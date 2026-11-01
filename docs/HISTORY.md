@@ -55,3 +55,7 @@ No hay botón de restauración en esta versión. Para restaurar manualmente, cie
 ## Modelo y límites
 
 SQLite con esquema user_version=1, índices por serial y fecha, inserciones parametrizadas y sin edición/borrado de eventos desde la interfaz. La tabla carga los resultados de la búsqueda; un historial muy grande podría requerir paginación en una versión posterior. Los filtros por texto parcial pueden recorrer filas. La base local no está cifrada ni sincronizada con otros equipos.
+
+## Etiquetas sin código (v0.14)
+
+WorkState conserva ShowCode. Los registros antiguos sin esa propiedad usan true. Las etiquetas de solo texto pueden no tener serial: la base guarda una cadena vacía, la tabla muestra un enlace (Sin serial)/(No serial) y carga por ID. Los CSV conservan el serial vacío. CodeType es TextOnly para ExportTag/ExportZpl/PrintSubmitted sin código; ExportCode siempre conserva QR/Code128. El formato de tabla SQLite y sus datos previos no necesitan recrearse.

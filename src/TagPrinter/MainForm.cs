@@ -8,6 +8,8 @@ public partial class MainForm : Form
     readonly Label printSummary=new(){Dock=DockStyle.Fill,AutoEllipsis=true,Padding=new Padding(0,5,0,0),ForeColor=Color.FromArgb(35,65,100)};
     internal string PrintSummaryText=>printSummary.Text;
     readonly TextBox assetType=new(){Text="Monitor"};
+    readonly CheckBox showCode=new(){Checked=true,AutoSize=true};
+    readonly List<(CheckBox Check,Label Caption)> visibilityFields=new();
     readonly CheckBox showAssetType=new(){Checked=true,AutoSize=true};
     readonly TextBox brand=new(){Text="Dell"}, model=new(){Text="22\" - H22203H"}, serial=new(){Text="ABC123456"};
     readonly TextBox partNumber=new(), macAddress=new();
@@ -15,6 +17,7 @@ public partial class MainForm : Form
     readonly CheckBox showBrand=new(){Checked=true,AutoSize=true}, showModel=new(){Checked=true,AutoSize=true}, showSerialText=new(){Checked=true,AutoSize=true};
     readonly ComboBox printers=Combo(), sizes=Combo(), layout=Combo(), code=Combo(), mode=Combo(), dpi=Combo();
     readonly NumericUpDown width=Number(25,150,100), height=Number(20,200,50), copies=Number(1,999,1);
+    readonly Label previewDescription=new(){AutoSize=true};
     readonly PictureBox preview=new(){Dock=DockStyle.Fill,SizeMode=PictureBoxSizeMode.Zoom,BackColor=Color.FromArgb(226,232,240)};
     readonly Label status=new(){AutoSize=false,Dock=DockStyle.Bottom,Height=66,Padding=new Padding(12),ForeColor=Color.FromArgb(30,64,110)};
     readonly Button print=new(){Text=Ui.T("Imprimir etiquetas","Print labels"),AutoSize=true,BackColor=Color.FromArgb(30,80,150),ForeColor=Color.White,FlatStyle=FlatStyle.Flat};
@@ -38,7 +41,7 @@ public partial class MainForm : Form
         history=new HistoryStore(historyPath ?? (configPath is not null?Path.ChangeExtension(configPath,".db"):Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"TagPrinter","TagPrinter.db")));
         appConfig=configuration ?? AppConfig.Load(Path.Combine(AppContext.BaseDirectory,"config.json"));
         Ui.Language=appConfig.Defaults.Language;
-        Text="TagPrinter | v0.13";
+        Text="TagPrinter | v0.14";
         using var iconStream=typeof(MainForm).Assembly.GetManifestResourceStream("TagPrinter.TagPrinter.ico");
         if(iconStream is not null)Icon=new Icon(iconStream); Width=1160; Height=850; MinimumSize=new Size(980,720);
         Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;
@@ -51,10 +54,16 @@ public partial class MainForm : Form
         language.Items.AddRange(["English","Español"]);language.SelectedIndex=0;
         assetSection=new CollapsibleSection(Ui.T("01  Datos del activo","01  Asset details")){Expanded=true};
         fields.Controls.Add(assetSection);target=assetSection.Body;
-        void TextField(CheckBox check,string caption,TextBox input)
+        var dataRows=new TableLayoutPanel{ColumnCount=3,AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,Dock=DockStyle.Top,Margin=Padding.Empty};
+        dataRows.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,115));dataRows.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));dataRows.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,28));
+        target.Controls.Add(dataRows);
+        void TextField(CheckBox check,string caption,Control input)
         {
-            check.Text=caption;check.Margin=new Padding(0,5,0,3);target.Controls.Add(check);
-            input.Dock=DockStyle.Top;target.Controls.Add(input);
+            int row=dataRows.RowCount++;dataRows.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            var label=new Label{Text=caption,AutoSize=true,Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleLeft,Margin=new Padding(0,3,3,3)};
+            check.Text="";check.AutoSize=true;check.Anchor=AnchorStyles.None;check.Margin=new Padding(6,4,2,4);
+            input.Dock=DockStyle.Fill;input.Margin=new Padding(0,3,0,3);
+            dataRows.Controls.Add(label,0,row);dataRows.Controls.Add(input,1,row);dataRows.Controls.Add(check,2,row);visibilityFields.Add((check,label));
         }
         TextField(showAssetType,Ui.T("Tipo de activo","Asset type"),assetType);
         assetType.MaxLength=80;
@@ -63,8 +72,10 @@ public partial class MainForm : Form
         TextField(showSerialText,"Serial",serial);
         TextField(showPartNumber,Ui.T("No. de parte","Part number"),partNumber);
         TextField(showMacAddress,Ui.T("Dirección MAC","MAC address"),macAddress);
+        code.Items.AddRange([Ui.T("Código de barras · Code 128","Barcode · Code 128"),"QR"]);
+        TextField(showCode,Ui.T("Código","Code"),code);
         partNumber.MaxLength=100;macAddress.MaxLength=100;
-        target.Controls.Add(new Label{Text=Ui.T("Las casillas controlan el texto impreso. El código siempre usa el serial.","Checkboxes control printed text. The code always uses the serial."),AutoSize=true,MaximumSize=new Size(330,0),ForeColor=Color.DimGray,Margin=new Padding(0,5,0,0)});
+        target.Controls.Add(new Label{Text=Ui.T("Las casillas incluyen u ocultan cada elemento en la etiqueta.","Checkboxes include or hide each item on the label."),AutoSize=true,MaximumSize=new Size(330,0),ForeColor=Color.DimGray,Margin=new Padding(0,5,0,0)});
         brand.MaxLength=80; model.MaxLength=100; serial.MaxLength=120;
         templateSection=new CollapsibleSection(Ui.T("02  Etiqueta y plantilla","02  Label and template"));
         fields.Controls.Add(templateSection);target=templateSection.Body;
@@ -75,7 +86,6 @@ public partial class MainForm : Form
         var dims=new FlowLayoutPanel{AutoSize=true}; dims.Controls.AddRange([new Label{Text=Ui.T("Ancho mm","Width mm"),AutoSize=true},width,new Label{Text=Ui.T("Alto mm","Height mm"),AutoSize=true},height]); width.Width=65;height.Width=65;
         target.Controls.Add(dims);
         layout.Items.AddRange([Ui.T("Código abajo · centrado","Code below · centered"),Ui.T("Código abajo · izquierda","Code below · left"),Ui.T("Código abajo · derecha","Code below · right"),Ui.T("Código a la derecha del texto","Code to the right of text")]); Field(Ui.T("Distribución de la plantilla","Template layout"),layout);
-        code.Items.AddRange([Ui.T("Código de barras · Code 128","Barcode · Code 128"),"QR"]); Field(Ui.T("Tipo de código","Code type"),code);
         textSection=new CollapsibleSection(Ui.T("03  Texto y márgenes","03  Text and margins"));
         fields.Controls.Add(textSection);target=textSection.Body;
         target.Controls.Add(autoFont);
@@ -104,7 +114,7 @@ public partial class MainForm : Form
         var right=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=5,Padding=new Padding(16,0,0,0)};
         right.RowStyles.Add(new RowStyle(SizeType.Absolute,48));right.RowStyles.Add(new RowStyle(SizeType.Absolute,46));right.RowStyles.Add(new RowStyle(SizeType.Percent,100));right.RowStyles.Add(new RowStyle(SizeType.Absolute,74));right.RowStyles.Add(new RowStyle(SizeType.Absolute,128));
         right.Controls.Add(new Label{Text=Ui.T("Vista de la plantilla","Template preview"),Font=new Font("Segoe UI",20,FontStyle.Bold),AutoSize=true});
-        right.Controls.Add(new Label{Text=Ui.T("La vista previa se actualiza al cambiar datos, tamaño o distribución.\nEl código contiene el serial completo.","Preview updates when you change the data, size or layout.\nThe code contains the full serial number."),AutoSize=true});var previewHost=new Panel{Dock=DockStyle.Fill};previewHost.Controls.Add(preview);previewHost.Controls.Add(previewError);right.Controls.Add(previewHost);
+        right.Controls.Add(previewDescription);var previewHost=new Panel{Dock=DockStyle.Fill};previewHost.Controls.Add(preview);previewHost.Controls.Add(previewError);right.Controls.Add(previewHost);
         right.Controls.Add(new Label{Text=Ui.T("RFID: esta versión imprime el contenido visible.\nLa grabación y verificación del chip todavía no están habilitadas.","RFID: this version prints the visible content.\nChip encoding and verification are not enabled yet."),Dock=DockStyle.Fill,Padding=new Padding(8),ForeColor=Color.FromArgb(120,70,10)});
         var actionArea=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=2,Margin=Padding.Empty};
         actionArea.RowStyles.Add(new RowStyle(SizeType.Absolute,48));actionArea.RowStyles.Add(new RowStyle(SizeType.Percent,100));
@@ -118,9 +128,10 @@ public partial class MainForm : Form
         root.Controls.Add(fields,0,0);root.Controls.Add(right,1,0);InitializeWorkspace(root);
         sizes.SelectedIndex=appConfig.LabelSizes.FindIndex(p=>p.Id==appConfig.Defaults.LabelPresetId);
         layout.SelectedIndex=appConfig.Defaults.Layout;code.SelectedIndex=appConfig.Defaults.Qr?1:0;mode.SelectedIndex=0;dpi.SelectedIndex=appConfig.Defaults.Dpi==300?1:0;
+        showCode.Checked=appConfig.Defaults.ShowCode;
         margin.Value=appConfig.Defaults.MarginMm;autoFont.Checked=appConfig.Defaults.AutoFont;fontPercent=appConfig.Defaults.FontPercent;
         LoadPrinters();LoadConfig();
-        foreach(var check in new[]{showAssetType,showBrand,showModel,showSerialText,showPartNumber,showMacAddress})check.CheckedChanged+=(_,_)=>UpdatePreview();
+        foreach(var check in new[]{showAssetType,showBrand,showModel,showSerialText,showPartNumber,showMacAddress,showCode})check.CheckedChanged+=(_,_)=>UpdatePreview();
         foreach(var t in new[]{assetType,brand,model,serial,partNumber,macAddress})t.TextChanged+=(_,_)=>UpdatePreview();
         foreach(var c in new[]{layout,code,mode,dpi})c.SelectedIndexChanged+=(_,_)=>UpdatePreview();
         sizes.SelectedIndexChanged+=(_,_)=>ApplySize(); width.ValueChanged+=(_,_)=>UpdatePreview();height.ValueChanged+=(_,_)=>UpdatePreview();
@@ -145,7 +156,7 @@ public partial class MainForm : Form
         printSummary.Text=string.Format(Ui.T("Impresora: {0}\nCopias: {1} · {2}","Printer: {0}\nCopies: {1} · {2}"),printerName,copies.Value,mode.SelectedIndex==1?"ZPL":"Windows");
     }
     void Guard(Action action) {try {action();}catch(Exception ex){MessageBox.Show(this,ex.Message,Ui.T("Etiquetas","TagPrinter"),MessageBoxButtons.OK,MessageBoxIcon.Warning);}}
-    LabelData Data()=>new(brand.Text.Trim(),model.Text.Trim(),serial.Text.Trim(),width.Value,height.Value,int.Parse(dpi.Text),layout.SelectedIndex,code.SelectedIndex==1,autoFont.Checked,fontPercent,margin.Value,offsetX.Value,offsetY.Value,showBrand.Checked,showModel.Checked,showSerialText.Checked,partNumber.Text.Trim(),macAddress.Text.Trim(),showPartNumber.Checked,showMacAddress.Checked,assetType.Text.Trim(),showAssetType.Checked);
+    LabelData Data()=>new(brand.Text.Trim(),model.Text.Trim(),serial.Text.Trim(),width.Value,height.Value,int.Parse(dpi.Text),layout.SelectedIndex,code.SelectedIndex==1,autoFont.Checked,fontPercent,margin.Value,offsetX.Value,offsetY.Value,showBrand.Checked,showModel.Checked,showSerialText.Checked,partNumber.Text.Trim(),macAddress.Text.Trim(),showPartNumber.Checked,showMacAddress.Checked,assetType.Text.Trim(),showAssetType.Checked,showCode.Checked);
     internal void ChangeFont(int step)
     {
         fontPercent=Math.Clamp((autoFont.Checked?effectiveFontPercent:fontPercent)+step,50,200);
@@ -165,12 +176,13 @@ public partial class MainForm : Form
     {
         if(!ready)return;
         ScheduleSave();UpdatePrintSummary();
+        previewDescription.Text=showCode.Checked?Ui.T("La vista previa se actualiza al cambiar datos, tamaño o distribución.\nEl código contiene el serial completo.","Preview updates when you change the data, size or layout.\nThe code contains the full serial number."):Ui.T("Vista previa de la etiqueta. El código está desactivado.\nEl texto utiliza toda el área disponible.","Label preview. The code is disabled.\nText uses the full available area.");
         try
         {
             var next=LabelRenderer.Render(Data(),showGuides.Checked,out effectiveFontPercent);var old=preview.Image;preview.Image=next;old?.Dispose();
             fontValue.Text=autoFont.Checked?$"Auto ({effectiveFontPercent} %)":$"{fontPercent} %";
             previewError.Visible=false;
-            status.Text=$"{width.Value} × {height.Value} mm · {dpi.Text} DPI · {next.Width} × {next.Height} px.\n"+Ui.T("Escanea una prueba impresa. En etiquetas pequeñas las barras pueden medir un solo punto.","Scan a printed sample. Small labels may use one-dot barcode bars.");print.Enabled=true;
+            status.Text=$"{width.Value} × {height.Value} mm · {dpi.Text} DPI · {next.Width} × {next.Height} px.\n"+(showCode.Checked?Ui.T("Escanea una prueba impresa. En etiquetas pequeñas las barras pueden medir un solo punto.","Scan a printed sample. Small labels may use one-dot barcode bars."):Ui.T("Etiqueta de solo texto.","Text-only label."));print.Enabled=true;
         }
         catch(Exception ex) {previewError.ForeColor=string.IsNullOrWhiteSpace(serial.Text)?Color.DimGray:Color.Firebrick;fontValue.Text=autoFont.Checked?"Auto":$"{fontPercent} %";var old=preview.Image;preview.Image=null;old?.Dispose();status.Text=ex.Message;previewError.Text=ex.Message;previewError.Visible=true;previewError.BringToFront();print.Enabled=false;}
     }
@@ -245,7 +257,7 @@ public partial class MainForm : Form
         return name;
     }
     void ScheduleSave(){if(!ready)return;autosave.Stop();autosave.Start();}
-    internal WorkState CaptureWork()=>new(){Printer=printers.Text,Size=sizes.SelectedIndex,LabelPresetId=sizes.SelectedIndex<appConfig.LabelSizes.Count?appConfig.LabelSizes[sizes.SelectedIndex].Id:"custom",Width=width.Value,Height=height.Value,Layout=layout.SelectedIndex,Code=code.SelectedIndex,Mode=mode.SelectedIndex,Dpi=dpi.SelectedIndex,AssetType=assetType.Text,ShowAssetType=showAssetType.Checked,Brand=brand.Text,PartNumber=partNumber.Text,MacAddress=macAddress.Text,ShowPartNumber=showPartNumber.Checked,ShowMacAddress=showMacAddress.Checked,Model=model.Text,Serial=serial.Text,Language=Ui.Language,ShowBrand=showBrand.Checked,ShowModel=showModel.Checked,ShowSerialText=showSerialText.Checked,ShowGuides=showGuides.Checked,AutoFont=autoFont.Checked,FontPercent=fontPercent,MarginMm=margin.Value,OffsetXmm=offsetX.Value,OffsetYmm=offsetY.Value,Copies=(int)copies.Value};
+    internal WorkState CaptureWork()=>new(){Printer=printers.Text,Size=sizes.SelectedIndex,LabelPresetId=sizes.SelectedIndex<appConfig.LabelSizes.Count?appConfig.LabelSizes[sizes.SelectedIndex].Id:"custom",Width=width.Value,Height=height.Value,Layout=layout.SelectedIndex,Code=code.SelectedIndex,Mode=mode.SelectedIndex,Dpi=dpi.SelectedIndex,AssetType=assetType.Text,ShowAssetType=showAssetType.Checked,Brand=brand.Text,PartNumber=partNumber.Text,MacAddress=macAddress.Text,ShowPartNumber=showPartNumber.Checked,ShowMacAddress=showMacAddress.Checked,Model=model.Text,Serial=serial.Text,Language=Ui.Language,ShowBrand=showBrand.Checked,ShowModel=showModel.Checked,ShowSerialText=showSerialText.Checked,ShowCode=showCode.Checked,ShowGuides=showGuides.Checked,AutoFont=autoFont.Checked,FontPercent=fontPercent,MarginMm=margin.Value,OffsetXmm=offsetX.Value,OffsetYmm=offsetY.Value,Copies=(int)copies.Value};
     internal void Restore(WorkState s)
     {
         bool wasReady=ready;ready=false;
@@ -257,6 +269,7 @@ public partial class MainForm : Form
         assetType.Text=s.AssetType;showAssetType.Checked=s.ShowAssetType;
         partNumber.Text=s.PartNumber;macAddress.Text=s.MacAddress;showPartNumber.Checked=s.ShowPartNumber;showMacAddress.Checked=s.ShowMacAddress;
         showBrand.Checked=s.ShowBrand;showModel.Checked=s.ShowModel;showSerialText.Checked=s.ShowSerialText;
+        showCode.Checked=s.ShowCode;
         showGuides.Checked=s.ShowGuides;autoFont.Checked=s.AutoFont;fontPercent=Math.Clamp(s.FontPercent,50,200);margin.Value=Math.Clamp(s.MarginMm,1,5);offsetX.Value=Math.Clamp(s.OffsetXmm,-5,5);offsetY.Value=Math.Clamp(s.OffsetYmm,-5,5);
         brand.Text=s.Brand;model.Text=s.Model;serial.Text=s.Serial;copies.Value=Math.Clamp(s.Copies,1,999);Ui.Language=s.Language=="es"?"es":"en";
         language.SelectedIndex=Ui.Language=="es"?1:0;

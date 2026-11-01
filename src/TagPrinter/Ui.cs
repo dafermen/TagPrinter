@@ -12,6 +12,8 @@ public static class Ui
         ("Desplazamiento de impresión…","Print offsets…"),
         ("04  Impresión","04  Printing"),
         ("Idioma","Language"),
+        ("Código","Code"),
+        ("Las casillas incluyen u ocultan cada elemento en la etiqueta.","Checkboxes include or hide each item on the label."),
         ("Nuevo activo","New asset"),
         ("Proyecto","Project"),
         ("05  Configuración","05  Settings"),

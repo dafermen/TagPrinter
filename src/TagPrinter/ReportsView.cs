@@ -68,7 +68,7 @@ public sealed class ReportsView : UserControl
         current=store.Query(Filter());string sort=table?.DefaultView.Sort??"";
         var next=new DataTable();
         next.Columns.Add("Id",typeof(long));next.Columns.Add("Date",typeof(DateTime));foreach(var name in new[]{"Action","Serial","AssetType","Brand","Model","PartNumber","MacAddress","Printer"})next.Columns.Add(name,typeof(string));next.Columns.Add("Copies",typeof(int));next.Columns.Add("CodeType",typeof(string));next.Columns.Add("SourceEventId",typeof(long));
-        foreach(var row in current){var state=row.State;next.Rows.Add(row.Id,row.CreatedUtc.LocalDateTime,ActionText(row.Action),state.Serial,state.AssetType,state.Brand,state.Model,state.PartNumber,state.MacAddress,state.Printer,state.Copies,state.Code==1?"QR":"Code 128",(object?)row.SourceEventId??DBNull.Value);}
+        foreach(var row in current){var state=row.State;next.Rows.Add(row.Id,row.CreatedUtc.LocalDateTime,ActionText(row.Action),string.IsNullOrWhiteSpace(state.Serial)?Ui.T("(Sin serial)","(No serial)"):state.Serial,state.AssetType,state.Brand,state.Model,state.PartNumber,state.MacAddress,state.Printer,state.Copies,!state.ShowCode && row.Action!="ExportCode"?Ui.T("Solo texto","Text only"):state.Code==1?"QR":"Code 128",(object?)row.SourceEventId??DBNull.Value);}
         if(sort.Length>0)next.DefaultView.Sort=sort;
         var old=table;table=next;Grid.DataSource=next;old?.Dispose();
         count.Text=string.Format(Ui.T("{0} registros. Pulsa un serial para cargar la etiqueta; no se imprime automáticamente.","{0} records. Click a serial to load its label; it will not print automatically."),current.Count);

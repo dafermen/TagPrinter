@@ -16,7 +16,8 @@ Extrae todo el ZIP y abre **TagPrinter.exe**. Incluye .NET y SQLite; no requiere
 
 ## Features / Funciones
 
-- Asset type, brand, model, serial, part number and MAC address, each with a visibility checkbox.
+- Compact rows for asset type, brand, model, serial, part number and MAC address, with visibility checkboxes on the right.
+- Optional QR / Code 128: turn off Code for text-only labels. A serial is optional for those labels.
 - QR / Code 128 containing the serial, label sizes, four layouts, font scaling, margins and print offsets.
 - **01 Asset details** collapsible and expanded at startup; sections 02–05 collapsed.
 - **New asset**, visible printer/copies summary, automatic save and restore of the last work.
@@ -60,7 +61,7 @@ powershell -ExecutionPolicy Bypass -File scripts/Test.ps1
 powershell -ExecutionPolicy Bypass -File scripts/Publish.ps1
 ```
 
-The publish script verifies the self-contained EXE and creates `artifacts/TagPrinter-v0.13-PORTABLE-Windows-x64.zip`. Generated output and personal databases are excluded from Git.
+The publish script verifies the self-contained EXE and creates `artifacts/TagPrinter-v0.14-PORTABLE-Windows-x64.zip`. Generated output and personal databases are excluded from Git.
 
 ## Documentation
 
@@ -78,3 +79,11 @@ Los CSV conservan valores originales y fechas UTC; al importarlos, trata el seri
 - Microsoft.Data.Sqlite 8.0.28 / SQLitePCLRaw — SQLite provider and native engine distributed through NuGet.
 - .NET runtime — [license and notices](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT).
 - GitHub mark from the [official brand assets](https://brand.github.com/foundations/logo), used only as a link to this project. GitHub marks are trademarks of GitHub, Inc.; no affiliation or endorsement is implied.
+
+## v0.14: filas compactas y código opcional
+
+Cada campo tiene su nombre, control y checkbox en la misma fila. Los checkboxes solo incluyen/ocultan el elemento en la etiqueta; no borran datos ni deshabilitan edición. Sus tooltips y nombres accesibles explican la acción.
+
+En 01, la fila Código permite elegir QR/Code 128 y activar/desactivar su inclusión. Sin código, los textos usan toda el área y el serial puede estar vacío. Se bloquean las etiquetas completamente vacías. Vista previa, Export Tag, ZPL e impresión comparten ese diseño. Export Code es independiente: siempre genera un símbolo y necesita serial.
+
+La selección se guarda y se recupera del historial. En Reportes las etiquetas sin serial muestran (Sin serial) / (No serial) como enlace; se recuperan por su ID, sin inventar un serial. Los datos anteriores siguen mostrando su código por defecto.

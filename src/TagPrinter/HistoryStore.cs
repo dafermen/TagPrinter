@@ -50,7 +50,7 @@ public sealed class HistoryStore
     public long Add(string action,WorkState state,string outputPath="",long? sourceEventId=null,DateTimeOffset? timestamp=null)
     {
         if(!Actions.Contains(action))throw new ArgumentException("Unknown history action.");
-        if(string.IsNullOrWhiteSpace(state.Serial))throw new ArgumentException("History requires a serial.");
+        if(string.IsNullOrWhiteSpace(state.Serial) && (state.ShowCode || action=="ExportCode"))throw new ArgumentException("A generated code requires a serial.");
         using var connection=Open();using var command=connection.CreateCommand();
         command.CommandText="""
             INSERT INTO events(created_utc,action,serial,asset_type,brand,model,part_number,mac_address,state_json,output_path,source_event_id)
@@ -101,7 +101,7 @@ public sealed class HistoryStore
         foreach(var row in rows)
         {
             var state=row.State;
-            Write([row.Id.ToString(CultureInfo.InvariantCulture),row.CreatedUtc.ToUniversalTime().ToString("O",CultureInfo.InvariantCulture),row.Action,state.Serial,state.AssetType,state.Brand,state.Model,state.PartNumber,state.MacAddress,state.Printer,state.Copies.ToString(CultureInfo.InvariantCulture),state.Code==1?"QR":"Code128",state.Width.ToString(CultureInfo.InvariantCulture),state.Height.ToString(CultureInfo.InvariantCulture),row.OutputPath,row.SourceEventId?.ToString(CultureInfo.InvariantCulture)??"",JsonSerializer.Serialize(state)]);
+            Write([row.Id.ToString(CultureInfo.InvariantCulture),row.CreatedUtc.ToUniversalTime().ToString("O",CultureInfo.InvariantCulture),row.Action,state.Serial,state.AssetType,state.Brand,state.Model,state.PartNumber,state.MacAddress,state.Printer,state.Copies.ToString(CultureInfo.InvariantCulture),!state.ShowCode && row.Action!="ExportCode"?"TextOnly":state.Code==1?"QR":"Code128",state.Width.ToString(CultureInfo.InvariantCulture),state.Height.ToString(CultureInfo.InvariantCulture),row.OutputPath,row.SourceEventId?.ToString(CultureInfo.InvariantCulture)??"",JsonSerializer.Serialize(state)]);
         }
     }
 }

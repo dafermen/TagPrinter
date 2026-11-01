@@ -8,15 +8,16 @@ Extrae todo el ZIP portable y abre TagPrinter.exe. Conserva sus archivos y carpe
 
 Tipo de activo / Asset type, Marca / Brand, Modelo / Model, Serial, No. de parte / Part number y Dirección MAC / MAC address. Las seis casillas comienzan marcadas para trabajos nuevos. Desmarcar oculta solo el texto y conserva el valor editable.
 
-El serial es obligatorio: alimenta el QR o Code 128 incluso si ocultas su texto. No. de parte y MAC son opcionales; si están vacíos no consumen espacio en la etiqueta. MAC se imprime tal como se escribe; no se normaliza ni se valida como dirección de red en esta versión.
+Si Código está activado, el serial es obligatorio y alimenta el QR o Code 128 incluso si ocultas su texto. Si desactivas Código, el serial puede estar vacío. No. de parte y MAC son opcionales; si están vacíos no consumen espacio en la etiqueta. MAC se imprime tal como se escribe; no se normaliza ni se valida como dirección de red en esta versión.
 
-Los textos visibles se redistribuyen. Si desmarcas todos, queda únicamente el código. Seis campos pueden no caber en etiquetas pequeñas; usa un tamaño mayor o desmarca los que no necesitas. No se recortan textos silenciosamente.
+Los textos visibles se redistribuyen. Si desmarcas todos los textos y Código sigue marcado, queda únicamente el código. Sin código debe quedar al menos un texto visible con contenido. Seis campos pueden no caber en etiquetas pequeñas; usa un tamaño mayor o desmarca los que no necesitas. No se recortan textos silenciosamente.
 
 ## Secciones plegables
 
 01 Datos del activo empieza expandida y también se puede contraer. 02 a 05 comienzan contraídas. Pulsa el encabezado o usa Enter/Espacio con el foco en él para expandir. Contraerlas no cambia sus valores.
 
-- 02: tamaño de etiqueta (ancho × alto), medidas personalizadas, distribución y QR/Code 128. Los tamaños vienen de config.json.
+- 01: filas compactas con campos, selector QR/Code 128 y checkbox Código a la derecha.
+- 02: tamaño de etiqueta (ancho × alto), medidas personalizadas y distribución. Los tamaños vienen de config.json.
 - 03: ajuste automático de texto o botones −/+ (manual, 50–200 %), margen 1–5 mm (inicial 2 mm), guía azul de vista previa y desplazamientos.
 - 04: impresora instalada, método Windows/ZPL, 203/300 DPI y copias.
 - 05 Configuración / Settings: idioma English / Español. La selección se aplica al instante y se conserva al reabrir.
@@ -60,3 +61,11 @@ El icono de GitHub está siempre visible en la esquina inferior izquierda. Su to
 ## v0.13: pestaña Reportes
 
 Exporta una etiqueta o código, abre Reportes y busca su serial. La tabla admite filtros y ordenación. Pulsa el serial para recuperar el diseño y volver a Etiquetas, revisa y pulsa Imprimir. Usa Exportar vista CSV, Exportar todo CSV o Copia de seguridad. [Guía completa del historial](HISTORY.md). El historial comienza con nuevas operaciones de v0.13 y nunca implica confirmación de impresión física.
+
+## v0.14: filas compactas y código opcional
+
+Cada campo tiene su nombre, control y checkbox en la misma fila. Los checkboxes solo incluyen/ocultan el elemento en la etiqueta; no borran datos ni deshabilitan edición. Sus tooltips y nombres accesibles explican la acción.
+
+En 01, la fila Código permite elegir QR/Code 128 y activar/desactivar su inclusión. Sin código, los textos usan toda el área y el serial puede estar vacío. Se bloquean las etiquetas completamente vacías. Vista previa, Export Tag, ZPL e impresión comparten ese diseño. Export Code es independiente: siempre genera un símbolo y necesita serial.
+
+La selección se guarda y se recupera del historial. En Reportes las etiquetas sin serial muestran (Sin serial) / (No serial) como enlace; se recuperan por su ID, sin inventar un serial. Los datos anteriores siguen mostrando su código por defecto.

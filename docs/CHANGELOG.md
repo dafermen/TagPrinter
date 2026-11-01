@@ -1,5 +1,9 @@
 # Cambios
 
+## 0.14.0
+
+Filas compactas con checkboxes a la derecha, tooltips y accesibilidad bilingüe. Selector QR/Code 128 en 01 con checkbox de inclusión. Etiquetas de solo texto usan el área completa, permiten serial vacío y rechazan salida vacía. Persistencia y recuperación en SQLite compatibles. Reportes distingue TextOnly y permite cargar registros sin serial; Export Code sigue independiente.
+
 ## 0.13.0
 
 01 plegable y expandida al iniciar. Historial SQLite con instantáneas de exportaciones/envíos, sin sobrescribir seriales repetidos. Pestaña Reportes: búsqueda, acción/fechas, ordenación, recuperación por serial, CSV vista/todo y backup. Enlace de proyecto sustituido por icono GitHub inferior izquierdo con tooltip About / Acerca de. Localización no modifica filtros de fecha.

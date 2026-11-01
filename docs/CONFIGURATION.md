@@ -25,6 +25,7 @@ Cierra la aplicación, edita config.json y vuelve a abrirla. No pongas contrase�
     "Dpi": 203,
     "Layout": 3,
     "Qr": false,
+    "ShowCode": true,
     "AutoFont": true,
     "FontPercent": 100,
     "MarginMm": 2
@@ -44,6 +45,7 @@ El archivo distribuido incluye seis ejemplos: 100×50, 50×25, 60×40, 80×50, 4
 - Dpi: 203 o 300.
 - Layout: 0 código abajo centrado, 1 abajo izquierda, 2 abajo derecha, 3 a la derecha del texto.
 - Qr: true para QR, false para Code 128.
+- ShowCode: true (predeterminado) incluye el código en etiquetas nuevas; false permite etiquetas de solo texto. El último trabajo guardado tiene prioridad.
 - AutoFont: true para ajuste automático. FontPercent: 50–200, utilizado cuando AutoFont es false.
 - MarginMm: 1–5 mm, hasta un decimal.
 

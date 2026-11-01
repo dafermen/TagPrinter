@@ -8,6 +8,7 @@ public record ConfigDefaults
     public string LabelPresetId {get;init;}="100x50";
     public int Dpi {get;init;}=203;
     public int Layout {get;init;}=3;
+    public bool ShowCode {get;init;}=true;
     public bool Qr {get;init;}
     public bool AutoFont {get;init;}=true;
     public int FontPercent {get;init;}=100;

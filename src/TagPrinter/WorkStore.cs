@@ -24,6 +24,7 @@ public record WorkState
     public bool ShowBrand {get;init;}=true;
     public bool ShowModel {get;init;}=true;
     public bool ShowSerialText {get;init;}=true;
+    public bool ShowCode {get;init;}=true;
     public bool ShowGuides {get;init;}=true;
     public bool AutoFont {get;init;}=true;
     public int FontPercent {get;init;}=100;

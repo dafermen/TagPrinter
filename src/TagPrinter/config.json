@@ -46,6 +46,7 @@
     "Qr": false,
     "AutoFont": true,
     "FontPercent": 100,
-    "MarginMm": 2
+    "MarginMm": 2,
+    "ShowCode": true
   }
 }

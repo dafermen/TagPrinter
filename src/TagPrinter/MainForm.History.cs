@@ -34,6 +34,11 @@ public partial class MainForm
     {
         labelTab.Text=Ui.T("Etiquetas","Labels");reportsTab.Text=Ui.T("Reportes","Reports");
         string about=Ui.T("Acerca de","About");aboutTip.SetToolTip(aboutButton,about);aboutButton.AccessibleName=about;
+        foreach(var item in visibilityFields)
+        {
+            string hint=string.Format(Ui.T("Incluir {0} en la etiqueta","Include {0} on the label"),item.Caption.Text);
+            item.Check.AccessibleName=hint;aboutTip.SetToolTip(item.Check,hint);
+        }
         reports?.RefreshLanguage();
     }
     WorkState GenerationState()=>CaptureWork() with

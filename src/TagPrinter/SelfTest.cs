@@ -26,6 +26,7 @@ public static class SelfTest
         TestConfigurationAndAssetFields(folder);
         TestAssetType(folder);
         TestHistory(folder);
+        TestTextOnlyLabels(folder);
         string statePath=Path.Combine(folder,"test-work.json");
         var work=new WorkState{AssetType="Laptop",ShowAssetType=false,Brand="Laptop",Model="Dell Latitude",Serial="TEST/123",Size=6,Width=65,Height=35,Layout=3,Code=1,Dpi=1,Copies=4,Language="es",AutoFont=false,FontPercent=70,MarginMm=3,OffsetXmm=.5m,OffsetYmm=-.5m,ShowBrand=false,ShowModel=true,ShowSerialText=false,PartNumber="PN-DEMO-001",MacAddress="00:11:22:33:44:55",ShowPartNumber=false,ShowMacAddress=false};
         WorkStore.Save(statePath,work);
@@ -70,7 +71,7 @@ public static class SelfTest
             var restored=reopened.CaptureWork();
             if(restored.Serial!="ABC12345644" || restored.Language!="es" || restored.Layout!=3 || restored.Copies!=4 || restored.AutoFont || restored.FontPercent!=70 || restored.MarginMm!=3 || restored.OffsetXmm!=.5m || restored.OffsetYmm!=-.5m || restored.ShowBrand || !restored.ShowModel || restored.ShowSerialText || restored.PartNumber!="PN-DEMO-001" || restored.MacAddress!="00:11:22:33:44:55" || restored.ShowPartNumber || restored.ShowMacAddress || restored.AssetType!="Laptop" || restored.ShowAssetType)throw new Exception("UI restore failed");
         }
-        File.WriteAllText(Path.Combine(folder,"results.txt"),$"PASS: {count} etiquetas generadas y decodificadas (2 tamaños × 2 resoluciones × 4 plantillas × 2 tipos). Serial vacío rechazado. Persistencia de trabajo/idioma, reapertura y nombres de archivo comprobados. Fuente manual/automática, márgenes, guías y desplazamientos comprobados. ZPL con dimensiones y cantidad comprobados. Exportación independiente QR/Code 128 y nombres de archivo comprobados. Visibilidad de campos: 32 combinaciones decodificadas y preferencias restauradas. Campos P/N y MAC, configuración JSON y migración Title/Brand comprobados. Tipo de activo, seis campos, visibilidad y persistencia comprobados. Nuevo activo y resumen de impresión comprobados. SQLite, búsqueda, filtros, CSV, backup, exportaciones y recuperación histórica comprobados. No se envió ningún trabajo a impresoras.");
+        File.WriteAllText(Path.Combine(folder,"results.txt"),$"PASS: {count} etiquetas generadas y decodificadas (2 tamaños × 2 resoluciones × 4 plantillas × 2 tipos). Serial vacío rechazado. Persistencia de trabajo/idioma, reapertura y nombres de archivo comprobados. Fuente manual/automática, márgenes, guías y desplazamientos comprobados. ZPL con dimensiones y cantidad comprobados. Exportación independiente QR/Code 128 y nombres de archivo comprobados. Visibilidad de campos: 32 combinaciones decodificadas y preferencias restauradas. Campos P/N y MAC, configuración JSON y migración Title/Brand comprobados. Tipo de activo, seis campos, visibilidad y persistencia comprobados. Nuevo activo y resumen de impresión comprobados. SQLite, búsqueda, filtros, CSV, backup, exportaciones y recuperación histórica comprobados. Etiquetas sin código y recuperación sin serial comprobadas. No se envió ningún trabajo a impresoras.");
     }
     static void TestTypographyAndMargins(string folder)
     {
@@ -338,4 +339,54 @@ public static class SelfTest
             demo.Close();
         }
     }
+    static void TestTextOnlyLabels(string folder)
+    {
+        var data=new LabelData("Dell","H22203H","",100,50,203,3,false,AssetType:"Monitor",ShowCode:false);
+        foreach(int dpi in new[]{203,300})
+        {
+            using var baseline=LabelRenderer.Render(data with {Dpi=dpi,Layout=0});
+            foreach(int layout in new[]{1,2,3})
+            {
+                using var candidate=LabelRenderer.Render(data with {Dpi=dpi,Layout=layout,Qr=true});
+                for(int y=0;y<baseline.Height;y++)for(int x=0;x<baseline.Width;x++)if(baseline.GetPixel(x,y)!=candidate.GetPixel(x,y))throw new Exception("Text-only layout still depends on code settings");
+            }
+            var rgb=new byte[baseline.Width*baseline.Height*3];
+            for(int y=0;y<baseline.Height;y++)for(int x=0;x<baseline.Width;x++){var c=baseline.GetPixel(x,y);int i=(y*baseline.Width+x)*3;rgb[i]=c.R;rgb[i+1]=c.G;rgb[i+2]=c.B;}
+            if(new BarcodeReaderGeneric().Decode(new RGBLuminanceSource(rgb,baseline.Width,baseline.Height,RGBLuminanceSource.BitmapFormat.RGB24)) is not null)throw new Exception("Text-only label contains a code");
+        }
+        using(var text=LabelRenderer.Render(data with {Serial=new string('Ñ',300),ShowSerialText=false})){}
+        try{using var invalid=LabelRenderer.Render(data with {ShowCode=true});throw new Exception("Code without serial accepted");}catch(ArgumentException){}
+        try{using var invalid=LabelRenderer.Render(data with {ShowAssetType=false,ShowBrand=false,ShowModel=false,ShowSerialText=false});throw new Exception("Blank label accepted");}catch(ArgumentException){}
+        var wideText=new LabelData("Asset inventory department","Model 2026","ABC123",50,25,203,3,false,AutoFont:false,FontPercent:80,ShowSerialText:false,ShowCode:false);
+        using(var image=LabelRenderer.Render(wideText)){}
+        string dir=Path.Combine(folder,"text-only-"+Guid.NewGuid());Directory.CreateDirectory(dir);
+        string workPath=Path.Combine(dir,"work.json");
+        using(var form=new MainForm(workPath,AppConfig.CreateDefault()))
+        {
+            form.Show();form.Restore(new WorkState{AssetType="Monitor",Brand="Dell",Model="H22203H",Serial="",ShowCode=false,Code=1});
+            form.ExportTagFile(Path.Combine(dir,"tag.png"));form.ExportTagFile(Path.Combine(dir,"tag.zpl"),true);
+            if(form.History.Query().Count!=2 || form.History.Query().Any(row=>row.State.ShowCode || row.State.Serial!=""))throw new Exception("Text-only event was not saved correctly");
+            long id=form.History.Query()[0].Id;form.ShowReports();
+            if(!form.Reports.Grid.Rows.Cast<DataGridViewRow>().Any(row=>row.Cells["Serial"].Value?.ToString()=="(No serial)"))throw new Exception("No-serial report link missing");
+            form.Reports.OpenRecordForTest(id);
+            if(!form.ShowingLabel || form.CaptureWork().ShowCode || form.CaptureWork().Serial!="")throw new Exception("Text-only label was not restored");
+            string csv=Path.Combine(dir,"report.csv");HistoryStore.ExportCsv(csv,form.History.Query());
+            using(var parser=new Microsoft.VisualBasic.FileIO.TextFieldParser(csv,System.Text.Encoding.UTF8))
+            {
+                parser.SetDelimiters(";");parser.HasFieldsEnclosedInQuotes=true;parser.ReadFields();var fields=parser.ReadFields()!;
+                if(fields[3]!="" || fields[11]!="TextOnly" || System.Text.Json.JsonSerializer.Deserialize<WorkState>(fields[16])!.ShowCode)throw new Exception("CSV lost text-only state");
+            }
+            try{form.ExportCodeFile(Path.Combine(dir,"empty-code.png"));throw new Exception("Standalone code without serial accepted");}catch(ArgumentException){}
+            if(form.History.Query().Count!=2)throw new Exception("Failed standalone code logged success");
+            form.Restore(form.CaptureWork() with {Serial="ABC123"});form.ExportCodeFile(Path.Combine(dir,"standalone.png"));
+            if(form.History.Query()[0].Action!="ExportCode")throw new Exception("Standalone export broken with hidden label code");
+            form.Restore(form.CaptureWork() with {Serial="",Language="es"});form.SaveConfig();Application.DoEvents();
+            using(var capture=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(capture,new Rectangle(Point.Empty,form.Size));capture.Save(Path.Combine(folder,"text-only-es.png"));}
+            form.Close();
+        }
+        using(var reopened=new MainForm(workPath,AppConfig.CreateDefault()))if(reopened.CaptureWork().ShowCode || reopened.CaptureWork().Serial!="")throw new Exception("Text-only preferences not persisted");
+        string legacy=Path.Combine(dir,"legacy.json");File.WriteAllText(legacy,"{\"Serial\":\"OLD123\"}");
+        if(!WorkStore.Load(legacy).ShowCode)throw new Exception("Legacy work should keep its code");
+    }
+
 }

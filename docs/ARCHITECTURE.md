@@ -29,3 +29,7 @@ HistoryStore usa Microsoft.Data.Sqlite 8.0.28. Esquema events con metadatos inde
 ReportsView enlaza un DataTable ordenable a DataGridView con seriales como enlaces. Convierte filtros de fechas locales a límites UTC. CSV independiente con escaping de comillas y separador punto y coma. MainForm.History integra tabs, icono About y hooks tras operaciones exitosas. La recuperación fuerza dimensiones históricas personalizadas y conserva el idioma actual.
 
 Las pruebas reciben configPath/historyPath aislados. En uso normal: settings.json histórico en InventoryLabels y TagPrinter.db en LocalAppData/TagPrinter. No se hace una transacción atómica conjunta con spooler o archivos: un fallo de historial tras una operación externa se comunica sin reenviar trabajos.
+
+## v0.14
+
+ShowCode se añade como propiedad opcional true a LabelData/WorkState/ConfigDefaults. El render evita el encoder cuando está desactivado y utiliza toda el área para texto. HistoryStore permite serial vacío solo en eventos de etiqueta sin código, y Reports usa el ID para recuperar incluso cuando el texto de enlace es (No serial). No cambia el esquema SQLite. La cuadrícula de datos usa filas AutoSize con nombres accesibles y ToolTip por checkbox.
