@@ -1,4 +1,4 @@
-# Guía de uso — TagPrinter 0.9
+# Guía de uso — TagPrinter 0.10
 
 ## Abrir
 
@@ -6,11 +6,11 @@ Extrae todo el ZIP portable y abre TagPrinter.exe. Conserva sus archivos y carpe
 
 ## Datos del activo
 
-Marca / Brand, Modelo / Model, Serial, No. de parte / Part number y Dirección MAC / MAC address. Las cinco casillas comienzan marcadas para trabajos nuevos. Desmarcar oculta solo el texto y conserva el valor editable.
+Tipo de activo / Asset type, Marca / Brand, Modelo / Model, Serial, No. de parte / Part number y Dirección MAC / MAC address. Las seis casillas comienzan marcadas para trabajos nuevos. Desmarcar oculta solo el texto y conserva el valor editable.
 
 El serial es obligatorio: alimenta el QR o Code 128 incluso si ocultas su texto. No. de parte y MAC son opcionales; si están vacíos no consumen espacio en la etiqueta. MAC se imprime tal como se escribe; no se normaliza ni se valida como dirección de red en esta versión.
 
-Los textos visibles se redistribuyen. Si desmarcas todos, queda únicamente el código. Cinco campos pueden no caber en etiquetas pequeñas; usa un tamaño mayor o desmarca los que no necesitas. No se recortan textos silenciosamente.
+Los textos visibles se redistribuyen. Si desmarcas todos, queda únicamente el código. Seis campos pueden no caber en etiquetas pequeñas; usa un tamaño mayor o desmarca los que no necesitas. No se recortan textos silenciosamente.
 
 ## Secciones 02, 03 y 04
 
@@ -43,3 +43,5 @@ Los antiguos Title / ShowTitle migran a Brand / ShowBrand sin borrar valores. Re
 ## Configuración general
 
 [config.json: tamaños y valores iniciales](CONFIGURATION.md). Edita el archivo junto al EXE y reinicia. La aplicación no lo reescribe al guardar el trabajo.
+
+Tipo de activo / Asset type aparece antes de Marca y tiene checkbox y autoguardado. Ejemplo: Monitor / Dell / H22203H / ABC123 / ZYX123 / 00:1A:2B:3C:4D:5E. El código representa ABC123. En trabajos existentes el nuevo campo empieza vacío para no inventar el tipo; completa su valor cuando corresponda.

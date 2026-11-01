@@ -35,3 +35,7 @@ Las comprobaciones de estado inicial, expansión, contracción, conservación de
 ## v0.9
 
 Ocho combinaciones de P/N/MAC y QR/Code 128 decodificadas. Pruebas de persistencia de campos/flags, migración Title/ShowTitle, defaults desde JSON, rechazo de JSON inválido/configuración fuera de rango, selección estable tras reordenar tamaños y recuperación como personalizado al retirar un preset. Capturas sintéticas asset-fields-en.png y asset-fields-es.png. La prueba no envía etiquetas a impresoras ni toca el último trabajo del usuario.
+
+## v0.10
+
+Ocho combinaciones de Tipo visible/oculto, 203/300 DPI y QR/Code 128; los seis campos del ejemplo se renderizan y se recupera siempre ABC123 del código. Comparación de imágenes con Tipo oculto, persistencia del valor/checkbox, carga de trabajos anteriores sin inventar un tipo y capturas en ambos idiomas.

@@ -24,8 +24,9 @@ public static class SelfTest
         TestCodeExport(folder);
         TestFieldVisibility(folder);
         TestConfigurationAndAssetFields(folder);
+        TestAssetType(folder);
         string statePath=Path.Combine(folder,"test-work.json");
-        var work=new WorkState{Brand="Laptop",Model="Dell Latitude",Serial="TEST/123",Size=6,Width=65,Height=35,Layout=3,Code=1,Dpi=1,Copies=4,Language="es",AutoFont=false,FontPercent=70,MarginMm=3,OffsetXmm=.5m,OffsetYmm=-.5m,ShowBrand=false,ShowModel=true,ShowSerialText=false,PartNumber="PN-DEMO-001",MacAddress="00:11:22:33:44:55",ShowPartNumber=false,ShowMacAddress=false};
+        var work=new WorkState{AssetType="Laptop",ShowAssetType=false,Brand="Laptop",Model="Dell Latitude",Serial="TEST/123",Size=6,Width=65,Height=35,Layout=3,Code=1,Dpi=1,Copies=4,Language="es",AutoFont=false,FontPercent=70,MarginMm=3,OffsetXmm=.5m,OffsetYmm=-.5m,ShowBrand=false,ShowModel=true,ShowSerialText=false,PartNumber="PN-DEMO-001",MacAddress="00:11:22:33:44:55",ShowPartNumber=false,ShowMacAddress=false};
         WorkStore.Save(statePath,work);
         if(WorkStore.Load(statePath)!=work)throw new Exception("Work persistence mismatch");
         if(MainForm.SafeFileName("ABC12345644")!="ABC12345644" || MainForm.SafeFileName("TEST/123")!="TEST_123" || MainForm.SafeFileName("CON")!="_CON")throw new Exception("Invalid file name");
@@ -54,9 +55,9 @@ public static class SelfTest
         {
             if(reopened.templateSection.Expanded || reopened.textSection.Expanded || reopened.printingSection.Expanded)throw new Exception("Reopened sections must start collapsed");
             var restored=reopened.CaptureWork();
-            if(restored.Serial!="ABC12345644" || restored.Language!="es" || restored.Layout!=3 || restored.Copies!=4 || restored.AutoFont || restored.FontPercent!=70 || restored.MarginMm!=3 || restored.OffsetXmm!=.5m || restored.OffsetYmm!=-.5m || restored.ShowBrand || !restored.ShowModel || restored.ShowSerialText || restored.PartNumber!="PN-DEMO-001" || restored.MacAddress!="00:11:22:33:44:55" || restored.ShowPartNumber || restored.ShowMacAddress)throw new Exception("UI restore failed");
+            if(restored.Serial!="ABC12345644" || restored.Language!="es" || restored.Layout!=3 || restored.Copies!=4 || restored.AutoFont || restored.FontPercent!=70 || restored.MarginMm!=3 || restored.OffsetXmm!=.5m || restored.OffsetYmm!=-.5m || restored.ShowBrand || !restored.ShowModel || restored.ShowSerialText || restored.PartNumber!="PN-DEMO-001" || restored.MacAddress!="00:11:22:33:44:55" || restored.ShowPartNumber || restored.ShowMacAddress || restored.AssetType!="Laptop" || restored.ShowAssetType)throw new Exception("UI restore failed");
         }
-        File.WriteAllText(Path.Combine(folder,"results.txt"),$"PASS: {count} etiquetas generadas y decodificadas (2 tamaños × 2 resoluciones × 4 plantillas × 2 tipos). Serial vacío rechazado. Persistencia de trabajo/idioma, reapertura y nombres de archivo comprobados. Fuente manual/automática, márgenes, guías y desplazamientos comprobados. ZPL con dimensiones y cantidad comprobados. Exportación independiente QR/Code 128 y nombres de archivo comprobados. Visibilidad de campos: 32 combinaciones decodificadas y preferencias restauradas. Campos P/N y MAC, configuración JSON y migración Title/Brand comprobados. No se envió ningún trabajo a impresoras.");
+        File.WriteAllText(Path.Combine(folder,"results.txt"),$"PASS: {count} etiquetas generadas y decodificadas (2 tamaños × 2 resoluciones × 4 plantillas × 2 tipos). Serial vacío rechazado. Persistencia de trabajo/idioma, reapertura y nombres de archivo comprobados. Fuente manual/automática, márgenes, guías y desplazamientos comprobados. ZPL con dimensiones y cantidad comprobados. Exportación independiente QR/Code 128 y nombres de archivo comprobados. Visibilidad de campos: 32 combinaciones decodificadas y preferencias restauradas. Campos P/N y MAC, configuración JSON y migración Title/Brand comprobados. Tipo de activo, seis campos, visibilidad y persistencia comprobados. No se envió ningún trabajo a impresoras.");
     }
     static void TestTypographyAndMargins(string folder)
     {
@@ -227,13 +228,34 @@ public static class SelfTest
         }
         using(var screenshotForm=new MainForm(Path.Combine(folder,"screenshot-"+Guid.NewGuid()+".json"),AppConfig.CreateDefault()))
         {
-            screenshotForm.Restore(new WorkState{Brand="Dell",Model="Latitude 5420",Serial="DEMO123456",PartNumber="PN-DEMO-001",MacAddress="00:11:22:33:44:55",Code=1});
+            screenshotForm.Restore(new WorkState{AssetType="Monitor",Brand="Dell",Model="H22203H",Serial="ABC123",PartNumber="ZYX123",MacAddress="00:1A:2B:3C:4D:5E",Code=1});
             screenshotForm.Show();Application.DoEvents();
             using(var capture=new Bitmap(screenshotForm.Width,screenshotForm.Height)){screenshotForm.DrawToBitmap(capture,new Rectangle(Point.Empty,screenshotForm.Size));capture.Save(Path.Combine(folder,"asset-fields-en.png"));}
             screenshotForm.Restore(screenshotForm.CaptureWork() with {Language="es"});Application.DoEvents();
             using(var capture=new Bitmap(screenshotForm.Width,screenshotForm.Height)){screenshotForm.DrawToBitmap(capture,new Rectangle(Point.Empty,screenshotForm.Size));capture.Save(Path.Combine(folder,"asset-fields-es.png"));}
             screenshotForm.Close();
         }
+    }
+
+    static void TestAssetType(string folder)
+    {
+        foreach(int dpi in new[]{203,300})foreach(bool qr in new[]{false,true})foreach(bool visible in new[]{false,true})
+        {
+            var data=new LabelData("Dell","H22203H","ABC123",100,50,dpi,3,qr,PartNumber:"ZYX123",MacAddress:"00:1A:2B:3C:4D:5E",AssetType:"Monitor",ShowAssetType:visible);
+            using var image=LabelRenderer.Render(data);
+            var rgb=new byte[image.Width*image.Height*3];
+            for(int y=0;y<image.Height;y++)for(int x=0;x<image.Width;x++){var c=image.GetPixel(x,y);int i=(y*image.Width+x)*3;rgb[i]=c.R;rgb[i+1]=c.G;rgb[i+2]=c.B;}
+            var decoded=new BarcodeReaderGeneric{Options=new ZXing.Common.DecodingOptions{TryHarder=true}}.Decode(new RGBLuminanceSource(rgb,image.Width,image.Height,RGBLuminanceSource.BitmapFormat.RGB24));
+            if(decoded?.Text!="ABC123")throw new Exception("Asset type changed code payload");
+            if(!visible)
+            {
+                using var changed=LabelRenderer.Render(data with {AssetType=new string('X',300)});
+                for(int y=0;y<image.Height;y++)for(int x=0;x<image.Width;x++)if(image.GetPixel(x,y)!=changed.GetPixel(x,y))throw new Exception("Hidden asset type rendered");
+            }
+            else if(dpi==203)image.Save(Path.Combine(folder,qr?"six-fields-qr.png":"six-fields-barcode.png"));
+        }
+        string legacy=Path.Combine(folder,"asset-type-legacy.json");File.WriteAllText(legacy,"{\"Brand\":\"Dell\",\"Serial\":\"OLD123\"}");
+        if(WorkStore.Load(legacy).AssetType!="")throw new Exception("Invented asset type for existing work");
     }
 
 }

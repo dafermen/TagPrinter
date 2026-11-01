@@ -17,6 +17,7 @@ public static class Ui
         ("Las casillas controlan el texto impreso. El código siempre usa el serial.","Checkboxes control printed text. The code always uses the serial."),
         ("01  Datos del activo","01  Asset details"),
         ("Marca","Brand"),
+        ("Tipo de activo","Asset type"),
         ("Modelo","Model"),
         ("Serial (contenido del código)","Serial (code content)"),
         ("02  Etiqueta y plantilla","02  Label and template"),

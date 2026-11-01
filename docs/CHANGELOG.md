@@ -1,5 +1,9 @@
 # Cambios
 
+## 0.10.0
+
+Tipo de activo / Asset type antes de Marca, checkbox independiente, autoguardado y recuperación. Seis campos en la etiqueta. Tipo como encabezado; marca conserva el encabezado si se oculta o vacía Tipo. Ejemplo y capturas actualizados. Compatibilidad: trabajos anteriores mantienen sus valores y el nuevo campo vacío.
+
 ## 0.9.0 — 2026-11-01
 
 Brand / Marca sustituye Title; Model / Modelo separado. Nuevos Part number y MAC address con checkboxes y autoguardado. Migración de datos anteriores. config.json editable: tamaños por Id y valores iniciales validados. Repositorio GitHub, documentación y capturas en inglés/español.

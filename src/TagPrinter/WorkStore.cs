@@ -10,6 +10,8 @@ public record WorkState
     public int Code {get;init;}
     public int Mode {get;init;}
     public int Dpi {get;init;}
+    public string AssetType {get;init;}="";
+    public bool ShowAssetType {get;init;}=true;
     public string Brand {get;init;}="Dell";
     public string Model {get;init;}="22\" - H22203H";
     public string Serial {get;init;}="ABC123456";

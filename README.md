@@ -4,7 +4,7 @@ Windows desktop app for inventory labels / Aplicación de escritorio para etique
 
 **C# · WinForms · .NET 8 · Windows x64 · English / Español**
 
-![TagPrinter — five inventory fields](docs/images/tagprinter-en.png)
+![TagPrinter — six inventory fields](docs/images/tagprinter-en.png)
 
 ## Download / Descargar
 
@@ -16,7 +16,7 @@ Extrae todo el ZIP y abre **TagPrinter.exe**. Incluye .NET. Instala por separado
 
 ## Features / Funciones
 
-- Brand / Marca, Model / Modelo, Serial, Part number / No. de parte and MAC address / Dirección MAC, each with its own visibility checkbox.
+- Asset type / Tipo de activo, Brand / Marca, Model / Modelo, Serial, Part number / No. de parte and MAC address / Dirección MAC, each with its own visibility checkbox.
 - QR or Code 128 containing the serial. Hiding the printed serial does not change the code.
 - Label-size presets, custom dimensions, four layouts, font scaling, margins and print offsets.
 - Collapsible settings sections, English/Spanish UI, automatic save and restore of the last work.
@@ -50,7 +50,7 @@ powershell -ExecutionPolicy Bypass -File scripts/Test.ps1
 powershell -ExecutionPolicy Bypass -File scripts/Publish.ps1
 ```
 
-The publish script verifies the self-contained EXE and creates `artifacts/TagPrinter-v0.9-PORTABLE-Windows-x64.zip`. Generated output is not tracked in Git.
+The publish script verifies the self-contained EXE and creates `artifacts/TagPrinter-v0.10-PORTABLE-Windows-x64.zip`. Generated output is not tracked in Git.
 
 ## Documentation
 
@@ -72,3 +72,5 @@ La selección de impresora usa dispositivos instalados en Windows. ZPL directo r
 
 ZXing.Net 0.16.11 — Michael Jahn and contributors — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0), [project](https://github.com/micjahn/ZXing.Net).
 .NET runtime — Microsoft and contributors — [license and notices](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT).
+
+Tipo de activo / Asset type aparece antes de Marca y tiene checkbox y autoguardado. Ejemplo: Monitor / Dell / H22203H / ABC123 / ZYX123 / 00:1A:2B:3C:4D:5E. El código representa ABC123. En trabajos existentes el nuevo campo empieza vacío para no inventar el tipo; completa su valor cuando corresponda.
