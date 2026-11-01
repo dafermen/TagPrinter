@@ -1,86 +1,80 @@
 # TagPrinter
 
-Windows desktop app for inventory labels / Aplicación de escritorio para etiquetas de inventario.
+Windows desktop app for inventory labels and local reports / Aplicación de etiquetas de inventario e historial local.
 
-**C# · WinForms · .NET 8 · Windows x64 · English / Español**
+**C# · WinForms · .NET 8 · SQLite · Windows x64 · English / Español**
 
-![TagPrinter — six inventory fields](docs/images/tagprinter-en.png)
+![TagPrinter — labels](docs/images/tagprinter-en.png)
 
 ## Download / Descargar
 
 [Portable releases](https://github.com/dafermen/TagPrinter/releases/latest)
 
-Extract the entire ZIP and open **TagPrinter.exe**. .NET is included. Install your printer's Windows driver separately.
+Extract the entire ZIP and open **TagPrinter.exe**. .NET and SQLite are included. Install your printer's Windows driver separately.
 
-Extrae todo el ZIP y abre **TagPrinter.exe**. Incluye .NET. Instala por separado el controlador de tu impresora en Windows.
+Extrae todo el ZIP y abre **TagPrinter.exe**. Incluye .NET y SQLite; no requiere instalar un servidor de base de datos. El controlador de la impresora se instala por separado.
 
 ## Features / Funciones
 
-- Asset type / Tipo de activo, Brand / Marca, Model / Modelo, Serial, Part number / No. de parte and MAC address / Dirección MAC, each with its own visibility checkbox.
-- QR or Code 128 containing the serial. Hiding the printed serial does not change the code.
-- Label-size presets, custom dimensions, four layouts, font scaling, margins and print offsets.
-- Collapsible settings sections, English/Spanish UI, automatic save and restore of the last work.
-- **Export Tag**: complete PNG label. **Export Code**: standalone QR/barcode PNG with white quiet zones. ZPL export and Windows/RAW-ZPL printing.
-- Editable **config.json** for label sizes and startup defaults.
+- Asset type, brand, model, serial, part number and MAC address, each with a visibility checkbox.
+- QR / Code 128 containing the serial, label sizes, four layouts, font scaling, margins and print offsets.
+- **01 Asset details** collapsible and expanded at startup; sections 02–05 collapsed.
+- **New asset**, visible printer/copies summary, automatic save and restore of the last work.
+- **Export Tag**, **Export Code**, ZPL and Windows/RAW-ZPL printing.
+- **Reports** tab: search by serial or asset fields, optional local-date/action filters, sortable columns, recover a label by clicking its serial.
+- **SQLite history** of successful exports and print submissions, with a full design snapshot. Repeated serials are separate events.
+- CSV export of the current sorted/filtered view or all history, using `;` and UTF-8.
+- Database backup. GitHub icon at the bottom left with **About / Acerca de** tooltip.
 
-![TagPrinter — interfaz en español](docs/images/tagprinter-es.png)
+![TagPrinter — reports](docs/images/reports-en.png)
 
-## Configuration / Configuración
+## Quick test / Prueba rápida
 
-Edit **config.json beside TagPrinter.exe** and restart. In the source tree: [src/TagPrinter/config.json](src/TagPrinter/config.json).
+1. Complete a label and export it with Export Tag or Export Code.
+2. Open Reports: a new event should appear.
+3. Search the serial; click a column header to sort.
+4. Click its serial: the Labels tab loads the saved design. Review it and click Print yourself.
+5. Export view CSV or Back up database as needed.
 
-The file defines label sizes and initial language, DPI, layout, code type, font and margin. The last work is saved separately in `%LOCALAPPDATA%\InventoryLabels\settings.json` and takes precedence over startup defaults.
+El historial empieza con operaciones realizadas desde v0.13. No se reconstruyen etiquetas de versiones anteriores y no se incluyen datos de ejemplo en la base real.
 
-Consulta la [guía de config.json](docs/CONFIGURATION.md) para ejemplos, límites y prioridad de los ajustes.
+## Data and configuration
+
+| File | Location | Purpose |
+|---|---|---|
+| config.json | Beside the EXE | Label sizes and startup defaults |
+| settings.json | %LOCALAPPDATA%\InventoryLabels | Last work; compatible with older versions |
+| TagPrinter.db | %LOCALAPPDATA%\TagPrinter | Permanent event history and saved designs |
+
+Updates to the portable do not replace the history. Config defaults are overridden by the last work. See [configuration](docs/CONFIGURATION.md) and [history/reports](docs/HISTORY.md).
 
 ## Develop / Desarrollar
 
-Windows with .NET 8 SDK and a desktop development environment:
+Windows with .NET 8 SDK:
 
 ```powershell
 dotnet restore TagPrinter.sln
 dotnet build TagPrinter.sln -c Release
 dotnet run --project src/TagPrinter
-```
-
-Open `TagPrinter.sln` in Visual Studio, or run the commands above from this repository's root.
-
-```powershell
 powershell -ExecutionPolicy Bypass -File scripts/Test.ps1
 powershell -ExecutionPolicy Bypass -File scripts/Publish.ps1
 ```
 
-The publish script verifies the self-contained EXE and creates `artifacts/TagPrinter-v0.12-PORTABLE-Windows-x64.zip`. Generated output is not tracked in Git.
+The publish script verifies the self-contained EXE and creates `artifacts/TagPrinter-v0.13-PORTABLE-Windows-x64.zip`. Generated output and personal databases are excluded from Git.
 
 ## Documentation
 
-- [User guide / Guía de uso](docs/USER_GUIDE.md)
-- [Configuration / Configuración](docs/CONFIGURATION.md)
-- [Architecture / Arquitectura](docs/ARCHITECTURE.md)
-- [Validation / Validación](docs/VALIDATION.md)
-- [Changelog / Cambios](docs/CHANGELOG.md)
-- [Status / Estado](docs/STATUS.md)
-- [Roadmap / Próximos pasos](docs/ROADMAP.md)
+[User guide](docs/USER_GUIDE.md) · [History and reports](docs/HISTORY.md) · [Configuration](docs/CONFIGURATION.md) · [Architecture](docs/ARCHITECTURE.md) · [Validation](docs/VALIDATION.md) · [Changelog](docs/CHANGELOG.md) · [Status](docs/STATUS.md) · [Roadmap](docs/ROADMAP.md)
 
-## Limits / Límites
+## Limits
 
-**RFID chip encoding and verification are not implemented.** This version prints only the visible content. A successful spooler submission does not confirm physical printing. Print and scan one real sample before printing batches. Small labels may require fewer visible fields or smaller fonts.
+**RFID chip encoding and verification are not implemented.** Print submissions mean the app's print call completed; they do not confirm physical printing. Test a real sample before batches. A history load never prints automatically.
 
-La selección de impresora usa dispositivos instalados en Windows. ZPL directo requiere un modelo compatible. Las medidas y calibración deben comprobarse con el material real. No incluye importación de inventario ni historial de todos los trabajos.
+Los CSV conservan valores originales y fechas UTC; al importarlos, trata el serial y MAC como texto para mantener ceros iniciales. La tabla muestra fecha/hora local. No hay importación masiva de inventario ni borrado de registros en esta versión.
 
-## Dependencies
+## Dependencies and artwork
 
-ZXing.Net 0.16.11 — Michael Jahn and contributors — [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0), [project](https://github.com/micjahn/ZXing.Net).
-.NET runtime — Microsoft and contributors — [license and notices](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT).
-
-Tipo de activo / Asset type aparece antes de Marca y tiene checkbox y autoguardado. Ejemplo: Monitor / Dell / H22203H / ABC123 / ZYX123 / 00:1A:2B:3C:4D:5E. El código representa ABC123. En trabajos existentes el nuevo campo empieza vacío para no inventar el tipo; completa su valor cuando corresponda.
-
-El selector de idioma está en **05 Configuración / Settings**, contraída por defecto junto con 02, 03 y 04. Abre su encabezado para cambiarlo. La zona principal comienza con los datos del activo.
-
-## v0.12: trabajo diario
-
-**New asset / Nuevo activo** vacía los seis datos del activo y guarda el trabajo vacío, conservando impresora, copias, plantilla, idioma, tamaños, fuente, márgenes y checkboxes. No mantiene una copia del activo anterior ni un historial; exporta su etiqueta antes si necesitas conservarla.
-
-El resumen junto a los botones muestra siempre impresora, copias y método Windows/ZPL, aunque 04 esté contraída. Se actualiza al cambiar opciones o idioma.
-
-En **05 Configuración / Settings**, el enlace `github.com/dafermen/TagPrinter` abre el repositorio en el navegador predeterminado solo al pulsarlo.
+- ZXing.Net 0.16.11 — [project](https://github.com/micjahn/ZXing.Net), Apache-2.0.
+- Microsoft.Data.Sqlite 8.0.28 / SQLitePCLRaw — SQLite provider and native engine distributed through NuGet.
+- .NET runtime — [license and notices](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT).
+- GitHub mark from the [official brand assets](https://brand.github.com/foundations/logo), used only as a link to this project. GitHub marks are trademarks of GitHub, Inc.; no affiliation or endorsement is implied.

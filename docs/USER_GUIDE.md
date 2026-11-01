@@ -1,4 +1,4 @@
-# Guía de uso — TagPrinter 0.12
+# Guía de uso — TagPrinter 0.13
 
 ## Abrir
 
@@ -12,9 +12,9 @@ El serial es obligatorio: alimenta el QR o Code 128 incluso si ocultas su texto.
 
 Los textos visibles se redistribuyen. Si desmarcas todos, queda únicamente el código. Seis campos pueden no caber en etiquetas pequeñas; usa un tamaño mayor o desmarca los que no necesitas. No se recortan textos silenciosamente.
 
-## Secciones 02, 03, 04 y 05
+## Secciones plegables
 
-Comienzan contraídas. Pulsa el encabezado o usa Enter/Espacio con el foco en él para expandir. Contraerlas no cambia sus valores.
+01 Datos del activo empieza expandida y también se puede contraer. 02 a 05 comienzan contraídas. Pulsa el encabezado o usa Enter/Espacio con el foco en él para expandir. Contraerlas no cambia sus valores.
 
 - 02: tamaño de etiqueta (ancho × alto), medidas personalizadas, distribución y QR/Code 128. Los tamaños vienen de config.json.
 - 03: ajuste automático de texto o botones −/+ (manual, 50–200 %), margen 1–5 mm (inicial 2 mm), guía azul de vista previa y desplazamientos.
@@ -37,7 +37,7 @@ Selecciona la impresora real instalada en Windows. El método Windows usa su con
 
 ## Guardado automático
 
-Los cambios se guardan tras 600 ms, al cerrar, exportar o imprimir. La aplicación recupera solo el último trabajo, no un historial. Se conserva la ruta histórica %LOCALAPPDATA%\InventoryLabels\settings.json para compatibilidad.
+Los cambios se guardan tras 600 ms, al cerrar, exportar o imprimir. El formulario recupera el último trabajo; el historial independiente está en SQLite y se consulta en Reportes. Se conserva la ruta histórica %LOCALAPPDATA%\InventoryLabels\settings.json para compatibilidad.
 
 Los antiguos Title / ShowTitle migran a Brand / ShowBrand sin borrar valores. Revisa la marca después de actualizar, ya que el contenido antiguo podría ser un tipo de equipo como «Monitor».
 
@@ -55,4 +55,8 @@ El selector de idioma está en **05 Configuración / Settings**, contraída por 
 
 El resumen junto a los botones muestra siempre impresora, copias y método Windows/ZPL, aunque 04 esté contraída. Se actualiza al cambiar opciones o idioma.
 
-En **05 Configuración / Settings**, el enlace `github.com/dafermen/TagPrinter` abre el repositorio en el navegador predeterminado solo al pulsarlo.
+El icono de GitHub está siempre visible en la esquina inferior izquierda. Su tooltip es Acerca de / About y abre el repositorio al pulsarlo. Ya no está dentro de 05.
+
+## v0.13: pestaña Reportes
+
+Exporta una etiqueta o código, abre Reportes y busca su serial. La tabla admite filtros y ordenación. Pulsa el serial para recuperar el diseño y volver a Etiquetas, revisa y pulsa Imprimir. Usa Exportar vista CSV, Exportar todo CSV o Copia de seguridad. [Guía completa del historial](HISTORY.md). El historial comienza con nuevas operaciones de v0.13 y nunca implica confirmación de impresión física.

@@ -5,6 +5,7 @@
 | Archivo | Ubicación | Uso |
 |---|---|---|
 | config.json | Junto a TagPrinter.exe; fuente: src/TagPrinter/config.json | Catálogo de tamaños y valores iniciales; editable manualmente |
+| TagPrinter.db | %LOCALAPPDATA%\TagPrinter | Historial SQLite y diseños generados |
 | settings.json | %LOCALAPPDATA%\InventoryLabels | Último trabajo, valores de los campos y preferencias; guardado automático |
 
 Cierra la aplicación, edita config.json y vuelve a abrirla. No pongas contraseñas ni datos de inventario en el archivo del proyecto. El archivo publicado en GitHub contiene solo ejemplos generales.
@@ -55,3 +56,5 @@ Los Defaults se aplican al iniciar sin trabajo guardado. Si hay un trabajo, se r
 Los tamaños se guardan por Id. Puedes reordenarlos sin cambiar la selección anterior. Si eliminas el tamaño seleccionado, sus últimas dimensiones se recuperan como Personalizado. Si modificas las medidas de un Id existente, se usan las medidas actualizadas del catálogo. Conserva Id estables y cambia LabelPresetId si eliminas el predeterminado.
 
 El catálogo siempre se toma del config.json de esa instalación. No requiere conexión a internet ni modifica los tamaños del controlador Windows.
+
+La ubicación del historial está fuera del portable y es independiente de config.json. Reportes incluye copia de seguridad y CSV. Consulta HISTORY.md.

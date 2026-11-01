@@ -25,6 +25,7 @@ public static class SelfTest
         TestFieldVisibility(folder);
         TestConfigurationAndAssetFields(folder);
         TestAssetType(folder);
+        TestHistory(folder);
         string statePath=Path.Combine(folder,"test-work.json");
         var work=new WorkState{AssetType="Laptop",ShowAssetType=false,Brand="Laptop",Model="Dell Latitude",Serial="TEST/123",Size=6,Width=65,Height=35,Layout=3,Code=1,Dpi=1,Copies=4,Language="es",AutoFont=false,FontPercent=70,MarginMm=3,OffsetXmm=.5m,OffsetYmm=-.5m,ShowBrand=false,ShowModel=true,ShowSerialText=false,PartNumber="PN-DEMO-001",MacAddress="00:11:22:33:44:55",ShowPartNumber=false,ShowMacAddress=false};
         WorkStore.Save(statePath,work);
@@ -36,7 +37,11 @@ public static class SelfTest
             if(!form.CaptureWork().ShowBrand || !form.CaptureWork().ShowModel || !form.CaptureWork().ShowSerialText || form.CaptureWork().Layout!=3 || form.CaptureWork().Language!="en")throw new Exception("Defaults mismatch");
             form.Show();Application.DoEvents();
             if(form.templateSection.Expanded || form.textSection.Expanded || form.printingSection.Expanded || form.settingsSection.Expanded)throw new Exception("Sections must start collapsed");
+            if(!form.assetSection.Expanded || form.AboutTooltip!="About")throw new Exception("Asset section or About tooltip default incorrect");
             var before=form.CaptureWork();
+            form.assetSection.Toggle();Application.DoEvents();
+            if(form.assetSection.Expanded || form.assetSection.Body.Visible || form.CaptureWork()!=before)throw new Exception("Asset details cannot collapse safely");
+            form.assetSection.Toggle();
             form.templateSection.Toggle();form.textSection.Toggle();form.printingSection.Toggle();form.settingsSection.Toggle();Application.DoEvents();
             if(!form.templateSection.Expanded || !form.textSection.Expanded || !form.printingSection.Expanded || !form.settingsSection.Expanded || !form.templateSection.Body.Visible || !form.textSection.Body.Visible || !form.printingSection.Body.Visible || !form.settingsSection.Body.Visible)throw new Exception("Sections did not expand");
             form.templateSection.Toggle();form.textSection.Toggle();form.printingSection.Toggle();form.settingsSection.Toggle();Application.DoEvents();
@@ -65,7 +70,7 @@ public static class SelfTest
             var restored=reopened.CaptureWork();
             if(restored.Serial!="ABC12345644" || restored.Language!="es" || restored.Layout!=3 || restored.Copies!=4 || restored.AutoFont || restored.FontPercent!=70 || restored.MarginMm!=3 || restored.OffsetXmm!=.5m || restored.OffsetYmm!=-.5m || restored.ShowBrand || !restored.ShowModel || restored.ShowSerialText || restored.PartNumber!="PN-DEMO-001" || restored.MacAddress!="00:11:22:33:44:55" || restored.ShowPartNumber || restored.ShowMacAddress || restored.AssetType!="Laptop" || restored.ShowAssetType)throw new Exception("UI restore failed");
         }
-        File.WriteAllText(Path.Combine(folder,"results.txt"),$"PASS: {count} etiquetas generadas y decodificadas (2 tamaños × 2 resoluciones × 4 plantillas × 2 tipos). Serial vacío rechazado. Persistencia de trabajo/idioma, reapertura y nombres de archivo comprobados. Fuente manual/automática, márgenes, guías y desplazamientos comprobados. ZPL con dimensiones y cantidad comprobados. Exportación independiente QR/Code 128 y nombres de archivo comprobados. Visibilidad de campos: 32 combinaciones decodificadas y preferencias restauradas. Campos P/N y MAC, configuración JSON y migración Title/Brand comprobados. Tipo de activo, seis campos, visibilidad y persistencia comprobados. Nuevo activo y resumen de impresión comprobados. No se envió ningún trabajo a impresoras.");
+        File.WriteAllText(Path.Combine(folder,"results.txt"),$"PASS: {count} etiquetas generadas y decodificadas (2 tamaños × 2 resoluciones × 4 plantillas × 2 tipos). Serial vacío rechazado. Persistencia de trabajo/idioma, reapertura y nombres de archivo comprobados. Fuente manual/automática, márgenes, guías y desplazamientos comprobados. ZPL con dimensiones y cantidad comprobados. Exportación independiente QR/Code 128 y nombres de archivo comprobados. Visibilidad de campos: 32 combinaciones decodificadas y preferencias restauradas. Campos P/N y MAC, configuración JSON y migración Title/Brand comprobados. Tipo de activo, seis campos, visibilidad y persistencia comprobados. Nuevo activo y resumen de impresión comprobados. SQLite, búsqueda, filtros, CSV, backup, exportaciones y recuperación histórica comprobados. No se envió ningún trabajo a impresoras.");
     }
     static void TestTypographyAndMargins(string folder)
     {
@@ -266,4 +271,71 @@ public static class SelfTest
         if(WorkStore.Load(legacy).AssetType!="")throw new Exception("Invented asset type for existing work");
     }
 
+    static void TestHistory(string folder)
+    {
+        string testFolder=Path.Combine(folder,"history-"+Guid.NewGuid());Directory.CreateDirectory(testFolder);
+        var store=new HistoryStore(Path.Combine(testFolder,"TagPrinter.db"));
+        var state=new WorkState{AssetType="Monitor",Brand="Dell",Model="Text; \"quote\"\r\nsecond line",Serial="000123",PartNumber="PN-01",MacAddress="00:1A:2B:3C:4D:5E",Width=100,Height=50,MarginMm=3,OffsetXmm=.5m,ShowMacAddress=false,Copies=2,Code=1,Printer="Missing-Test-Printer",LabelPresetId="100x50"};
+        var firstTime=DateTimeOffset.Parse("2026-10-31T23:59:59Z");
+        long first=store.Add("ExportTag",state,"test.png",timestamp:firstTime);
+        long second=store.Add("PrintSubmitted",state,sourceEventId:first,timestamp:firstTime.AddSeconds(1));
+        if(first==second || store.Query().Count!=2 || store.Get(first)?.State!=state || store.Get(second)?.SourceEventId!=first)throw new Exception("History append/snapshot failed");
+        if(store.Query(new("000123","serial")).Count!=2 || store.Query(new("Dell","brand")).Count!=2 || store.Query(new("Dell","model")).Count!=0)throw new Exception("History field search failed");
+        if(store.Query(new(Action:"PrintSubmitted")).Count!=1 || store.Query(new(FromUtc:firstTime,ToUtcExclusive:firstTime.AddSeconds(1))).Count!=1)throw new Exception("History action/date filter failed");
+        store.Add("ExportCode",state with {Serial="A_B%123"});
+        if(store.Query(new("A_B%","serial")).Count!=1 || store.Query(new("%' OR 1=1--")).Count!=0)throw new Exception("Search escaping failed");
+        string csv=Path.Combine(testFolder,"roundtrip.csv");HistoryStore.ExportCsv(csv,store.Query());
+        using(var parser=new Microsoft.VisualBasic.FileIO.TextFieldParser(csv,System.Text.Encoding.UTF8))
+        {
+            parser.SetDelimiters(";");parser.HasFieldsEnclosedInQuotes=true;
+            var header=parser.ReadFields()!;var fields=parser.ReadFields()!;
+            if(header.Length!=17 || fields[3]!="A_B%123" || fields[6]!=state.Model || System.Text.Json.JsonSerializer.Deserialize<WorkState>(fields[16])!=state with {Serial="A_B%123"})throw new Exception("CSV quoting/state roundtrip failed");
+        }
+        string backup=Path.Combine(testFolder,"backup.db");store.Backup(backup);
+        if(new HistoryStore(backup).Query().Count!=3)throw new Exception("SQLite backup did not preserve history");
+        try{store.Backup(store.DatabasePath);throw new Exception("Backup overwrote live database");}catch(ArgumentException){}
+        if(new HistoryStore(store.DatabasePath).Query().Count!=3)throw new Exception("History was not durable");
+        var config=AppConfig.CreateDefault() with {LabelSizes=AppConfig.CreateDefault().LabelSizes.Select(p=>p.Id=="100x50"?p with {WidthMm=120,HeightMm=70}:p).ToList()};
+        using(var form=new MainForm(Path.Combine(testFolder,"work.json"),config,store.DatabasePath))
+        {
+            form.Show();Application.DoEvents();form.ShowReports();
+            if(form.Reports.VisibleRows().Count!=3)throw new Exception("Reports starts with unintended date filter");
+            form.Reports.Grid.Sort(form.Reports.Grid.Columns["Id"],System.ComponentModel.ListSortDirection.Ascending);
+            if(form.Reports.VisibleRows()[0].Id!=first)throw new Exception("Report sorting/export order failed");
+            int before=store.Query().Count;form.Reports.OpenRecordForTest(first);
+            var restored=form.CaptureWork();
+            if(!form.ShowingLabel || restored.Width!=100 || restored.Height!=50 || restored.LabelPresetId!="custom" || restored.Model!=state.Model || restored.MarginMm!=3 || restored.ShowMacAddress || restored.Printer!="" || store.Query().Count!=before)throw new Exception("Historical recovery changed design or printed automatically");
+            form.ExportTagFile(Path.Combine(testFolder,"actual-tag.png"));
+            var tag=store.Query()[0];if(tag.Action!="ExportTag" || tag.SourceEventId!=first || tag.State.Serial!="000123")throw new Exception("Tag export was not recorded");
+            form.ExportCodeFile(Path.Combine(testFolder,"actual-code.png"));
+            form.ExportTagFile(Path.Combine(testFolder,"actual.zpl"),true);
+            if(store.Query().Count!=before+3 || store.Query()[0].Action!="ExportZpl")throw new Exception("Successful exports missing history");
+            int successful=store.Query().Count;
+            try{form.ExportCodeFile(Path.Combine(testFolder,"missing-dir","code.png"));throw new Exception("Bad export path accepted");}catch(Exception ex) when(ex is System.Runtime.InteropServices.ExternalException or DirectoryNotFoundException){}
+            if(store.Query().Count!=successful)throw new Exception("Failed export was logged as success");
+            form.StartNewAsset();
+            try{form.ExportCodeFile(Path.Combine(testFolder,"empty.png"));throw new Exception("Blank export accepted");}catch(ArgumentException){}
+            if(store.Query().Count!=successful)throw new Exception("Preview, clear or invalid export created history");
+            form.Restore(new WorkState{AssetType="Monitor",Brand="Dell",Model="H22203H",Serial="ABC123",PartNumber="ZYX123",MacAddress="00:1A:2B:3C:4D:5E",Code=1});
+            form.ExportTagFile(Path.Combine(testFolder,"sample-label.png"));
+            form.ShowReports();
+            if(form.Reports.VisibleRows().Count!=store.Query().Count)throw new Exception("Restoring a label unexpectedly enabled date filters");
+            form.Restore(form.CaptureWork() with {Language="es"});form.ShowReports();
+            if(form.Reports.VisibleRows().Count!=store.Query().Count || form.AboutTooltip!="Acerca de")throw new Exception("Language change modified filters or About tooltip");
+            form.Close();
+        }
+        using(var demo=new MainForm(Path.Combine(testFolder,"demo-work.json"),AppConfig.CreateDefault(),Path.Combine(testFolder,"demo.db")))
+        {
+            demo.Show();
+            demo.Restore(new WorkState{AssetType="Monitor",Brand="Dell",Model="H22203H",Serial="ABC123",PartNumber="ZYX123",MacAddress="00:1A:2B:3C:4D:5E",Code=1});
+            demo.ExportTagFile(Path.Combine(testFolder,"demo-monitor.png"));demo.ExportCodeFile(Path.Combine(testFolder,"demo-qr.png"));
+            demo.Restore(new WorkState{AssetType="Laptop",Brand="Lenovo",Model="ThinkPad T14",Serial="LT000456",PartNumber="T14-DEMO",MacAddress="00:11:22:33:44:55"});demo.ExportTagFile(Path.Combine(testFolder,"demo-laptop.png"));
+            demo.ShowReports();Application.DoEvents();
+            using(var capture=new Bitmap(demo.Width,demo.Height)){demo.DrawToBitmap(capture,new Rectangle(Point.Empty,demo.Size));capture.Save(Path.Combine(folder,"reports-en.png"));}
+            demo.Restore(demo.CaptureWork() with {Language="es"});demo.ShowReports();Application.DoEvents();
+            if(demo.Reports.VisibleRows().Count!=3)throw new Exception("Language change unexpectedly filtered demo reports");
+            using(var capture=new Bitmap(demo.Width,demo.Height)){demo.DrawToBitmap(capture,new Rectangle(Point.Empty,demo.Size));capture.Save(Path.Combine(folder,"reports-es.png"));}
+            demo.Close();
+        }
+    }
 }

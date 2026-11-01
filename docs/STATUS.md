@@ -1,21 +1,9 @@
 # Estado
 
-Versión 0.12.0. Proyecto: C:\Projects\TagPrinter. Repositorio: https://github.com/dafermen/TagPrinter.
+Versión 0.13.0 — C:\Projects\TagPrinter — https://github.com/dafermen/TagPrinter.
 
-Completado: seis campos con visibilidad individual, Brand en lugar de Title, migración de trabajos anteriores, configuración JSON de tamaños/defaults, imágenes y documentación bilingüe, impresión/exportación y portable autocontenido.
+Completado: sección 01 plegable/expandida; historial SQLite de operaciones con fecha y diseño; Reportes con búsqueda, acciones/fechas, ordenación, CSV filtrado/completo y backup; recuperación por serial sin impresión automática; icono GitHub inferior izquierdo con tooltip bilingüe. Se conservan las funciones previas de etiquetas, configuración y último trabajo.
 
-Los valores de ejemplo de las capturas son sintéticos. El código utiliza siempre el serial. P/N y MAC vacíos no ocupan filas. Configuración general y último trabajo están separados.
+Las pruebas/capturas usan datos sintéticos aislados. La base real empieza vacía y fuera del portable. No se importan automáticamente etiquetas antiguas.
 
-Pendiente: validar hardware real y definir/implementar grabación/verificación RFID. No hay importación de inventario ni historial completo.
-
-Tipo de activo / Asset type aparece antes de Marca y tiene checkbox y autoguardado. Ejemplo: Monitor / Dell / H22203H / ABC123 / ZYX123 / 00:1A:2B:3C:4D:5E. El código representa ABC123. En trabajos existentes el nuevo campo empieza vacío para no inventar el tipo; completa su valor cuando corresponda.
-
-El selector de idioma está en **05 Configuración / Settings**, contraída por defecto junto con 02, 03 y 04. Abre su encabezado para cambiarlo. La zona principal comienza con los datos del activo.
-
-## v0.12: trabajo diario
-
-**New asset / Nuevo activo** vacía los seis datos del activo y guarda el trabajo vacío, conservando impresora, copias, plantilla, idioma, tamaños, fuente, márgenes y checkboxes. No mantiene una copia del activo anterior ni un historial; exporta su etiqueta antes si necesitas conservarla.
-
-El resumen junto a los botones muestra siempre impresora, copias y método Windows/ZPL, aunque 04 esté contraída. Se actualiza al cambiar opciones o idioma.
-
-En **05 Configuración / Settings**, el enlace `github.com/dafermen/TagPrinter` abre el repositorio en el navegador predeterminado solo al pulsarlo.
+Pendiente: prueba de impresión física del usuario, RFID, importación de inventario y eventual paginación de historiales grandes. No hay confirmación física de impresión ni borrado/edición del historial.

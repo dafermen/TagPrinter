@@ -1,7 +1,10 @@
 # Próximos pasos
 
-1. Validar impresión y escaneo con el hardware real.
-2. Definir identificadores/memoria RFID e implementar codificación y verificación en la ZD621R.
-3. Evaluar importación e historial al concretar el flujo de inventario.
+Completado en v0.13: SQLite, Reportes, CSV, recuperación para reimpresión, 01 plegable y enlace GitHub como icono.
 
-No forman parte de la versión 0.4.
+Pendiente:
+
+1. Validar impresión y escaneo con hardware real.
+2. Definir identificadores/memoria RFID e implementar codificación y verificación.
+3. Evaluar importación de inventario y paginación para historiales grandes.
+4. Evaluar restauración de backups desde la interfaz y sincronización solo si se concreta la necesidad.

@@ -1,5 +1,9 @@
 # Cambios
 
+## 0.13.0
+
+01 plegable y expandida al iniciar. Historial SQLite con instantáneas de exportaciones/envíos, sin sobrescribir seriales repetidos. Pestaña Reportes: búsqueda, acción/fechas, ordenación, recuperación por serial, CSV vista/todo y backup. Enlace de proyecto sustituido por icono GitHub inferior izquierdo con tooltip About / Acerca de. Localización no modifica filtros de fecha.
+
 ## 0.12.0
 
 Nuevo activo limpia datos y conserva preferencias; guardado inmediato. Resumen visible de impresora, copias y método junto a Imprimir. Enlace al proyecto GitHub en 05 Configuración. Capturas y documentación actualizadas.

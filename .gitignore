@@ -7,3 +7,6 @@ artifacts/
 *.suo
 settings.json
 settings.json.tmp
+*.db
+*.db-wal
+*.db-shm

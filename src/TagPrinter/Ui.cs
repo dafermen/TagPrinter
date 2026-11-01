@@ -78,7 +78,11 @@ public static class Ui
                 finally {combo.EndUpdate();}
             }
         }
-        else if(root is not TextBox && root is not NumericUpDown)root.Text=TranslateText(root.Text);
+        else if(root is not TextBox && root is not NumericUpDown && root is not DateTimePicker)
+        {
+            string translated=TranslateText(root.Text);
+            if(translated!=root.Text)root.Text=translated;
+        }
         foreach(Control child in root.Controls)Translate(child);
     }
 }

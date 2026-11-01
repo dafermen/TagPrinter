@@ -47,3 +47,9 @@ La sección 05 está incluida en las comprobaciones de inicio/reapertura contra�
 ## v0.12
 
 Comprobación de que Nuevo activo limpia solo los seis valores y los guarda, conserva el resto del WorkState y mantiene copias/método en el resumen. Verificación de URL fija sin abrir el navegador en las pruebas. Se mantienen las pruebas de render/exportación/persistencia.
+
+## v0.13
+
+Pruebas reales con SQLite nativo: eventos duplicados, persistencia, snapshots, vínculos origen, búsquedas parametrizadas por campo, comodines literales, inyección como texto, acciones, límites UTC inclusivo/exclusivo, CSV reabierto con TextFieldParser (comillas/punto y coma/saltos de línea/JSON), backup reabierto y rechazo de destino activo.
+
+Integración: exportaciones PNG/código/ZPL crean eventos; rutas inválidas, serial vacío, cambios de formulario y Nuevo activo no crean éxitos. Reportes ordena y exporta en ese orden, recupera dimensiones históricas pese a cambios en config.json, no imprime al cargar y no usa silenciosamente una impresora ausente. Cambiar idioma conserva filtros desactivados. 01 se expande/contrae sin alterar datos; tooltip About/Acerca de. Capturas de Labels/Reports con tres eventos sintéticos. No se abrió navegador ni se envió impresión física en las pruebas.

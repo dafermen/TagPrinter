@@ -2,7 +2,7 @@ using System.Drawing.Printing;
 using System.Text.Json;
 namespace TagPrinter;
 
-public class MainForm : Form
+public partial class MainForm : Form
 {
     internal const string ProjectUrl="https://github.com/dafermen/TagPrinter";
     readonly Label printSummary=new(){Dock=DockStyle.Fill,AutoEllipsis=true,Padding=new Padding(0,5,0,0),ForeColor=Color.FromArgb(35,65,100)};
@@ -28,28 +28,29 @@ public class MainForm : Form
     readonly Label fontValue=new(){AutoSize=true,Padding=new Padding(6)};
     readonly NumericUpDown margin=Number(1,5,2), offsetX=Number(-5,5,0), offsetY=Number(-5,5,0);
     int fontPercent=100, effectiveFontPercent=100;
-    internal readonly CollapsibleSection templateSection, textSection, printingSection, settingsSection;
+    internal readonly CollapsibleSection assetSection, templateSection, textSection, printingSection, settingsSection;
     bool ready, translating;
     static ComboBox Combo()=>new(){DropDownStyle=ComboBoxStyle.DropDownList};
     static NumericUpDown Number(decimal min,decimal max,decimal value)=>new(){Minimum=min,Maximum=max,Value=value,DecimalPlaces=0};
-    public MainForm(string? configPath=null, AppConfig? configuration=null)
+    public MainForm(string? configPath=null, AppConfig? configuration=null,string? historyPath=null)
     {
         config=configPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"InventoryLabels","settings.json");
+        history=new HistoryStore(historyPath ?? (configPath is not null?Path.ChangeExtension(configPath,".db"):Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"TagPrinter","TagPrinter.db")));
         appConfig=configuration ?? AppConfig.Load(Path.Combine(AppContext.BaseDirectory,"config.json"));
         Ui.Language=appConfig.Defaults.Language;
-        Text="TagPrinter | v0.12";
+        Text="TagPrinter | v0.13";
         using var iconStream=typeof(MainForm).Assembly.GetManifestResourceStream("TagPrinter.TagPrinter.ico");
         if(iconStream is not null)Icon=new Icon(iconStream); Width=1160; Height=850; MinimumSize=new Size(980,720);
         Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;
-        var root=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=2,Padding=new Padding(20)};
+        var root=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=2,Padding=new Padding(20,12,20,12)};
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,380)); root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
         var fields=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,AutoScroll=true,Padding=new Padding(0,0,20,0)};
         fields.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
         var target=fields;
-        void Heading(string text) { target.Controls.Add(new Label {Text=text,AutoSize=true,Font=new Font(Font,FontStyle.Bold),Margin=new Padding(0,14,0,6)}); }
         void Field(string label,Control control) { target.Controls.Add(new Label{Text=label,AutoSize=true,Margin=new Padding(0,5,0,3)}); control.Dock=DockStyle.Top; target.Controls.Add(control); }
         language.Items.AddRange(["English","Español"]);language.SelectedIndex=0;
-        Heading(Ui.T("01  Datos del activo","01  Asset details"));
+        assetSection=new CollapsibleSection(Ui.T("01  Datos del activo","01  Asset details")){Expanded=true};
+        fields.Controls.Add(assetSection);target=assetSection.Body;
         void TextField(CheckBox check,string caption,TextBox input)
         {
             check.Text=caption;check.Margin=new Padding(0,5,0,3);target.Controls.Add(check);
@@ -100,9 +101,6 @@ public class MainForm : Form
         settingsSection=new CollapsibleSection(Ui.T("05  Configuración","05  Settings"));
         fields.Controls.Add(settingsSection);target=settingsSection.Body;
         Field(Ui.T("Idioma","Language"),language);
-        var projectLink=new LinkLabel{Text="github.com/dafermen/TagPrinter",AutoSize=true,AccessibleName=Ui.T("Proyecto en GitHub","Project on GitHub")};
-        projectLink.LinkClicked+=(_,_)=>Guard(()=>System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(ProjectUrl){UseShellExecute=true}));
-        Field(Ui.T("Proyecto","Project"),projectLink);
         var right=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=5,Padding=new Padding(16,0,0,0)};
         right.RowStyles.Add(new RowStyle(SizeType.Absolute,48));right.RowStyles.Add(new RowStyle(SizeType.Absolute,46));right.RowStyles.Add(new RowStyle(SizeType.Percent,100));right.RowStyles.Add(new RowStyle(SizeType.Absolute,74));right.RowStyles.Add(new RowStyle(SizeType.Absolute,128));
         right.Controls.Add(new Label{Text=Ui.T("Vista de la plantilla","Template preview"),Font=new Font("Segoe UI",20,FontStyle.Bold),AutoSize=true});
@@ -117,7 +115,7 @@ public class MainForm : Form
         var codeExport=new Button{Text=Ui.T("Exportar código","Export Code"),AutoSize=true};
         codeExport.Click+=(_,_)=>Guard(ExportCode);
         export.Click+=(_,_)=>Guard(()=>Export(false));zpl.Click+=(_,_)=>Guard(()=>Export(true));print.Click+=(_,_)=>Guard(Print);buttons.Controls.AddRange([export,codeExport,zpl,print]);actionArea.Controls.Add(buttons,0,1);right.Controls.Add(actionArea);
-        root.Controls.Add(fields,0,0);root.Controls.Add(right,1,0);Controls.Add(root);Controls.Add(status);
+        root.Controls.Add(fields,0,0);root.Controls.Add(right,1,0);InitializeWorkspace(root);
         sizes.SelectedIndex=appConfig.LabelSizes.FindIndex(p=>p.Id==appConfig.Defaults.LabelPresetId);
         layout.SelectedIndex=appConfig.Defaults.Layout;code.SelectedIndex=appConfig.Defaults.Qr?1:0;mode.SelectedIndex=0;dpi.SelectedIndex=appConfig.Defaults.Dpi==300?1:0;
         margin.Value=appConfig.Defaults.MarginMm;autoFont.Checked=appConfig.Defaults.AutoFont;fontPercent=appConfig.Defaults.FontPercent;
@@ -127,15 +125,16 @@ public class MainForm : Form
         foreach(var c in new[]{layout,code,mode,dpi})c.SelectedIndexChanged+=(_,_)=>UpdatePreview();
         sizes.SelectedIndexChanged+=(_,_)=>ApplySize(); width.ValueChanged+=(_,_)=>UpdatePreview();height.ValueChanged+=(_,_)=>UpdatePreview();
         language.SelectedIndex=Ui.Language=="es"?1:0;
-        language.SelectedIndexChanged+=(_,_)=>{if(translating)return;translating=true;bool active=ready;ready=false;try{Ui.Language=language.SelectedIndex==1?"es":"en";Ui.Translate(this);}finally{ready=active;translating=false;}UpdatePreview();if(ready)SaveConfig();};
+        language.SelectedIndexChanged+=(_,_)=>{if(translating)return;translating=true;bool active=ready;ready=false;try{Ui.Language=language.SelectedIndex==1?"es":"en";Ui.Translate(this);UpdateChrome();}finally{ready=active;translating=false;}UpdatePreview();if(ready)SaveConfig();};
         autoFont.CheckedChanged+=(_,_)=>UpdatePreview();showGuides.CheckedChanged+=(_,_)=>UpdatePreview();
         foreach(var number in new[]{margin,offsetX,offsetY})number.ValueChanged+=(_,_)=>UpdatePreview();
         copies.ValueChanged+=(_,_)=>{UpdatePrintSummary();ScheduleSave();};printers.SelectedIndexChanged+=(_,_)=>{UpdatePrintSummary();ScheduleSave();};
         autosave.Tick+=(_,_)=>{autosave.Stop();SaveConfig();};
-        FormClosing+=(_,_)=>SaveConfig();Ui.Translate(this);ready=true;ApplySize();
+        FormClosing+=(_,_)=>SaveConfig();Ui.Translate(this);UpdateChrome();ready=true;ApplySize();
     }
     internal void StartNewAsset()
     {
+        sourceHistoryId=null;assetSection.Expanded=true;
         bool active=ready;ready=false;
         foreach(var input in new[]{assetType,brand,model,serial,partNumber,macAddress})input.Clear();
         ready=active;UpdatePreview();SaveConfig();assetType.Focus();
@@ -198,7 +197,7 @@ public class MainForm : Form
     }
     void Print()
     {
-        using var image=LabelRenderer.Render(Data());using var doc=Document();
+        var snapshot=GenerationState();using var image=LabelRenderer.Render(Data());using var doc=Document();
         if(mode.SelectedIndex==1) RawPrinter.Send(printers.Text,LabelRenderer.ToZpl(image,(int)copies.Value));
         else
         {
@@ -213,20 +212,19 @@ public class MainForm : Form
             };
             doc.Print();
         }
+        RecordGeneration("PrintSubmitted","",snapshot);
         SaveConfig();status.Text=string.Format(Ui.T("Enviado a {0}: {1} etiqueta(s). No confirma impresión física ni RFID.","Sent to {0}: {1} label(s). This does not confirm physical printing or RFID."),printers.Text,copies.Value);
     }
     void Export(bool zpl)
     {
-        using var image=LabelRenderer.Render(Data());using var dialog=new SaveFileDialog{Filter=zpl?"ZPL|*.zpl":Ui.T("Imagen PNG|*.png","PNG image|*.png"),FileName=SafeFileName(serial.Text)+(zpl?".zpl":".png")};
+        using var dialog=new SaveFileDialog{Filter=zpl?"ZPL|*.zpl":Ui.T("Imagen PNG|*.png","PNG image|*.png"),FileName=SafeFileName(serial.Text)+(zpl?".zpl":".png")};
         if(dialog.ShowDialog(this)!=DialogResult.OK)return;
-        if(zpl)File.WriteAllText(dialog.FileName,LabelRenderer.ToZpl(image,(int)copies.Value),System.Text.Encoding.ASCII);else image.Save(dialog.FileName,System.Drawing.Imaging.ImageFormat.Png);
-        SaveConfig();
+        ExportTagFile(dialog.FileName,zpl);
     }
     internal static string CodeFileName(string serial,bool qr)=>SafeFileName(serial)+(qr?"_QR.png":"_barcode.png");
     void ExportCode()
     {
         bool qr=code.SelectedIndex==1;
-        using var image=CodeRenderer.Render(serial.Text.Trim(),qr,int.Parse(dpi.Text));
         using var dialog=new SaveFileDialog
         {
             Title=Ui.T("Exportar código","Export Code"),
@@ -234,8 +232,7 @@ public class MainForm : Form
             FileName=CodeFileName(serial.Text,qr),DefaultExt="png",AddExtension=true
         };
         if(dialog.ShowDialog(this)!=DialogResult.OK)return;
-        image.Save(dialog.FileName,System.Drawing.Imaging.ImageFormat.Png);
-        SaveConfig();
+        ExportCodeFile(dialog.FileName);
         status.Text=Ui.T("Código exportado con zona blanca de lectura.","Code exported with a white quiet zone.");
     }
     internal static string SafeFileName(string value)
@@ -263,7 +260,7 @@ public class MainForm : Form
         showGuides.Checked=s.ShowGuides;autoFont.Checked=s.AutoFont;fontPercent=Math.Clamp(s.FontPercent,50,200);margin.Value=Math.Clamp(s.MarginMm,1,5);offsetX.Value=Math.Clamp(s.OffsetXmm,-5,5);offsetY.Value=Math.Clamp(s.OffsetYmm,-5,5);
         brand.Text=s.Brand;model.Text=s.Model;serial.Text=s.Serial;copies.Value=Math.Clamp(s.Copies,1,999);Ui.Language=s.Language=="es"?"es":"en";
         language.SelectedIndex=Ui.Language=="es"?1:0;
-        ready=wasReady;if(ready){Ui.Translate(this);ApplySize();}
+        ready=wasReady;if(ready){Ui.Translate(this);UpdateChrome();ApplySize();}
     }
     internal void SaveConfig()
     {
@@ -275,5 +272,5 @@ public class MainForm : Form
         try {if(File.Exists(config))Restore(WorkStore.Load(config));}
         catch{status.Text=Ui.T("No se pudo recuperar el trabajo anterior.","Could not restore previous work.");}
     }
-    protected override void Dispose(bool disposing) {if(disposing){autosave.Dispose();preview.Image?.Dispose();}base.Dispose(disposing);}
+    protected override void Dispose(bool disposing) {if(disposing){autosave.Dispose();aboutTip.Dispose();aboutButton.Image?.Dispose();preview.Image?.Dispose();}base.Dispose(disposing);}
 }
