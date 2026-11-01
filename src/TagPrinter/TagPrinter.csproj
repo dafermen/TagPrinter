@@ -8,7 +8,7 @@
     <AssemblyName>TagPrinter</AssemblyName>
     <RootNamespace>TagPrinter</RootNamespace>
     <ApplicationIcon>TagPrinter.ico</ApplicationIcon>
-    <Version>0.10.0</Version>
+    <Version>0.11.0</Version>
     <Product>TagPrinter</Product>
   </PropertyGroup>
   <ItemGroup><PackageReference Include="ZXing.Net" Version="0.16.11" /></ItemGroup>

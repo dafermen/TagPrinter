@@ -1,4 +1,4 @@
-# Guía de uso — TagPrinter 0.10
+# Guía de uso — TagPrinter 0.11
 
 ## Abrir
 
@@ -12,13 +12,14 @@ El serial es obligatorio: alimenta el QR o Code 128 incluso si ocultas su texto.
 
 Los textos visibles se redistribuyen. Si desmarcas todos, queda únicamente el código. Seis campos pueden no caber en etiquetas pequeñas; usa un tamaño mayor o desmarca los que no necesitas. No se recortan textos silenciosamente.
 
-## Secciones 02, 03 y 04
+## Secciones 02, 03, 04 y 05
 
 Comienzan contraídas. Pulsa el encabezado o usa Enter/Espacio con el foco en él para expandir. Contraerlas no cambia sus valores.
 
 - 02: tamaño de etiqueta (ancho × alto), medidas personalizadas, distribución y QR/Code 128. Los tamaños vienen de config.json.
 - 03: ajuste automático de texto o botones −/+ (manual, 50–200 %), margen 1–5 mm (inicial 2 mm), guía azul de vista previa y desplazamientos.
 - 04: impresora instalada, método Windows/ZPL, 203/300 DPI y copias.
+- 05 Configuración / Settings: idioma English / Español. La selección se aplica al instante y se conserva al reabrir.
 
 La fuente se ajusta conjuntamente sin modificar el código. La guía no se imprime ni se exporta. Desplazamientos positivos mueven a la derecha/abajo; se bloquea la salida del área disponible.
 
@@ -45,3 +46,5 @@ Los antiguos Title / ShowTitle migran a Brand / ShowBrand sin borrar valores. Re
 [config.json: tamaños y valores iniciales](CONFIGURATION.md). Edita el archivo junto al EXE y reinicia. La aplicación no lo reescribe al guardar el trabajo.
 
 Tipo de activo / Asset type aparece antes de Marca y tiene checkbox y autoguardado. Ejemplo: Monitor / Dell / H22203H / ABC123 / ZYX123 / 00:1A:2B:3C:4D:5E. El código representa ABC123. En trabajos existentes el nuevo campo empieza vacío para no inventar el tipo; completa su valor cuando corresponda.
+
+El selector de idioma está en **05 Configuración / Settings**, contraída por defecto junto con 02, 03 y 04. Abre su encabezado para cambiarlo. La zona principal comienza con los datos del activo.

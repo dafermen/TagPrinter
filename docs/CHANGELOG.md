@@ -1,5 +1,9 @@
 # Cambios
 
+## 0.11.0
+
+Nueva sección 05 Configuración / Settings, contraída en cada apertura. Idioma trasladado desde la cabecera a esa sección, conservando cambio instantáneo y persistencia. Capturas y guía actualizadas para destacar los datos a imprimir.
+
 ## 0.10.0
 
 Tipo de activo / Asset type antes de Marca, checkbox independiente, autoguardado y recuperación. Seis campos en la etiqueta. Tipo como encabezado; marca conserva el encabezado si se oculta o vacía Tipo. Ejemplo y capturas actualizados. Compatibilidad: trabajos anteriores mantienen sus valores y el nuevo campo vacío.

@@ -12,6 +12,7 @@ public static class Ui
         ("Desplazamiento de impresión…","Print offsets…"),
         ("04  Impresión","04  Printing"),
         ("Idioma","Language"),
+        ("05  Configuración","05  Settings"),
         ("No. de parte","Part number"),
         ("Dirección MAC","MAC address"),
         ("Las casillas controlan el texto impreso. El código siempre usa el serial.","Checkboxes control printed text. The code always uses the serial."),

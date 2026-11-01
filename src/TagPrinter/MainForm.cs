@@ -25,7 +25,7 @@ public class MainForm : Form
     readonly Label fontValue=new(){AutoSize=true,Padding=new Padding(6)};
     readonly NumericUpDown margin=Number(1,5,2), offsetX=Number(-5,5,0), offsetY=Number(-5,5,0);
     int fontPercent=100, effectiveFontPercent=100;
-    internal readonly CollapsibleSection templateSection, textSection, printingSection;
+    internal readonly CollapsibleSection templateSection, textSection, printingSection, settingsSection;
     bool ready, translating;
     static ComboBox Combo()=>new(){DropDownStyle=ComboBoxStyle.DropDownList};
     static NumericUpDown Number(decimal min,decimal max,decimal value)=>new(){Minimum=min,Maximum=max,Value=value,DecimalPlaces=0};
@@ -34,7 +34,7 @@ public class MainForm : Form
         config=configPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"InventoryLabels","settings.json");
         appConfig=configuration ?? AppConfig.Load(Path.Combine(AppContext.BaseDirectory,"config.json"));
         Ui.Language=appConfig.Defaults.Language;
-        Text="TagPrinter | v0.10";
+        Text="TagPrinter | v0.11";
         using var iconStream=typeof(MainForm).Assembly.GetManifestResourceStream("TagPrinter.TagPrinter.ico");
         if(iconStream is not null)Icon=new Icon(iconStream); Width=1160; Height=850; MinimumSize=new Size(980,720);
         Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;
@@ -45,7 +45,7 @@ public class MainForm : Form
         var target=fields;
         void Heading(string text) { target.Controls.Add(new Label {Text=text,AutoSize=true,Font=new Font(Font,FontStyle.Bold),Margin=new Padding(0,14,0,6)}); }
         void Field(string label,Control control) { target.Controls.Add(new Label{Text=label,AutoSize=true,Margin=new Padding(0,5,0,3)}); control.Dock=DockStyle.Top; target.Controls.Add(control); }
-        language.Items.AddRange(["English","Español"]);language.SelectedIndex=0;Field(Ui.T("Idioma","Language"),language);
+        language.Items.AddRange(["English","Español"]);language.SelectedIndex=0;
         Heading(Ui.T("01  Datos del activo","01  Asset details"));
         void TextField(CheckBox check,string caption,TextBox input)
         {
@@ -94,6 +94,9 @@ public class MainForm : Form
         mode.Items.AddRange([Ui.T("Controlador de Windows (general)","Windows driver (general)"),Ui.T("ZPL directo (solo equipos compatibles)","Direct ZPL (compatible printers only)")]); Field(Ui.T("Método de impresión","Print method"),mode);
         dpi.Items.AddRange(["203","300"]);Field(Ui.T("Resolución de la impresora · DPI","Printer resolution · DPI"),dpi); Field(Ui.T("Copias","Copies"),copies);
         var options=new Button{Text=Ui.T("Preferencias del controlador…","Driver preferences…"),AutoSize=true};options.Click+=(_,_)=>Guard(Preferences);target.Controls.Add(options);
+        settingsSection=new CollapsibleSection(Ui.T("05  Configuración","05  Settings"));
+        fields.Controls.Add(settingsSection);target=settingsSection.Body;
+        Field(Ui.T("Idioma","Language"),language);
         var right=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=5,Padding=new Padding(16,0,0,0)};
         right.RowStyles.Add(new RowStyle(SizeType.Absolute,48));right.RowStyles.Add(new RowStyle(SizeType.Absolute,46));right.RowStyles.Add(new RowStyle(SizeType.Percent,100));right.RowStyles.Add(new RowStyle(SizeType.Absolute,74));right.RowStyles.Add(new RowStyle(SizeType.Absolute,100));
         right.Controls.Add(new Label{Text=Ui.T("Vista de la plantilla","Template preview"),Font=new Font("Segoe UI",20,FontStyle.Bold),AutoSize=true});

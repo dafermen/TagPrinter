@@ -50,7 +50,7 @@ powershell -ExecutionPolicy Bypass -File scripts/Test.ps1
 powershell -ExecutionPolicy Bypass -File scripts/Publish.ps1
 ```
 
-The publish script verifies the self-contained EXE and creates `artifacts/TagPrinter-v0.10-PORTABLE-Windows-x64.zip`. Generated output is not tracked in Git.
+The publish script verifies the self-contained EXE and creates `artifacts/TagPrinter-v0.11-PORTABLE-Windows-x64.zip`. Generated output is not tracked in Git.
 
 ## Documentation
 
@@ -74,3 +74,5 @@ ZXing.Net 0.16.11 — Michael Jahn and contributors — [Apache-2.0](https://www
 .NET runtime — Microsoft and contributors — [license and notices](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT).
 
 Tipo de activo / Asset type aparece antes de Marca y tiene checkbox y autoguardado. Ejemplo: Monitor / Dell / H22203H / ABC123 / ZYX123 / 00:1A:2B:3C:4D:5E. El código representa ABC123. En trabajos existentes el nuevo campo empieza vacío para no inventar el tipo; completa su valor cuando corresponda.
+
+El selector de idioma está en **05 Configuración / Settings**, contraída por defecto junto con 02, 03 y 04. Abre su encabezado para cambiarlo. La zona principal comienza con los datos del activo.

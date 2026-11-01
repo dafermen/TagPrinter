@@ -39,3 +39,7 @@ Ocho combinaciones de P/N/MAC y QR/Code 128 decodificadas. Pruebas de persistenc
 ## v0.10
 
 Ocho combinaciones de Tipo visible/oculto, 203/300 DPI y QR/Code 128; los seis campos del ejemplo se renderizan y se recupera siempre ABC123 del código. Comparación de imágenes con Tipo oculto, persistencia del valor/checkbox, carga de trabajos anteriores sin inventar un tipo y capturas en ambos idiomas.
+
+## v0.11
+
+La sección 05 está incluida en las comprobaciones de inicio/reapertura contraídos, expansión/contracción y conservación del trabajo. Se conserva la prueba de recuperación del idioma y las capturas en inglés y español.

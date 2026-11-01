@@ -35,12 +35,12 @@ public static class SelfTest
         {
             if(!form.CaptureWork().ShowBrand || !form.CaptureWork().ShowModel || !form.CaptureWork().ShowSerialText || form.CaptureWork().Layout!=3 || form.CaptureWork().Language!="en")throw new Exception("Defaults mismatch");
             form.Show();Application.DoEvents();
-            if(form.templateSection.Expanded || form.textSection.Expanded || form.printingSection.Expanded)throw new Exception("Sections must start collapsed");
+            if(form.templateSection.Expanded || form.textSection.Expanded || form.printingSection.Expanded || form.settingsSection.Expanded)throw new Exception("Sections must start collapsed");
             var before=form.CaptureWork();
-            form.templateSection.Toggle();form.textSection.Toggle();form.printingSection.Toggle();Application.DoEvents();
-            if(!form.templateSection.Expanded || !form.textSection.Expanded || !form.printingSection.Expanded || !form.templateSection.Body.Visible || !form.textSection.Body.Visible || !form.printingSection.Body.Visible)throw new Exception("Sections did not expand");
-            form.templateSection.Toggle();form.textSection.Toggle();form.printingSection.Toggle();Application.DoEvents();
-            if(form.templateSection.Expanded || form.textSection.Expanded || form.printingSection.Expanded || form.CaptureWork()!=before)throw new Exception("Collapsing changed the work");
+            form.templateSection.Toggle();form.textSection.Toggle();form.printingSection.Toggle();form.settingsSection.Toggle();Application.DoEvents();
+            if(!form.templateSection.Expanded || !form.textSection.Expanded || !form.printingSection.Expanded || !form.settingsSection.Expanded || !form.templateSection.Body.Visible || !form.textSection.Body.Visible || !form.printingSection.Body.Visible || !form.settingsSection.Body.Visible)throw new Exception("Sections did not expand");
+            form.templateSection.Toggle();form.textSection.Toggle();form.printingSection.Toggle();form.settingsSection.Toggle();Application.DoEvents();
+            if(form.templateSection.Expanded || form.textSection.Expanded || form.printingSection.Expanded || form.settingsSection.Expanded || form.CaptureWork()!=before)throw new Exception("Collapsing changed the work");
             form.ChangeFont(-10);
             if(form.CaptureWork().AutoFont || form.CaptureWork().FontPercent!=90)throw new Exception("Font buttons failed");
             form.Restore(new WorkState());
@@ -53,7 +53,7 @@ public static class SelfTest
         }
         using(var reopened=new MainForm(freshPath,AppConfig.CreateDefault()))
         {
-            if(reopened.templateSection.Expanded || reopened.textSection.Expanded || reopened.printingSection.Expanded)throw new Exception("Reopened sections must start collapsed");
+            if(reopened.templateSection.Expanded || reopened.textSection.Expanded || reopened.printingSection.Expanded || reopened.settingsSection.Expanded)throw new Exception("Reopened sections must start collapsed");
             var restored=reopened.CaptureWork();
             if(restored.Serial!="ABC12345644" || restored.Language!="es" || restored.Layout!=3 || restored.Copies!=4 || restored.AutoFont || restored.FontPercent!=70 || restored.MarginMm!=3 || restored.OffsetXmm!=.5m || restored.OffsetYmm!=-.5m || restored.ShowBrand || !restored.ShowModel || restored.ShowSerialText || restored.PartNumber!="PN-DEMO-001" || restored.MacAddress!="00:11:22:33:44:55" || restored.ShowPartNumber || restored.ShowMacAddress || restored.AssetType!="Laptop" || restored.ShowAssetType)throw new Exception("UI restore failed");
         }
