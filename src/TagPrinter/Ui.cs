@@ -12,6 +12,8 @@ public static class Ui
         ("Desplazamiento de impresión…","Print offsets…"),
         ("04  Impresión","04  Printing"),
         ("Idioma","Language"),
+        ("Nuevo activo","New asset"),
+        ("Proyecto","Project"),
         ("05  Configuración","05  Settings"),
         ("No. de parte","Part number"),
         ("Dirección MAC","MAC address"),

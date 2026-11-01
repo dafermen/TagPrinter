@@ -1,6 +1,6 @@
 # Estado
 
-Versión 0.11.0. Proyecto: C:\Projects\TagPrinter. Repositorio: https://github.com/dafermen/TagPrinter.
+Versión 0.12.0. Proyecto: C:\Projects\TagPrinter. Repositorio: https://github.com/dafermen/TagPrinter.
 
 Completado: seis campos con visibilidad individual, Brand en lugar de Title, migración de trabajos anteriores, configuración JSON de tamaños/defaults, imágenes y documentación bilingüe, impresión/exportación y portable autocontenido.
 
@@ -11,3 +11,11 @@ Pendiente: validar hardware real y definir/implementar grabación/verificación 
 Tipo de activo / Asset type aparece antes de Marca y tiene checkbox y autoguardado. Ejemplo: Monitor / Dell / H22203H / ABC123 / ZYX123 / 00:1A:2B:3C:4D:5E. El código representa ABC123. En trabajos existentes el nuevo campo empieza vacío para no inventar el tipo; completa su valor cuando corresponda.
 
 El selector de idioma está en **05 Configuración / Settings**, contraída por defecto junto con 02, 03 y 04. Abre su encabezado para cambiarlo. La zona principal comienza con los datos del activo.
+
+## v0.12: trabajo diario
+
+**New asset / Nuevo activo** vacía los seis datos del activo y guarda el trabajo vacío, conservando impresora, copias, plantilla, idioma, tamaños, fuente, márgenes y checkboxes. No mantiene una copia del activo anterior ni un historial; exporta su etiqueta antes si necesitas conservarla.
+
+El resumen junto a los botones muestra siempre impresora, copias y método Windows/ZPL, aunque 04 esté contraída. Se actualiza al cambiar opciones o idioma.
+
+En **05 Configuración / Settings**, el enlace `github.com/dafermen/TagPrinter` abre el repositorio en el navegador predeterminado solo al pulsarlo.

@@ -4,6 +4,9 @@ namespace TagPrinter;
 
 public class MainForm : Form
 {
+    internal const string ProjectUrl="https://github.com/dafermen/TagPrinter";
+    readonly Label printSummary=new(){Dock=DockStyle.Fill,AutoEllipsis=true,Padding=new Padding(0,5,0,0),ForeColor=Color.FromArgb(35,65,100)};
+    internal string PrintSummaryText=>printSummary.Text;
     readonly TextBox assetType=new(){Text="Monitor"};
     readonly CheckBox showAssetType=new(){Checked=true,AutoSize=true};
     readonly TextBox brand=new(){Text="Dell"}, model=new(){Text="22\" - H22203H"}, serial=new(){Text="ABC123456"};
@@ -34,7 +37,7 @@ public class MainForm : Form
         config=configPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"InventoryLabels","settings.json");
         appConfig=configuration ?? AppConfig.Load(Path.Combine(AppContext.BaseDirectory,"config.json"));
         Ui.Language=appConfig.Defaults.Language;
-        Text="TagPrinter | v0.11";
+        Text="TagPrinter | v0.12";
         using var iconStream=typeof(MainForm).Assembly.GetManifestResourceStream("TagPrinter.TagPrinter.ico");
         if(iconStream is not null)Icon=new Icon(iconStream); Width=1160; Height=850; MinimumSize=new Size(980,720);
         Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;
@@ -97,15 +100,23 @@ public class MainForm : Form
         settingsSection=new CollapsibleSection(Ui.T("05  Configuración","05  Settings"));
         fields.Controls.Add(settingsSection);target=settingsSection.Body;
         Field(Ui.T("Idioma","Language"),language);
+        var projectLink=new LinkLabel{Text="github.com/dafermen/TagPrinter",AutoSize=true,AccessibleName=Ui.T("Proyecto en GitHub","Project on GitHub")};
+        projectLink.LinkClicked+=(_,_)=>Guard(()=>System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(ProjectUrl){UseShellExecute=true}));
+        Field(Ui.T("Proyecto","Project"),projectLink);
         var right=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=5,Padding=new Padding(16,0,0,0)};
-        right.RowStyles.Add(new RowStyle(SizeType.Absolute,48));right.RowStyles.Add(new RowStyle(SizeType.Absolute,46));right.RowStyles.Add(new RowStyle(SizeType.Percent,100));right.RowStyles.Add(new RowStyle(SizeType.Absolute,74));right.RowStyles.Add(new RowStyle(SizeType.Absolute,100));
+        right.RowStyles.Add(new RowStyle(SizeType.Absolute,48));right.RowStyles.Add(new RowStyle(SizeType.Absolute,46));right.RowStyles.Add(new RowStyle(SizeType.Percent,100));right.RowStyles.Add(new RowStyle(SizeType.Absolute,74));right.RowStyles.Add(new RowStyle(SizeType.Absolute,128));
         right.Controls.Add(new Label{Text=Ui.T("Vista de la plantilla","Template preview"),Font=new Font("Segoe UI",20,FontStyle.Bold),AutoSize=true});
         right.Controls.Add(new Label{Text=Ui.T("La vista previa se actualiza al cambiar datos, tamaño o distribución.\nEl código contiene el serial completo.","Preview updates when you change the data, size or layout.\nThe code contains the full serial number."),AutoSize=true});var previewHost=new Panel{Dock=DockStyle.Fill};previewHost.Controls.Add(preview);previewHost.Controls.Add(previewError);right.Controls.Add(previewHost);
         right.Controls.Add(new Label{Text=Ui.T("RFID: esta versión imprime el contenido visible.\nLa grabación y verificación del chip todavía no están habilitadas.","RFID: this version prints the visible content.\nChip encoding and verification are not enabled yet."),Dock=DockStyle.Fill,Padding=new Padding(8),ForeColor=Color.FromArgb(120,70,10)});
-        var buttons=new FlowLayoutPanel{Dock=DockStyle.Fill}; var export=new Button{Text=Ui.T("Exportar etiqueta","Export Tag"),AutoSize=true};var zpl=new Button{Text=Ui.T("Guardar ZPL…","Save ZPL…"),AutoSize=true};
+        var actionArea=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=2,Margin=Padding.Empty};
+        actionArea.RowStyles.Add(new RowStyle(SizeType.Absolute,48));actionArea.RowStyles.Add(new RowStyle(SizeType.Percent,100));
+        actionArea.Controls.Add(printSummary,0,0);
+        var buttons=new FlowLayoutPanel{Dock=DockStyle.Fill,Margin=Padding.Empty};
+        var newAsset=new Button{Text=Ui.T("Nuevo activo","New asset"),AutoSize=true};
+        newAsset.Click+=(_,_)=>StartNewAsset();buttons.Controls.Add(newAsset); var export=new Button{Text=Ui.T("Exportar etiqueta","Export Tag"),AutoSize=true};var zpl=new Button{Text=Ui.T("Guardar ZPL…","Save ZPL…"),AutoSize=true};
         var codeExport=new Button{Text=Ui.T("Exportar código","Export Code"),AutoSize=true};
         codeExport.Click+=(_,_)=>Guard(ExportCode);
-        export.Click+=(_,_)=>Guard(()=>Export(false));zpl.Click+=(_,_)=>Guard(()=>Export(true));print.Click+=(_,_)=>Guard(Print);buttons.Controls.AddRange([export,codeExport,zpl,print]);right.Controls.Add(buttons);
+        export.Click+=(_,_)=>Guard(()=>Export(false));zpl.Click+=(_,_)=>Guard(()=>Export(true));print.Click+=(_,_)=>Guard(Print);buttons.Controls.AddRange([export,codeExport,zpl,print]);actionArea.Controls.Add(buttons,0,1);right.Controls.Add(actionArea);
         root.Controls.Add(fields,0,0);root.Controls.Add(right,1,0);Controls.Add(root);Controls.Add(status);
         sizes.SelectedIndex=appConfig.LabelSizes.FindIndex(p=>p.Id==appConfig.Defaults.LabelPresetId);
         layout.SelectedIndex=appConfig.Defaults.Layout;code.SelectedIndex=appConfig.Defaults.Qr?1:0;mode.SelectedIndex=0;dpi.SelectedIndex=appConfig.Defaults.Dpi==300?1:0;
@@ -119,9 +130,20 @@ public class MainForm : Form
         language.SelectedIndexChanged+=(_,_)=>{if(translating)return;translating=true;bool active=ready;ready=false;try{Ui.Language=language.SelectedIndex==1?"es":"en";Ui.Translate(this);}finally{ready=active;translating=false;}UpdatePreview();if(ready)SaveConfig();};
         autoFont.CheckedChanged+=(_,_)=>UpdatePreview();showGuides.CheckedChanged+=(_,_)=>UpdatePreview();
         foreach(var number in new[]{margin,offsetX,offsetY})number.ValueChanged+=(_,_)=>UpdatePreview();
-        copies.ValueChanged+=(_,_)=>ScheduleSave();printers.SelectedIndexChanged+=(_,_)=>ScheduleSave();
+        copies.ValueChanged+=(_,_)=>{UpdatePrintSummary();ScheduleSave();};printers.SelectedIndexChanged+=(_,_)=>{UpdatePrintSummary();ScheduleSave();};
         autosave.Tick+=(_,_)=>{autosave.Stop();SaveConfig();};
         FormClosing+=(_,_)=>SaveConfig();Ui.Translate(this);ready=true;ApplySize();
+    }
+    internal void StartNewAsset()
+    {
+        bool active=ready;ready=false;
+        foreach(var input in new[]{assetType,brand,model,serial,partNumber,macAddress})input.Clear();
+        ready=active;UpdatePreview();SaveConfig();assetType.Focus();
+    }
+    void UpdatePrintSummary()
+    {
+        string printerName=printers.SelectedIndex>=0?printers.Text:Ui.T("Sin seleccionar","Not selected");
+        printSummary.Text=string.Format(Ui.T("Impresora: {0}\nCopias: {1} · {2}","Printer: {0}\nCopies: {1} · {2}"),printerName,copies.Value,mode.SelectedIndex==1?"ZPL":"Windows");
     }
     void Guard(Action action) {try {action();}catch(Exception ex){MessageBox.Show(this,ex.Message,Ui.T("Etiquetas","TagPrinter"),MessageBoxButtons.OK,MessageBoxIcon.Warning);}}
     LabelData Data()=>new(brand.Text.Trim(),model.Text.Trim(),serial.Text.Trim(),width.Value,height.Value,int.Parse(dpi.Text),layout.SelectedIndex,code.SelectedIndex==1,autoFont.Checked,fontPercent,margin.Value,offsetX.Value,offsetY.Value,showBrand.Checked,showModel.Checked,showSerialText.Checked,partNumber.Text.Trim(),macAddress.Text.Trim(),showPartNumber.Checked,showMacAddress.Checked,assetType.Text.Trim(),showAssetType.Checked);
@@ -143,7 +165,7 @@ public class MainForm : Form
     void UpdatePreview()
     {
         if(!ready)return;
-        ScheduleSave();
+        ScheduleSave();UpdatePrintSummary();
         try
         {
             var next=LabelRenderer.Render(Data(),showGuides.Checked,out effectiveFontPercent);var old=preview.Image;preview.Image=next;old?.Dispose();
@@ -151,7 +173,7 @@ public class MainForm : Form
             previewError.Visible=false;
             status.Text=$"{width.Value} × {height.Value} mm · {dpi.Text} DPI · {next.Width} × {next.Height} px.\n"+Ui.T("Escanea una prueba impresa. En etiquetas pequeñas las barras pueden medir un solo punto.","Scan a printed sample. Small labels may use one-dot barcode bars.");print.Enabled=true;
         }
-        catch(Exception ex) {fontValue.Text=autoFont.Checked?"Auto":$"{fontPercent} %";var old=preview.Image;preview.Image=null;old?.Dispose();status.Text=ex.Message;previewError.Text=ex.Message;previewError.Visible=true;previewError.BringToFront();print.Enabled=false;}
+        catch(Exception ex) {previewError.ForeColor=string.IsNullOrWhiteSpace(serial.Text)?Color.DimGray:Color.Firebrick;fontValue.Text=autoFont.Checked?"Auto":$"{fontPercent} %";var old=preview.Image;preview.Image=null;old?.Dispose();status.Text=ex.Message;previewError.Text=ex.Message;previewError.Visible=true;previewError.BringToFront();print.Enabled=false;}
     }
     void LoadPrinters()
     {

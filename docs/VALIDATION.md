@@ -43,3 +43,7 @@ Ocho combinaciones de Tipo visible/oculto, 203/300 DPI y QR/Code 128; los seis c
 ## v0.11
 
 La sección 05 está incluida en las comprobaciones de inicio/reapertura contraídos, expansión/contracción y conservación del trabajo. Se conserva la prueba de recuperación del idioma y las capturas en inglés y español.
+
+## v0.12
+
+Comprobación de que Nuevo activo limpia solo los seis valores y los guarda, conserva el resto del WorkState y mantiene copias/método en el resumen. Verificación de URL fija sin abrir el navegador en las pruebas. Se mantienen las pruebas de render/exportación/persistencia.

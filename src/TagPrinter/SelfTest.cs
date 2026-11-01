@@ -48,6 +48,14 @@ public static class SelfTest
             form.Restore(work with {Brand="Monitor",Model="Dell 22\" - H22203H",Serial="ABC12345644",Size=1,Width=50,Height=25,Code=0,Dpi=0,AutoFont=true,MarginMm=2,OffsetXmm=0,OffsetYmm=0});
             Application.DoEvents();
             using(var screenshot=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(screenshot,new Rectangle(Point.Empty,form.Size));screenshot.Save(Path.Combine(folder,"application-es-small.png"));}
+            form.Restore(work with {Serial="ABC12345644",Copies=7,Mode=1});
+            if(!form.PrintSummaryText.Contains("7") || !form.PrintSummaryText.Contains("ZPL"))throw new Exception("Print summary is stale");
+            var full=form.CaptureWork();form.StartNewAsset();
+            var cleared=form.CaptureWork();
+            if(cleared!=full with {AssetType="",Brand="",Model="",Serial="",PartNumber="",MacAddress=""})throw new Exception("New asset changed preferences or retained old data");
+            if(WorkStore.Load(freshPath)!=cleared)throw new Exception("New asset was not saved immediately");
+            if(!form.PrintSummaryText.Contains("7") || !form.PrintSummaryText.Contains("ZPL"))throw new Exception("New asset changed printing summary");
+            if(new Uri(MainForm.ProjectUrl).AbsoluteUri!="https://github.com/dafermen/TagPrinter")throw new Exception("Incorrect project link");
             form.Restore(work with {Serial="ABC12345644"});
             form.SaveConfig();form.Close();
         }
@@ -57,7 +65,7 @@ public static class SelfTest
             var restored=reopened.CaptureWork();
             if(restored.Serial!="ABC12345644" || restored.Language!="es" || restored.Layout!=3 || restored.Copies!=4 || restored.AutoFont || restored.FontPercent!=70 || restored.MarginMm!=3 || restored.OffsetXmm!=.5m || restored.OffsetYmm!=-.5m || restored.ShowBrand || !restored.ShowModel || restored.ShowSerialText || restored.PartNumber!="PN-DEMO-001" || restored.MacAddress!="00:11:22:33:44:55" || restored.ShowPartNumber || restored.ShowMacAddress || restored.AssetType!="Laptop" || restored.ShowAssetType)throw new Exception("UI restore failed");
         }
-        File.WriteAllText(Path.Combine(folder,"results.txt"),$"PASS: {count} etiquetas generadas y decodificadas (2 tamaños × 2 resoluciones × 4 plantillas × 2 tipos). Serial vacío rechazado. Persistencia de trabajo/idioma, reapertura y nombres de archivo comprobados. Fuente manual/automática, márgenes, guías y desplazamientos comprobados. ZPL con dimensiones y cantidad comprobados. Exportación independiente QR/Code 128 y nombres de archivo comprobados. Visibilidad de campos: 32 combinaciones decodificadas y preferencias restauradas. Campos P/N y MAC, configuración JSON y migración Title/Brand comprobados. Tipo de activo, seis campos, visibilidad y persistencia comprobados. No se envió ningún trabajo a impresoras.");
+        File.WriteAllText(Path.Combine(folder,"results.txt"),$"PASS: {count} etiquetas generadas y decodificadas (2 tamaños × 2 resoluciones × 4 plantillas × 2 tipos). Serial vacío rechazado. Persistencia de trabajo/idioma, reapertura y nombres de archivo comprobados. Fuente manual/automática, márgenes, guías y desplazamientos comprobados. ZPL con dimensiones y cantidad comprobados. Exportación independiente QR/Code 128 y nombres de archivo comprobados. Visibilidad de campos: 32 combinaciones decodificadas y preferencias restauradas. Campos P/N y MAC, configuración JSON y migración Title/Brand comprobados. Tipo de activo, seis campos, visibilidad y persistencia comprobados. Nuevo activo y resumen de impresión comprobados. No se envió ningún trabajo a impresoras.");
     }
     static void TestTypographyAndMargins(string folder)
     {

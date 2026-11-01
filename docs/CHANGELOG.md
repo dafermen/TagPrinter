@@ -1,5 +1,9 @@
 # Cambios
 
+## 0.12.0
+
+Nuevo activo limpia datos y conserva preferencias; guardado inmediato. Resumen visible de impresora, copias y método junto a Imprimir. Enlace al proyecto GitHub en 05 Configuración. Capturas y documentación actualizadas.
+
 ## 0.11.0
 
 Nueva sección 05 Configuración / Settings, contraída en cada apertura. Idioma trasladado desde la cabecera a esa sección, conservando cambio instantáneo y persistencia. Capturas y guía actualizadas para destacar los datos a imprimir.
