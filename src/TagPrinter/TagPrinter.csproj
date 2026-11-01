@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>TagPrinter</AssemblyName>
+    <RootNamespace>TagPrinter</RootNamespace>
+    <ApplicationIcon>TagPrinter.ico</ApplicationIcon>
+    <Version>0.9.0</Version>
+    <Product>TagPrinter</Product>
+  </PropertyGroup>
+  <ItemGroup><PackageReference Include="ZXing.Net" Version="0.16.11" /></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="TagPrinter.ico" /></ItemGroup>
+  <ItemGroup><None Update="config.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" /></ItemGroup>
+</Project>

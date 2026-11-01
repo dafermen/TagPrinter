@@ -1,0 +1,51 @@
+{
+  "SchemaVersion": 1,
+  "LabelSizes": [
+    {
+      "Id": "100x50",
+      "Name": "100 × 50 mm",
+      "WidthMm": 100,
+      "HeightMm": 50
+    },
+    {
+      "Id": "50x25",
+      "Name": "50 × 25 mm",
+      "WidthMm": 50,
+      "HeightMm": 25
+    },
+    {
+      "Id": "60x40",
+      "Name": "60 × 40 mm",
+      "WidthMm": 60,
+      "HeightMm": 40
+    },
+    {
+      "Id": "80x50",
+      "Name": "80 × 50 mm",
+      "WidthMm": 80,
+      "HeightMm": 50
+    },
+    {
+      "Id": "4x2",
+      "Name": "101.6 × 50.8 mm (4 × 2 in)",
+      "WidthMm": 101.6,
+      "HeightMm": 50.8
+    },
+    {
+      "Id": "4x6",
+      "Name": "101.6 × 152.4 mm (4 × 6 in)",
+      "WidthMm": 101.6,
+      "HeightMm": 152.4
+    }
+  ],
+  "Defaults": {
+    "Language": "en",
+    "LabelPresetId": "100x50",
+    "Dpi": 203,
+    "Layout": 3,
+    "Qr": false,
+    "AutoFont": true,
+    "FontPercent": 100,
+    "MarginMm": 2
+  }
+}

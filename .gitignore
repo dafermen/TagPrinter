@@ -1,0 +1,9 @@
+**/bin/
+**/obj/
+artifacts/
+.cli/
+.vs/
+*.user
+*.suo
+settings.json
+settings.json.tmp
