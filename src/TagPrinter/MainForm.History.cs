@@ -110,7 +110,7 @@ public partial class MainForm
     /// <param name="path">File path to read or write; test callers use their isolated verification directory.</param>
     internal void ExportCodeFile(string path)
     {
-        var snapshot=GenerationState();using var image=CodeRenderer.Render(snapshot.Serial,snapshot.Code==1,int.Parse(dpi.Text));
+        var snapshot=GenerationState();using var image=CodeRenderer.Render(snapshot.Serial,snapshot.Code==1,int.Parse(dpi.Text),snapshot.CodePercent);
         image.Save(path,System.Drawing.Imaging.ImageFormat.Png);RecordGeneration("ExportCode",path,snapshot);SaveConfig();
     }
     /// <summary>

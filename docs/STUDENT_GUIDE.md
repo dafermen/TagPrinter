@@ -144,3 +144,7 @@ When changing a persisted field, document defaults and old-data compatibility. W
 ## Startup checks (0.16)
 
 Open the root TagPrinter.exe to validate the immutable app/ payload before loading it. Editable config.json stays at the portable root; last work and SQLite are checked separately without deleting damaged data. See [startup validation](STARTUP_VALIDATION.md) for manifests, logs, recovery and limits.
+
+## Configuration transfer and symbol scaling — 0.17
+
+Read [the transfer/scale walkthrough](CONFIGURATION_TRANSFER.md) with ConfigurationTransfer.cs and MainForm.Configuration.cs. Notice the distinction between validating a draft and requiring a printable label, between a single-file atomic replacement and a two-file rollback, and between continuous percentages and integer pixel modules.

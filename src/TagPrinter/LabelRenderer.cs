@@ -35,8 +35,9 @@ namespace TagPrinter;
 /// <param name="FontSizePt">Body base size 4 through 72 points; heading uses 1.3 times this value.</param>
 /// <param name="Bold">Applies bold to every text line.</param>
 /// <param name="HeadingBold">Applies heading bold independently of general Bold.</param>
+/// <param name="CodePercent">Symbol size relative to the original fitted area, from 25 through 200 percent.</param>
 /// <param name="ContentRotation">Clockwise degrees: 0, 90, 180 or 270.</param>
-public record LabelData(string Brand, string Model, string Serial, decimal WidthMm, decimal HeightMm, int Dpi, int Layout, bool Qr, bool AutoFont = true, int FontPercent = 100, decimal MarginMm = 2, decimal OffsetXmm = 0, decimal OffsetYmm = 0, bool ShowBrand = true, bool ShowModel = true, bool ShowSerialText = true, string PartNumber = "", string MacAddress = "", bool ShowPartNumber = true, bool ShowMacAddress = true, string AssetType = "", bool ShowAssetType = true, bool ShowCode = true, string FontFamily = "Arial", decimal FontSizePt = 10, bool Bold = false, bool HeadingBold = true, int ContentRotation = 0);
+public record LabelData(string Brand, string Model, string Serial, decimal WidthMm, decimal HeightMm, int Dpi, int Layout, bool Qr, bool AutoFont = true, int FontPercent = 100, decimal MarginMm = 2, decimal OffsetXmm = 0, decimal OffsetYmm = 0, bool ShowBrand = true, bool ShowModel = true, bool ShowSerialText = true, string PartNumber = "", string MacAddress = "", bool ShowPartNumber = true, bool ShowMacAddress = true, string AssetType = "", bool ShowAssetType = true, bool ShowCode = true, string FontFamily = "Arial", decimal FontSizePt = 10, bool Bold = false, bool HeadingBold = true, int ContentRotation = 0, int CodePercent = 100);
 /// <summary>
 /// Draws complete labels and converts bitmaps into raster ZPL. Preview, export and printing share this
 /// renderer.
@@ -73,6 +74,7 @@ public static class LabelRenderer
             rotated.RotateFlip(d.ContentRotation==90?RotateFlipType.Rotate90FlipNone:d.ContentRotation==180?RotateFlipType.Rotate180FlipNone:RotateFlipType.Rotate270FlipNone);
             return rotated;
         }
+        if(d.CodePercent<25 || d.CodePercent>200)throw new ArgumentException("Code size must be between 25 and 200 percent.");
         if(d.FontSizePt<4 || d.FontSizePt>72)throw new ArgumentException("Font size must be between 4 and 72 pt.");
         usedFontPercent=100;
         if (d.ShowCode && string.IsNullOrWhiteSpace(d.Serial)) throw new ArgumentException(Ui.T("Escribe un serial.", "Enter a serial number."));
@@ -115,9 +117,25 @@ public static class LabelRenderer
                 new Dictionary<EncodeHintType, object> { [EncodeHintType.MARGIN] = d.Qr ? 4 : 10, [EncodeHintType.CHARACTER_SET] = "UTF-8" });
             // One module is one QR cell or barcode unit. Integer scaling keeps edges sharp; scale below one
             // means the symbol cannot fit.
-            scale = Math.Min(codeArea.Width / matrix.Width, codeArea.Height / matrix.Height);
-            if (scale < 1) throw new ArgumentException(Ui.T("El código no cabe. Aumenta la etiqueta o usa el código abajo.", "The code does not fit. Use a larger label or a bottom layout."));
-            int cw = matrix.Width * scale; ch = d.Qr ? matrix.Height * scale : Math.Min(codeArea.Height, d.Dpi / 4);
+            int fittedScale=Math.Min(codeArea.Width / matrix.Width,codeArea.Height / matrix.Height);
+            scale=(int)Math.Floor(fittedScale*d.CodePercent/100.0);
+            if(scale<1)throw new ArgumentException(Ui.T("El código queda demasiado pequeño. Aumenta su tamaño o la etiqueta.","The code is too small. Increase its size or the label size."));
+            int cw=matrix.Width*scale;
+            int baseHeight=d.Qr?matrix.Height*fittedScale:Math.Min(codeArea.Height,d.Dpi/4);
+            ch=d.Qr?matrix.Height*scale:Math.Max(1,(int)Math.Round(baseHeight*d.CodePercent/100.0));
+            // Growth can borrow text space on the layout's shared axis. Never clip modules or draw outside margins.
+            if(side && lineCount>0 && cw>codeArea.Width)
+            {
+                textW=content.Width-cw-m/2;
+                codeArea=new Rectangle(content.Right-cw,content.Top,cw,content.Height);
+            }
+            else if(!side && lineCount>0 && ch>codeArea.Height)
+            {
+                textH=content.Height-ch;
+                codeArea=new Rectangle(content.Left,content.Bottom-ch,content.Width,ch);
+            }
+            if(cw>codeArea.Width || ch>codeArea.Height || (lineCount>0 && (textW<=0 || textH<=0)))
+                throw new ArgumentException(Ui.T("El código no cabe con ese tamaño. Reduce el porcentaje, cambia la distribución o amplía la etiqueta.","The code does not fit at this size. Reduce the percentage, change layout or enlarge the label."));
             x = d.Layout == 1 ? codeArea.Left : d.Layout == 2 ? codeArea.Right-cw : codeArea.Left+(codeArea.Width-cw)/2;
             y = codeArea.Top + (codeArea.Height-ch)/2;
         }

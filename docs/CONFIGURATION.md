@@ -1,4 +1,4 @@
-# Configuration and data contracts — 0.16
+# Configuration and data contracts — 0.17
 
 ## Three separate stores
 
@@ -66,3 +66,7 @@ History loading deliberately forces Custom dimensions, preserving the original r
 ## Startup checks (0.16)
 
 Open the root TagPrinter.exe to validate the immutable app/ payload before loading it. Editable config.json stays at the portable root; last work and SQLite are checked separately without deleting damaged data. See [startup validation](STARTUP_VALIDATION.md) for manifests, logs, recovery and limits.
+
+## Full settings transfer and CodePercent
+
+05 Settings exports/imports a complete versioned ConfigurationBundle (catalog/defaults plus all current WorkState values). Import replaces rather than merges, with confirmation, automatic backup and I/O rollback. See [configuration transfer](CONFIGURATION_TRANSFER.md) for scope and limits. Defaults.CodePercent and WorkState.CodePercent are integers 25–200, default 100, preserving older designs. Root config remains editable and excluded from payload hashes.

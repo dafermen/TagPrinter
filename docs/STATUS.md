@@ -1,6 +1,6 @@
 # Current status
 
-Application version: 0.16.0. Project: https://github.com/dafermen/TagPrinter. Local checkout: C:/Projects/TagPrinter.
+Application version: 0.17.0. Project: https://github.com/dafermen/TagPrinter. Local checkout: C:/Projects/TagPrinter.
 
 The application supports six asset fields, independent visibility, optional QR/Code 128, text-only labels, media presets/custom dimensions, fonts/bold/fitting, margins/offsets, media orientation and content rotation. It restores last work, prints through Windows or RAW ZPL, exports label/code PNG and raster ZPL, and records successful actions in SQLite.
 
@@ -17,3 +17,5 @@ Pending: physical hardware validation, RFID, bulk import, pagination and optiona
 License: MIT for TagPrinter source and project documentation, Copyright (c) 2026 Dario Meneses. The repository root LICENSE is copied into portable packages. Third-party licensing remains separate. Application version is unchanged.
 
 0.16: root launcher, embedded/external integrity manifest, SHA-256 verification, mutable config/data preflight and startup logs. See STARTUP_VALIDATION.md.
+
+0.17: full application configuration transfer and adjustable QR/barcode size. Configuration includes current asset data/preferences/catalog; history, driver setup, fonts and transient view state remain separate. See CONFIGURATION_TRANSFER.md.

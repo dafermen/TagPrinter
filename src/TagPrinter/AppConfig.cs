@@ -26,6 +26,8 @@ public record ConfigDefaults
     public bool AutoFont {get;init;}=true;
     /// <summary>Manual scale percentage from 50 through 200.</summary>
     public int FontPercent {get;init;}=100;
+    /// <summary>Symbol size percentage, 25 through 200; 100 preserves the original fitted size.</summary>
+    public int CodePercent {get;init;}=100;
     /// <summary>Inner margin from 1 through 5 millimeters.</summary>
     public decimal MarginMm {get;init;}=2;
 }
@@ -80,7 +82,7 @@ public record AppConfig
             if(item.WidthMm<25 || item.WidthMm>150 || item.HeightMm<20 || item.HeightMm>200 || decimal.Round(item.WidthMm,1)!=item.WidthMm || decimal.Round(item.HeightMm,1)!=item.HeightMm)
                 throw new InvalidDataException("config.json: width 25–150 mm, height 20–200 mm, at most one decimal place.");
         }
-        if(Defaults is null || Defaults.Language is not ("en" or "es") || Defaults.Dpi is not (203 or 300) || Defaults.Layout<0 || Defaults.Layout>3 || Defaults.FontPercent<50 || Defaults.FontPercent>200 || Defaults.MarginMm<1 || Defaults.MarginMm>5 || decimal.Round(Defaults.MarginMm,1)!=Defaults.MarginMm || !ids.Contains(Defaults.LabelPresetId))
+        if(Defaults is null || Defaults.Language is not ("en" or "es") || Defaults.Dpi is not (203 or 300) || Defaults.Layout<0 || Defaults.Layout>3 || Defaults.CodePercent<25 || Defaults.CodePercent>200 || Defaults.FontPercent<50 || Defaults.FontPercent>200 || Defaults.MarginMm<1 || Defaults.MarginMm>5 || decimal.Round(Defaults.MarginMm,1)!=Defaults.MarginMm || !ids.Contains(Defaults.LabelPresetId))
             throw new InvalidDataException("config.json: invalid defaults. Check Language, LabelPresetId, Dpi, Layout, FontPercent and MarginMm.");
     }
 }

@@ -49,7 +49,11 @@ public partial class MainForm : Form
     // and defaults.
     readonly string config;
     // Validated installation catalog/defaults, separate from editable last-work settings.
-    readonly AppConfig appConfig;
+    AppConfig appConfig;
+    // Actual catalog destination; test settings imply an isolated catalog path.
+    readonly string catalogPath;
+    // Relative symbol size; pixel modules stay integral and overflow is reported instead of clipped.
+    readonly NumericUpDown codePercent=Number(25,200,100);
     // language stores locale selection; autosave debounces settings writes for 600 milliseconds.
     readonly ComboBox language=Combo();
     // UI-thread debounce timer; restarting delays a settings write until edits pause.
@@ -100,9 +104,10 @@ public partial class MainForm : Form
     {
         config=configPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"InventoryLabels","settings.json");
         history=new HistoryStore(historyPath ?? (configPath is not null?Path.ChangeExtension(configPath,".db"):Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"TagPrinter","TagPrinter.db")));
-        appConfig=configuration ?? AppConfig.Load(Path.Combine(StartupDiagnostics.InstallationRoot,"config.json"));
+        catalogPath=configPath is not null?Path.Combine(Path.GetDirectoryName(Path.GetFullPath(configPath))!,"catalog.json"):Path.Combine(StartupDiagnostics.InstallationRoot,"config.json");
+        appConfig=configuration ?? AppConfig.Load(catalogPath);
         Ui.Language=appConfig.Defaults.Language;
-        Text="TagPrinter | v0.16";
+        Text="TagPrinter | v0.17";
         using var iconStream=typeof(MainForm).Assembly.GetManifestResourceStream("TagPrinter.TagPrinter.ico");
         if(iconStream is not null)Icon=new Icon(iconStream); Width=1160; Height=850; MinimumSize=new Size(980,720);
         Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;
@@ -155,6 +160,15 @@ public partial class MainForm : Form
         rotation.Items.AddRange(["0°","90°","180°","270°"]);rotation.SelectedIndex=0;
         Field(Ui.T("Rotación del contenido","Content rotation"),rotation);
         layout.Items.AddRange([Ui.T("Código abajo · centrado","Code below · centered"),Ui.T("Código abajo · izquierda","Code below · left"),Ui.T("Código abajo · derecha","Code below · right"),Ui.T("Código a la derecha del texto","Code to the right of text")]); Field(Ui.T("Distribución de la plantilla","Template layout"),layout);
+        codePercent.Increment=10;
+        Field(Ui.T("Tamaño del código · %","Code size · %"),codePercent);
+        var symbolButtons=new FlowLayoutPanel{AutoSize=true};
+        Button codeSmaller=new Button{Text="−",Width=42},codeBigger=new Button{Text="+",Width=42},codeReset=new Button{Text="100 %",AutoSize=true};
+        codeSmaller.Click+=(_,_)=>codePercent.Value=Math.Max(codePercent.Minimum,codePercent.Value-10);
+        codeBigger.Click+=(_,_)=>codePercent.Value=Math.Min(codePercent.Maximum,codePercent.Value+10);
+        codeReset.Click+=(_,_)=>codePercent.Value=100;
+        symbolButtons.Controls.AddRange([codeSmaller,codeBigger,codeReset]);target.Controls.Add(symbolButtons);
+        target.Controls.Add(new Label{Text=Ui.T("100 % = tamaño ajustado. Los módulos cambian en pasos de píxeles completos.","100% = fitted size. Modules change in whole-pixel steps."),AutoSize=true,MaximumSize=new Size(330,0),ForeColor=Color.DimGray});
         textSection=new CollapsibleSection(Ui.T("03  Texto y márgenes","03  Text and margins"));
         fields.Controls.Add(textSection);target=textSection.Body;
         // Fonts come from this Windows installation; snapshots store family names, not font files.
@@ -185,6 +199,11 @@ public partial class MainForm : Form
         settingsSection=new CollapsibleSection(Ui.T("05  Configuración","05  Settings"));
         fields.Controls.Add(settingsSection);target=settingsSection.Body;
         Field(Ui.T("Idioma","Language"),language);
+        var transferButtons=new FlowLayoutPanel{AutoSize=true};
+        var exportSettings=new Button{Text=Ui.T("Exportar configuración","Export configuration"),AutoSize=true};
+        var importSettings=new Button{Text=Ui.T("Importar configuración…","Import configuration…"),AutoSize=true};
+        exportSettings.Click+=(_,_)=>Guard(ExportConfiguration);importSettings.Click+=(_,_)=>Guard(ImportConfiguration);
+        transferButtons.Controls.AddRange([exportSettings,importSettings]);target.Controls.Add(transferButtons);
         // Fixed rows reserve title/help/actions; the remaining percentage row expands the preview.
         var right=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=5,Padding=new Padding(16,0,0,0)};
         right.RowStyles.Add(new RowStyle(SizeType.Absolute,48));right.RowStyles.Add(new RowStyle(SizeType.Absolute,46));right.RowStyles.Add(new RowStyle(SizeType.Percent,100));right.RowStyles.Add(new RowStyle(SizeType.Absolute,74));right.RowStyles.Add(new RowStyle(SizeType.Absolute,128));
@@ -203,7 +222,7 @@ public partial class MainForm : Form
         root.Controls.Add(fields,0,0);root.Controls.Add(right,1,0);InitializeWorkspace(root);
         sizes.SelectedIndex=appConfig.LabelSizes.FindIndex(p=>p.Id==appConfig.Defaults.LabelPresetId);
         layout.SelectedIndex=appConfig.Defaults.Layout;code.SelectedIndex=appConfig.Defaults.Qr?1:0;mode.SelectedIndex=0;dpi.SelectedIndex=appConfig.Defaults.Dpi==300?1:0;
-        showCode.Checked=appConfig.Defaults.ShowCode;
+        showCode.Checked=appConfig.Defaults.ShowCode;codePercent.Value=appConfig.Defaults.CodePercent;
         margin.Value=appConfig.Defaults.MarginMm;autoFont.Checked=appConfig.Defaults.AutoFont;fontPercent=appConfig.Defaults.FontPercent;
         // Restore before enabling events so partially assigned controls cannot overwrite saved work or
         // trigger misleading errors.
@@ -216,6 +235,7 @@ public partial class MainForm : Form
         language.SelectedIndex=Ui.Language=="es"?1:0;
         // Translate existing controls while reactive preview is paused. finally restores flags even if a child refresh fails.
         language.SelectedIndexChanged+=(_,_)=>{if(translating)return;translating=true;bool active=ready;ready=false;try{Ui.Language=language.SelectedIndex==1?"es":"en";Ui.Translate(this);UpdateChrome();}finally{ready=active;translating=false;}UpdatePreview();if(ready)SaveConfig();};
+        codePercent.ValueChanged+=(_,_)=>UpdatePreview();
         fontFamily.SelectedIndexChanged+=(_,_)=>UpdatePreview();rotation.SelectedIndexChanged+=(_,_)=>UpdatePreview();
         fontSize.ValueChanged+=(_,_)=>UpdatePreview();bold.CheckedChanged+=(_,_)=>UpdatePreview();headingBold.CheckedChanged+=(_,_)=>UpdatePreview();
         // Orientation swaps physical dimensions and changes the preset to custom. Pause events until both
@@ -256,7 +276,7 @@ public partial class MainForm : Form
     /// indexes to DPI and rotation.
     /// </summary>
     /// <returns>Rendering-only snapshot of current controls.</returns>
-    LabelData Data()=>new(brand.Text.Trim(),model.Text.Trim(),serial.Text.Trim(),width.Value,height.Value,int.Parse(dpi.Text),layout.SelectedIndex,code.SelectedIndex==1,autoFont.Checked,fontPercent,margin.Value,offsetX.Value,offsetY.Value,showBrand.Checked,showModel.Checked,showSerialText.Checked,partNumber.Text.Trim(),macAddress.Text.Trim(),showPartNumber.Checked,showMacAddress.Checked,assetType.Text.Trim(),showAssetType.Checked,showCode.Checked,fontFamily.Text,fontSize.Value,bold.Checked,headingBold.Checked,rotation.SelectedIndex*90);
+    LabelData Data()=>new(brand.Text.Trim(),model.Text.Trim(),serial.Text.Trim(),width.Value,height.Value,int.Parse(dpi.Text),layout.SelectedIndex,code.SelectedIndex==1,autoFont.Checked,fontPercent,margin.Value,offsetX.Value,offsetY.Value,showBrand.Checked,showModel.Checked,showSerialText.Checked,partNumber.Text.Trim(),macAddress.Text.Trim(),showPartNumber.Checked,showMacAddress.Checked,assetType.Text.Trim(),showAssetType.Checked,showCode.Checked,fontFamily.Text,fontSize.Value,bold.Checked,headingBold.Checked,rotation.SelectedIndex*90,(int)codePercent.Value);
     /// <summary>
     /// Changes scale in percentage points, starting from the effective auto scale when appropriate, then
     /// selects manual fitting.
@@ -408,7 +428,7 @@ public partial class MainForm : Form
     void ScheduleSave(){if(!ready)return;autosave.Stop();autosave.Start();}
     /// <summary>Copies all editor values/preferences to WorkState without trimming or writing files.</summary>
     /// <returns>Complete serializable editor snapshot.</returns>
-    internal WorkState CaptureWork()=>new(){Printer=printers.Text,Size=sizes.SelectedIndex,LabelPresetId=sizes.SelectedIndex<appConfig.LabelSizes.Count?appConfig.LabelSizes[sizes.SelectedIndex].Id:"custom",Width=width.Value,Height=height.Value,Layout=layout.SelectedIndex,Code=code.SelectedIndex,Mode=mode.SelectedIndex,Dpi=dpi.SelectedIndex,AssetType=assetType.Text,ShowAssetType=showAssetType.Checked,Brand=brand.Text,PartNumber=partNumber.Text,MacAddress=macAddress.Text,ShowPartNumber=showPartNumber.Checked,ShowMacAddress=showMacAddress.Checked,Model=model.Text,Serial=serial.Text,Language=Ui.Language,ShowBrand=showBrand.Checked,ShowModel=showModel.Checked,ShowSerialText=showSerialText.Checked,ShowCode=showCode.Checked,ShowGuides=showGuides.Checked,AutoFont=autoFont.Checked,FontPercent=fontPercent,MarginMm=margin.Value,OffsetXmm=offsetX.Value,OffsetYmm=offsetY.Value,Copies=(int)copies.Value,FontFamily=fontFamily.Text,FontSizePt=fontSize.Value,Bold=bold.Checked,HeadingBold=headingBold.Checked,ContentRotation=rotation.SelectedIndex*90};
+    internal WorkState CaptureWork()=>new(){Printer=printers.Text,Size=sizes.SelectedIndex,LabelPresetId=sizes.SelectedIndex<appConfig.LabelSizes.Count?appConfig.LabelSizes[sizes.SelectedIndex].Id:"custom",Width=width.Value,Height=height.Value,Layout=layout.SelectedIndex,Code=code.SelectedIndex,Mode=mode.SelectedIndex,Dpi=dpi.SelectedIndex,AssetType=assetType.Text,ShowAssetType=showAssetType.Checked,Brand=brand.Text,PartNumber=partNumber.Text,MacAddress=macAddress.Text,ShowPartNumber=showPartNumber.Checked,ShowMacAddress=showMacAddress.Checked,Model=model.Text,Serial=serial.Text,Language=Ui.Language,ShowBrand=showBrand.Checked,ShowModel=showModel.Checked,ShowSerialText=showSerialText.Checked,ShowCode=showCode.Checked,ShowGuides=showGuides.Checked,AutoFont=autoFont.Checked,FontPercent=fontPercent,MarginMm=margin.Value,OffsetXmm=offsetX.Value,OffsetYmm=offsetY.Value,Copies=(int)copies.Value,FontFamily=fontFamily.Text,FontSizePt=fontSize.Value,Bold=bold.Checked,HeadingBold=headingBold.Checked,ContentRotation=rotation.SelectedIndex*90,CodePercent=(int)codePercent.Value};
     /// <summary>
     /// Restores a snapshot with range checks and preset lookup while suppressing preview events; missing
     /// presets become custom media.
@@ -417,6 +437,8 @@ public partial class MainForm : Form
     internal void Restore(WorkState s)
     {
         bool wasReady=ready;ready=false;
+        // An empty/unavailable restored destination must not silently fall back to another printer.
+        printers.SelectedIndex=-1;
         if(printers.Items.Contains(s.Printer))printers.SelectedItem=s.Printer;
         // Prefer stable preset IDs, use dimensions for legacy work, then select Custom if the preset disappeared.
         int presetIndex=appConfig.LabelSizes.FindIndex(p=>p.Id==s.LabelPresetId);
@@ -426,7 +448,7 @@ public partial class MainForm : Form
         assetType.Text=s.AssetType;showAssetType.Checked=s.ShowAssetType;
         partNumber.Text=s.PartNumber;macAddress.Text=s.MacAddress;showPartNumber.Checked=s.ShowPartNumber;showMacAddress.Checked=s.ShowMacAddress;
         showBrand.Checked=s.ShowBrand;showModel.Checked=s.ShowModel;showSerialText.Checked=s.ShowSerialText;
-        showCode.Checked=s.ShowCode;
+        showCode.Checked=s.ShowCode;codePercent.Value=Math.Clamp(s.CodePercent,25,200);
         fontFamily.SelectedItem=fontFamily.Items.Contains(s.FontFamily)?s.FontFamily:"Arial";
         fontSize.Value=Math.Clamp(s.FontSizePt,4,72);bold.Checked=s.Bold;headingBold.Checked=s.HeadingBold;rotation.SelectedIndex=Math.Clamp(s.ContentRotation/90,0,3);
         showGuides.Checked=s.ShowGuides;autoFont.Checked=s.AutoFont;fontPercent=Math.Clamp(s.FontPercent,50,200);margin.Value=Math.Clamp(s.MarginMm,1,5);offsetX.Value=Math.Clamp(s.OffsetXmm,-5,5);offsetY.Value=Math.Clamp(s.OffsetYmm,-5,5);

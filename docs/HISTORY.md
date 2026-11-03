@@ -64,3 +64,7 @@ Filters apply before deduplication. The latest matching event ID represents each
 Blank serials cannot establish asset identity and count only as separate actions. Totals distinguish all actions, ExportTag actions, PrintSubmitted jobs and their sum of Copies. Standalone code/ZPL exports are not counted as PNG tag exports. Reusing one serial for different physical assets merges them under this rule.
 
 Double-click opens a type/brand/model equality filter over active Reports history, clearing ordinary report filters. Reports uses original stored strings and default DataView comparison, whereas Dashboard trims grouping values. Case variants can match together in Reports, and edge-space differences can make drill-down differ from the displayed group count. It does not preserve Dashboard dates/search. History is local, unencrypted and unsynchronized; large results are loaded into memory without pagination.
+
+## Configuration transfer and code scale — 0.17
+
+Settings transfer does not import/export/change history or create output events. Back up the database separately. WorkState snapshots now store CodePercent (25–200, default 100); loading older events preserves their existing size. New exports record/recover the chosen scale.

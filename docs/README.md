@@ -1,6 +1,6 @@
 # Documentation index
 
-These English manuals describe application version 0.16. Source XML comments explain individual members; algorithm comments explain meaningful intermediate variables and decisions. The UI still supports English and Spanish.
+These English manuals describe application version 0.17. Source XML comments explain individual members; algorithm comments explain meaningful intermediate variables and decisions. The UI still supports English and Spanish.
 
 ## For users
 
@@ -26,3 +26,5 @@ These English manuals describe application version 0.16. Source XML comments exp
 - Run scripts/Test.ps1 and scripts/Publish.ps1 as required by the repository instructions. Never test printing against a real destination automatically.
 
 - [Startup validation](STARTUP_VALIDATION.md): launcher architecture, file integrity, mutable-data checks and recovery.
+
+- [Full configuration transfer and code size](CONFIGURATION_TRANSFER.md): complete settings, backup/rollback, local-resource constraints and symbol geometry.

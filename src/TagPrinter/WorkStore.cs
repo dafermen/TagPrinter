@@ -74,6 +74,8 @@ public record WorkState
     public bool HeadingBold {get;init;}=true;
     /// <summary>Clockwise degrees: 0, 90, 180 or 270.</summary>
     public int ContentRotation {get;init;}
+    /// <summary>Symbol size percentage, 25 through 200; 100 preserves the original fitted size.</summary>
+    public int CodePercent {get;init;}=100;
     /// <summary>Requested copies; a whole submission produces one history event.</summary>
     public int Copies {get;init;}=1;
 }

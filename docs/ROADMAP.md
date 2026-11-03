@@ -2,6 +2,8 @@
 
 ## Completed
 
+- 0.17: full configuration export/import and QR/barcode size control.
+
 - 0.16: startup payload integrity launcher, editable configuration validation, preserved corrupt-data diagnostics and isolated package mutation tests.
 
 - 0.13: SQLite events and snapshots, Reports search/sort/load, CSV and backup, collapsible Asset details, footer About link.

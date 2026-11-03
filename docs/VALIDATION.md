@@ -53,3 +53,9 @@ The root LICENSE uses the standard MIT grant and disclaimer with Copyright (c) 2
 Isolated checks cover malformed saved-work preservation and corrupted/healthy SQLite. Portable verification runs through the root launcher. Package mutation tests cover paths with spaces, missing app/runtime/native files, changed/missing manifest, same-length corrupt runtime, malformed/missing config, legitimate config edit and successful restoration. No printer work or real user data is used.
 
 Result: source verification passed; final root-launcher/application self-tests passed; all 11 package scenarios passed; compiler XML build completed with zero warnings/errors. Every manifest entry was rehashed from the final ZIP; no verification files/databases were included. Tests did not print or write user settings/history.
+
+## Configuration transfer/code size — 0.17
+
+Isolated real-form tests check complete envelope equality, catalog persistence, pre-import live-state backup, unavailable printer/font behavior, reopening with the imported catalog, invalid/partial/version/range rejection, protected export targets, drafts and forced paired-write rollback. Symbol tests decode full labels and standalone QR/Code128 at 50/100/140 percent and 203/300 DPI, plus rotated output, overflow rejection and old-snapshot defaults. Explicit output records/reloads nondefault CodePercent. Screenshots use synthetic data.
+
+Result: existing source suite passed during development; final root-launcher/published application suite passed with transfer, font fallback, history-scale recovery and rollback checks. All 11 package-integrity scenarios passed. Final ZIP hashes/manual images verified and test databases excluded. No printer jobs were submitted.

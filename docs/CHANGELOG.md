@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.0 — 2026-11-03
+
+Full configuration export/import in Settings, with live editor/catalog capture, strict validation, scope confirmation, automatic pre-import backup and staged I/O rollback. Missing printers remain unselected across restart; unavailable fonts are reported/fallback. Code size 25–200 percent with plus/minus/reset, integer module scaling, safe text-space reallocation and overflow rejection; scale persists in snapshots/transfers and standalone export.
+
+
 ## 0.16.0 — 2026-11-03
 
 Root startup launcher validates the embedded SHA-256 payload manifest before loading .NET 8. Detects missing/changed runtime, application and SQLite files; validates editable root config separately. Startup logs, saved-work preflight and SQLite quick_check preserve damaged data. Portable app/ layout and isolated mutation/launch tests.

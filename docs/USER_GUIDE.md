@@ -1,4 +1,4 @@
-# User guide — TagPrinter 0.16
+# User guide — TagPrinter 0.17
 
 ## Start and update
 
@@ -79,3 +79,7 @@ Summary indicators separate actions, PNG tag exports, submitted jobs and request
 ## Startup checks (0.16)
 
 Open the root TagPrinter.exe to validate the immutable app/ payload before loading it. Editable config.json stays at the portable root; last work and SQLite are checked separately without deleting damaged data. See [startup validation](STARTUP_VALIDATION.md) for manifests, logs, recovery and limits.
+
+## Complete configuration and code size — 0.17
+
+Use 05 Settings > Export configuration / Import configuration to transfer catalog, data and all saved preferences. Imports show scope and create a before-import backup. History and Windows drivers/fonts are separate. In 02 use Code size · % (25–200), minus/plus or 100% reset. See [configuration transfer and code size](CONFIGURATION_TRANSFER.md).
