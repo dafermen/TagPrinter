@@ -1,57 +1,57 @@
-# v0.15.0 — 2026-11-03
+# Changelog
 
-Fuente/tamaño/negrilla, orientación y rotación del contenido; eliminación reversible y restauración de registros; Dashboard con agrupaciones y conteo separado de seriales únicos y acciones. Estado anterior compatible.
+## Unreleased — documentation update
 
-# Cambios
+English XML documentation for source contracts, English explanations of complex blocks and meaningful variables, annotated build scripts, student walkthrough, troubleshooting and consolidated current manuals. Corrected stale statements about deletion/history and release filenames. XML documentation output enabled. No application behavior or version change.
+
+## 0.15.0 — 2026-11-03
+
+Installed-font selector, base point size, general/heading bold, physical media orientation and whole-content rotation. Reversible report deletion/restoration and Dashboard grouping latest matching serials by type/brand/model with separate activity counts. Compatible work/history snapshots.
 
 ## 0.14.0
 
-Filas compactas con checkboxes a la derecha, tooltips y accesibilidad bilingüe. Selector QR/Code 128 en 01 con checkbox de inclusión. Etiquetas de solo texto usan el área completa, permiten serial vacío y rechazan salida vacía. Persistencia y recuperación en SQLite compatibles. Reportes distingue TextOnly y permite cargar registros sin serial; Export Code sigue independiente.
+Compact rows with right-side checkboxes, bilingual accessibility hints and optional QR/Code128. Text-only labels use the full area and allow empty serials, but reject empty output. Compatible persistence/history; independent code export still requires serial.
 
 ## 0.13.0
 
-01 plegable y expandida al iniciar. Historial SQLite con instantáneas de exportaciones/envíos, sin sobrescribir seriales repetidos. Pestaña Reportes: búsqueda, acción/fechas, ordenación, recuperación por serial, CSV vista/todo y backup. Enlace de proyecto sustituido por icono GitHub inferior izquierdo con tooltip About / Acerca de. Localización no modifica filtros de fecha.
+Expanded/collapsible Asset details. SQLite history of output events with snapshots, timestamps and source links. Reports search/date/action filters, sorting, snapshot loading, view/all CSV and backup. Footer GitHub About icon. Language changes preserve optional date filters.
 
 ## 0.12.0
 
-Nuevo activo limpia datos y conserva preferencias; guardado inmediato. Resumen visible de impresora, copias y método junto a Imprimir. Enlace al proyecto GitHub en 05 Configuración. Capturas y documentación actualizadas.
+New asset clears values while retaining preferences, with immediate save. Visible printer/copies/method summary. Project link added to Settings (moved to footer in 0.13).
 
 ## 0.11.0
 
-Nueva sección 05 Configuración / Settings, contraída en cada apertura. Idioma trasladado desde la cabecera a esa sección, conservando cambio instantáneo y persistencia. Capturas y guía actualizadas para destacar los datos a imprimir.
+Collapsed Settings section contains remembered English/Spanish language selection.
 
 ## 0.10.0
 
-Tipo de activo / Asset type antes de Marca, checkbox independiente, autoguardado y recuperación. Seis campos en la etiqueta. Tipo como encabezado; marca conserva el encabezado si se oculta o vacía Tipo. Ejemplo y capturas actualizados. Compatibilidad: trabajos anteriores mantienen sus valores y el nuevo campo vacío.
+Asset type before brand, with independent visibility/autosave/recovery. Type becomes heading; brand is fallback. Older snapshots keep the new field empty.
 
 ## 0.9.0 — 2026-11-01
 
-Brand / Marca sustituye Title; Model / Modelo separado. Nuevos Part number y MAC address con checkboxes y autoguardado. Migración de datos anteriores. config.json editable: tamaños por Id y valores iniciales validados. Repositorio GitHub, documentación y capturas en inglés/español.
+Brand replaces Title. Model, part number and MAC fields with visibility and autosave. Legacy migration; editable validated config.json media/defaults; GitHub repository and documentation.
 
 ## 0.8.0
 
-Checkboxes para incluir/ocultar título, modelo y texto del serial. Selección persistida, valores conservados, redistribución de textos visibles y modo etiqueta con solo código. Compatibilidad con trabajos anteriores: los tres textos visibles por defecto. El serial sigue alimentando el QR/Code 128.
+Visibility checkboxes for title/model/serial text, with preserved values and code payload; compatible saved work.
 
 ## 0.7.0
 
-04 Printing / Impresión plegable y contraída al abrir, con el mismo comportamiento que 02 y 03. Se conservan impresora, método, DPI y cantidad al plegar.
+Printing section becomes collapsible and starts collapsed, retaining its values.
 
 ## 0.6.0
 
-Eliminado Save work, conservando guardado automático. Botones Export Tag / Exportar etiqueta y Export Code / Exportar código; formato PNG y contenido sin cambios.
+Removed Save work in favor of autosave. Buttons renamed Export Tag and Export Code.
 
 ## 0.5.0
 
-Secciones 02 y 03 plegables mediante encabezado con flecha, contraídas al abrir. Controles y ajustes se conservan al plegar. Acceso mediante teclado e interfaz bilingüe.
+Label/template and text/margins sections become keyboard-accessible, collapsible and initially collapsed.
 
 ## 0.4.0 — 2026-10-31
 
-- Copia de TagPrint 0.3 a C:\Projects\TagPrinter antes de la mejora.
-- Solución, proyecto, namespace, producto, EXE e icono renombrados a TagPrinter.
-- Exportar solo el código: QR/Code 128 independiente del diseño, PNG blanco, zona de lectura y nombre serial_QR.png / serial_barcode.png.
-- Pruebas de PNG guardado/reabierto: lectura, resolución, zona blanca y nombres.
-- Documentación y scripts de prueba/publicación portable.
+Copied prior TagPrint source to C:/Projects/TagPrinter, renamed solution/product/executable and added icon. Independent code PNG export with quiet zones and serial-based names. Save/reopen/decode tests, guides and portable scripts.
 
-## 0.3.0 — base copiada
+## 0.3.0 — copied baseline
 
-Fuente automática/manual, márgenes, guías, desplazamientos, persistencia del último trabajo, inglés/español, impresión y exportación de etiquetas completas.
+Automatic/manual text scaling, margins/guides/offsets, remembered work, English/Spanish, printing and full-label export.

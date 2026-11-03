@@ -1,7 +1,16 @@
 using ZXing;
 namespace TagPrinter;
+/// <summary>
+/// Rendering and integration checks with synthetic data and isolated settings/databases; never submits
+/// printer jobs.
+/// </summary>
 public static class SelfTest
 {
+    /// <summary>
+    /// Verifies rotated QR decoding, physical dimensions, format persistence, unique serials and
+    /// recycle/restore in isolated data.
+    /// </summary>
+    /// <param name="folder">Isolated output directory for synthetic verification data.</param>
     static void TestNewFeatures(string folder)
     {
         var data=new LabelData("Dell","Model","ROTATE123",100,50,203,3,true,FontFamily:"Calibri",FontSizePt:11,Bold:true);
@@ -10,6 +19,8 @@ public static class SelfTest
             using var bitmap=LabelRenderer.Render(data with {ContentRotation=rotation});
             if(bitmap.Width!=799 || bitmap.Height!=400)throw new Exception("Rotation changed physical media dimensions.");
             bitmap.Save(Path.Combine(folder,$"rotation-{rotation}.png"));
+            // ZXing expects three packed bytes per pixel: red, green, blue. This avoids relying on Bitmap
+            // internal storage layout.
             var rgb=new byte[bitmap.Width*bitmap.Height*3];
             for(int y=0;y<bitmap.Height;y++)for(int x=0;x<bitmap.Width;x++){var c=bitmap.GetPixel(x,y);int i=(y*bitmap.Width+x)*3;rgb[i]=c.R;rgb[i+1]=c.G;rgb[i+2]=c.B;}
             var decoded=new BarcodeReaderGeneric{AutoRotate=true,Options=new ZXing.Common.DecodingOptions{TryHarder=true}}.Decode(new RGBLuminanceSource(rgb,bitmap.Width,bitmap.Height,RGBLuminanceSource.BitmapFormat.RGB24));
@@ -35,10 +46,16 @@ public static class SelfTest
         using var dashboard=new DashboardView(reopened,(_,_,_)=>{});dashboard.Size=new Size(1100,650);dashboard.CreateControl();
         using(var screenshot=new Bitmap(1100,650)){dashboard.DrawToBitmap(screenshot,dashboard.ClientRectangle);screenshot.Save(Path.Combine(folder,"dashboard-en.png"));}
     }
+    /// <summary>
+    /// Runs verification scenarios and writes synthetic images/results.txt; thrown failures cause nonzero
+    /// script exit.
+    /// </summary>
     public static void Run()
     {
         string folder=Path.Combine(AppContext.BaseDirectory,"verification");Directory.CreateDirectory(folder);
         int count=0;
+        // Cover a matrix of media sizes, DPI values, layouts and code types. Decode actual pixels to verify
+        // the output serial.
         foreach(int width in new[]{50,100}) foreach(int dpi in new[]{203,300}) foreach(int layout in new[]{0,1,2,3}) foreach(bool qr in new[]{false,true})
         {
             var data=new LabelData("Monitor","Dell 22\" - H22203H","ABC12345644",width,width/2,dpi,layout,qr);
@@ -67,6 +84,7 @@ public static class SelfTest
         if(WorkStore.Load(statePath)!=work)throw new Exception("Work persistence mismatch");
         if(MainForm.SafeFileName("ABC12345644")!="ABC12345644" || MainForm.SafeFileName("TEST/123")!="TEST_123" || MainForm.SafeFileName("CON")!="_CON")throw new Exception("Invalid file name");
         string freshPath=Path.Combine(folder,"fresh-"+Guid.NewGuid()+".json");
+        // Supply isolated settings paths: synthetic UI interactions must never modify real user work or history.
         using(var form=new MainForm(freshPath,AppConfig.CreateDefault()))
         {
             if(!form.CaptureWork().ShowBrand || !form.CaptureWork().ShowModel || !form.CaptureWork().ShowSerialText || form.CaptureWork().Layout!=3 || form.CaptureWork().Language!="en")throw new Exception("Defaults mismatch");
@@ -107,6 +125,8 @@ public static class SelfTest
         }
         File.WriteAllText(Path.Combine(folder,"results.txt"),$"PASS: {count} etiquetas generadas y decodificadas (2 tamaños × 2 resoluciones × 4 plantillas × 2 tipos). Serial vacío rechazado. Persistencia de trabajo/idioma, reapertura y nombres de archivo comprobados. Fuente manual/automática, márgenes, guías y desplazamientos comprobados. ZPL con dimensiones y cantidad comprobados. Exportación independiente QR/Code 128 y nombres de archivo comprobados. Visibilidad de campos: 32 combinaciones decodificadas y preferencias restauradas. Campos P/N y MAC, configuración JSON y migración Title/Brand comprobados. Tipo de activo, seis campos, visibilidad y persistencia comprobados. Nuevo activo y resumen de impresión comprobados. SQLite, búsqueda, filtros, CSV, backup, exportaciones y recuperación histórica comprobados. Etiquetas sin código y recuperación sin serial comprobadas. No se envió ningún trabajo a impresoras.");
     }
+    /// <summary>Checks fitting, margins, preview-only guides, offsets and overflow rejection.</summary>
+    /// <param name="folder">Isolated output directory for synthetic verification data.</param>
     static void TestTypographyAndMargins(string folder)
     {
         var data=new LabelData("Monitor","Dell 22\" - H22203H","ABC12345644",100,50,203,3,false);
@@ -157,6 +177,7 @@ public static class SelfTest
                 if(moved.GetPixel(x,y).ToArgb()!=expected.ToArgb())throw new Exception("Offset did not translate exactly");
             }
         }
+        // Fails unless invalid rendering input throws ArgumentException.
         void MustReject(LabelData invalid)
         {
             try{using var image=LabelRenderer.Render(invalid);}catch(ArgumentException){return;}
@@ -172,6 +193,8 @@ public static class SelfTest
         original.Save(Path.Combine(folder,"margin-clean-export.png"));
     }
 
+    /// <summary>Saves/reopens codes, checks DPI/quiet zones/filenames and decodes serials.</summary>
+    /// <param name="folder">Isolated output directory for synthetic verification data.</param>
     static void TestCodeExport(string folder)
     {
         foreach(int dpi in new[]{203,300})foreach(bool qr in new[]{false,true})
@@ -208,6 +231,8 @@ public static class SelfTest
         using var standalone=CodeRenderer.Render(new string('A',80),false,203);
     }
 
+    /// <summary>Exercises visibility combinations and preserves encoded serial/checkbox preferences.</summary>
+    /// <param name="folder">Isolated output directory for synthetic verification data.</param>
     static void TestFieldVisibility(string folder)
     {
         foreach(int layout in new[]{0,3})foreach(bool qr in new[]{false,true})foreach(int mask in Enumerable.Range(0,8))
@@ -234,6 +259,10 @@ public static class SelfTest
         try{using var invalid=LabelRenderer.Render(new LabelData("","","",100,50,203,3,true,ShowBrand:false,ShowModel:false,ShowSerialText:false));throw new Exception("Hidden serial allowed empty code payload");}catch(ArgumentException){}
     }
 
+    /// <summary>
+    /// Checks catalog validation, stable preset restoration, extra fields and legacy property migration.
+    /// </summary>
+    /// <param name="folder">Isolated output directory for synthetic verification data.</param>
     static void TestConfigurationAndAssetFields(string folder)
     {
         var options=new System.Text.Json.JsonSerializerOptions{WriteIndented=true};
@@ -285,6 +314,8 @@ public static class SelfTest
         }
     }
 
+    /// <summary>Checks heading selection, six-field persistence and old-snapshot compatibility.</summary>
+    /// <param name="folder">Isolated output directory for synthetic verification data.</param>
     static void TestAssetType(string folder)
     {
         foreach(int dpi in new[]{203,300})foreach(bool qr in new[]{false,true})foreach(bool visible in new[]{false,true})
@@ -306,20 +337,29 @@ public static class SelfTest
         if(WorkStore.Load(legacy).AssetType!="")throw new Exception("Invented asset type for existing work");
     }
 
+    /// <summary>
+    /// Checks real SQLite, filters, CSV round trips, backup, output hooks, sorted loading and missing
+    /// printers with synthetic data.
+    /// </summary>
+    /// <param name="folder">Isolated output directory for synthetic verification data.</param>
     static void TestHistory(string folder)
     {
+        // Use a unique directory per run so old rows cannot make count assertions pass or fail accidentally.
         string testFolder=Path.Combine(folder,"history-"+Guid.NewGuid());Directory.CreateDirectory(testFolder);
         var store=new HistoryStore(Path.Combine(testFolder,"TagPrinter.db"));
         var state=new WorkState{AssetType="Monitor",Brand="Dell",Model="Text; \"quote\"\r\nsecond line",Serial="000123",PartNumber="PN-01",MacAddress="00:1A:2B:3C:4D:5E",Width=100,Height=50,MarginMm=3,OffsetXmm=.5m,ShowMacAddress=false,Copies=2,Code=1,Printer="Missing-Test-Printer",LabelPresetId="100x50"};
+        // Place events one second apart across midnight to verify inclusive-start/exclusive-end UTC filtering.
         var firstTime=DateTimeOffset.Parse("2026-10-31T23:59:59Z");
         long first=store.Add("ExportTag",state,"test.png",timestamp:firstTime);
         long second=store.Add("PrintSubmitted",state,sourceEventId:first,timestamp:firstTime.AddSeconds(1));
         if(first==second || store.Query().Count!=2 || store.Get(first)?.State!=state || store.Get(second)?.SourceEventId!=first)throw new Exception("History append/snapshot failed");
         if(store.Query(new("000123","serial")).Count!=2 || store.Query(new("Dell","brand")).Count!=2 || store.Query(new("Dell","model")).Count!=0)throw new Exception("History field search failed");
         if(store.Query(new(Action:"PrintSubmitted")).Count!=1 || store.Query(new(FromUtc:firstTime,ToUtcExclusive:firstTime.AddSeconds(1))).Count!=1)throw new Exception("History action/date filter failed");
+        // Include LIKE wildcard characters and injection-like text to verify literal, parameterized searches.
         store.Add("ExportCode",state with {Serial="A_B%123"});
         if(store.Query(new("A_B%","serial")).Count!=1 || store.Query(new("%' OR 1=1--")).Count!=0)throw new Exception("Search escaping failed");
         string csv=Path.Combine(testFolder,"roundtrip.csv");HistoryStore.ExportCsv(csv,store.Query());
+        // Reopen with an independent CSV parser. Embedded semicolons, quotes, newlines and JSON must survive export.
         using(var parser=new Microsoft.VisualBasic.FileIO.TextFieldParser(csv,System.Text.Encoding.UTF8))
         {
             parser.SetDelimiters(";");parser.HasFieldsEnclosedInQuotes=true;
@@ -330,6 +370,7 @@ public static class SelfTest
         if(new HistoryStore(backup).Query().Count!=3)throw new Exception("SQLite backup did not preserve history");
         try{store.Backup(store.DatabasePath);throw new Exception("Backup overwrote live database");}catch(ArgumentException){}
         if(new HistoryStore(store.DatabasePath).Query().Count!=3)throw new Exception("History was not durable");
+        // Change the catalog after recording. Loading history must still recover original physical dimensions, not the edited preset.
         var config=AppConfig.CreateDefault() with {LabelSizes=AppConfig.CreateDefault().LabelSizes.Select(p=>p.Id=="100x50"?p with {WidthMm=120,HeightMm=70}:p).ToList()};
         using(var form=new MainForm(Path.Combine(testFolder,"work.json"),config,store.DatabasePath))
         {
@@ -345,6 +386,7 @@ public static class SelfTest
             form.ExportCodeFile(Path.Combine(testFolder,"actual-code.png"));
             form.ExportTagFile(Path.Combine(testFolder,"actual.zpl"),true);
             if(store.Query().Count!=before+3 || store.Query()[0].Action!="ExportZpl")throw new Exception("Successful exports missing history");
+            // Remember the successful count, then force failures. Neither a bad path nor an empty serial may create a success event.
             int successful=store.Query().Count;
             try{form.ExportCodeFile(Path.Combine(testFolder,"missing-dir","code.png"));throw new Exception("Bad export path accepted");}catch(Exception ex) when(ex is System.Runtime.InteropServices.ExternalException or DirectoryNotFoundException){}
             if(store.Query().Count!=successful)throw new Exception("Failed export was logged as success");
@@ -359,6 +401,7 @@ public static class SelfTest
             if(form.Reports.VisibleRows().Count!=store.Query().Count || form.AboutTooltip!="Acerca de")throw new Exception("Language change modified filters or About tooltip");
             form.Close();
         }
+        // Build screenshot data through real export hooks in a separate demo database; never seed the live user database.
         using(var demo=new MainForm(Path.Combine(testFolder,"demo-work.json"),AppConfig.CreateDefault(),Path.Combine(testFolder,"demo.db")))
         {
             demo.Show();
@@ -373,6 +416,10 @@ public static class SelfTest
             demo.Close();
         }
     }
+    /// <summary>
+    /// Checks code-free rendering, optional serials, Unicode and independent standalone-code export.
+    /// </summary>
+    /// <param name="folder">Isolated output directory for synthetic verification data.</param>
     static void TestTextOnlyLabels(string folder)
     {
         var data=new LabelData("Dell","H22203H","",100,50,203,3,false,AssetType:"Monitor",ShowCode:false);
@@ -388,6 +435,7 @@ public static class SelfTest
             for(int y=0;y<baseline.Height;y++)for(int x=0;x<baseline.Width;x++){var c=baseline.GetPixel(x,y);int i=(y*baseline.Width+x)*3;rgb[i]=c.R;rgb[i+1]=c.G;rgb[i+2]=c.B;}
             if(new BarcodeReaderGeneric().Decode(new RGBLuminanceSource(rgb,baseline.Width,baseline.Height,RGBLuminanceSource.BitmapFormat.RGB24)) is not null)throw new Exception("Text-only label contains a code");
         }
+        // A hidden long Unicode serial must not invoke Code 128 validation when ShowCode is false.
         using(var text=LabelRenderer.Render(data with {Serial=new string('Ñ',300),ShowSerialText=false})){}
         try{using var invalid=LabelRenderer.Render(data with {ShowCode=true});throw new Exception("Code without serial accepted");}catch(ArgumentException){}
         try{using var invalid=LabelRenderer.Render(data with {ShowAssetType=false,ShowBrand=false,ShowModel=false,ShowSerialText=false});throw new Exception("Blank label accepted");}catch(ArgumentException){}

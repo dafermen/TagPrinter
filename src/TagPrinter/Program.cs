@@ -1,6 +1,12 @@
 namespace TagPrinter;
+/// <summary>Windows entry point; separates verification from interactive startup.</summary>
 internal static class Program
 {
+    /// <summary>
+    /// Initializes WinForms, handles --self-test or loads config and starts UI with separate
+    /// configuration/data failure messages.
+    /// </summary>
+    /// <param name="args">Command-line arguments; --self-test selects verification.</param>
     [STAThread]
     static void Main(string[] args)
     {

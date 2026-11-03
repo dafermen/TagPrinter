@@ -1,0 +1,47 @@
+# Troubleshooting — TagPrinter 0.15
+
+## Windows asks for .NET
+
+Use the self-contained Windows x64 ZIP from Releases, extract every file and start its TagPrinter.exe. Copying only the executable omits its runtime dependencies. Developer/framework-dependent builds require the matching runtime. Use the complete portable for normal distribution.
+
+## No printer or wrong destination
+
+Install the device's Windows driver, then use Refresh printers in section 04. Check the always-visible printer summary before submitting. Historical recovery clears a printer that is unavailable; choose a new destination explicitly. A successful spooler submission does not prove the device printed.
+
+## Wrong size, orientation, offset or blank physical output
+
+Compare app dimensions and DPI with actual media and driver settings. Calibrate the printer and review driver scaling/orientation. The app's horizontal/vertical control swaps physical dimensions; content rotation separately turns all text/code. Use the preview, then print one physical sample. Do not compensate for a media/driver mismatch by increasing copies.
+
+Direct ZPL requires ZPL-compatible firmware; the application does not automatically detect printer command-language capabilities. Use the Windows-driver method when appropriate for the installed device.
+
+## Text/code does not fit
+
+Use a larger label, shorter visible fields, bottom layout or QR where suitable. Try automatic font fit, a smaller point size/scale, or hide unneeded fields. A code still requires serial even when printed serial text is hidden. Text-only output may omit serial, but cannot be entirely blank.
+
+The font selector lists fonts on this computer. A missing historical font falls back to Arial in the editor. Automatic fitting can reduce the size you request; disable it to test a fixed scale and inspect overflow messages.
+
+## Barcode cannot be scanned
+
+Check serial contents (printable ASCII for Code 128), correct DPI, actual print sharpness and white quiet zones. Use a larger label or Export Code to inspect an independent symbol. Successful bitmap decoding in tests does not validate the printhead, media or driver scaling. Always scan a real sample before batches.
+
+## Changes to config.json appear ignored
+
+Existing last-work settings override startup defaults. The catalog still loads from the current installation. New asset clears asset values but does not reset formatting. Close the app before manual edits; see CONFIGURATION.md for supported properties and ranges. Do not add font/rotation keys to Defaults expecting unsupported settings to take effect.
+
+## History or Dashboard looks different than expected
+
+Check search, action, optional dates and Recycle bin in Reports. Dashboard excludes recycled events and counts one latest matching event per normalized nonblank serial. It reports blank-serial actions separately. Repeated exports are multiple events, not multiple unique assets. Group metadata is trimmed but case-sensitive.
+
+Dashboard filters apply before deduplication. Double-clicking a group opens full matching active history, not the Dashboard date/search subset. See HISTORY.md for exact counting rules.
+
+## History write failed after output
+
+The app can successfully create a file or submit printing and then fail to record SQLite history. Read the warning: do not automatically repeat a print. Inspect the output/queue and data-folder access before deciding whether another submission is needed.
+
+## Backup and data recovery
+
+Use Back up database for a consistent live SQLite copy. It includes recycled events, but not separate output files, config.json or last-work JSON. There is no restore-backup button. Close all instances and preserve the existing data folder before manual replacement; never mix unrelated WAL/SHM files. Keep backups outside the portable folder. See HISTORY.md.
+
+## RFID expectations
+
+This version prints visible labels on compatible printers. RFID chip encoding and read-back verification are not implemented. Printing successfully on RFID media does not mean its chip contains the serial.

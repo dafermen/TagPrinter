@@ -4,13 +4,68 @@ using ZXing;
 using ZXing.Common;
 namespace TagPrinter;
 
+/// <summary>
+/// Immutable rendering input independent of controls. Distances are millimeters, font sizes are points and
+/// Dpi converts measurements to pixels.
+/// </summary>
+/// <param name="Brand">Manufacturer text to draw when ShowBrand is enabled.</param>
+/// <param name="Model">Model description retained even when hidden.</param>
+/// <param name="Serial">Symbol payload/asset identifier; may be blank for a code-free label.</param>
+/// <param name="WidthMm">Physical width in millimeters.</param>
+/// <param name="HeightMm">Physical height in millimeters.</param>
+/// <param name="Dpi">Pixels per inch for physical-to-raster conversion.</param>
+/// <param name="Layout">0 bottom-center, 1 bottom-left, 2 bottom-right, 3 code beside text.</param>
+/// <param name="Qr">True selects QR; false selects Code 128.</param>
+/// <param name="AutoFont">Whether fitting may shrink text down to 50 percent.</param>
+/// <param name="FontPercent">Manual scale percentage from 50 through 200.</param>
+/// <param name="MarginMm">Inner margin from 1 through 5 millimeters.</param>
+/// <param name="OffsetXmm">Horizontal shift from -5 through 5 millimeters before rotation.</param>
+/// <param name="OffsetYmm">Vertical shift from -5 through 5 millimeters before rotation.</param>
+/// <param name="ShowBrand">Whether to print this field; hiding it preserves its value.</param>
+/// <param name="ShowModel">Whether to print this field; hiding it preserves its value.</param>
+/// <param name="ShowSerialText">Whether to print this field; hiding it preserves its value.</param>
+/// <param name="PartNumber">Optional part-number text.</param>
+/// <param name="MacAddress">Optional MAC text; not normalized or validated automatically.</param>
+/// <param name="ShowPartNumber">Whether to print this field; hiding it preserves its value.</param>
+/// <param name="ShowMacAddress">Whether to print this field; hiding it preserves its value.</param>
+/// <param name="AssetType">Optional category used as the heading when visible and nonempty.</param>
+/// <param name="ShowAssetType">Whether to print this field; hiding it preserves its value.</param>
+/// <param name="ShowCode">Whether to draw/encode the symbol. False gives text the entire content area.</param>
+/// <param name="FontFamily">Windows font-family name; UI restoration falls back to Arial if absent.</param>
+/// <param name="FontSizePt">Body base size 4 through 72 points; heading uses 1.3 times this value.</param>
+/// <param name="Bold">Applies bold to every text line.</param>
+/// <param name="HeadingBold">Applies heading bold independently of general Bold.</param>
+/// <param name="ContentRotation">Clockwise degrees: 0, 90, 180 or 270.</param>
 public record LabelData(string Brand, string Model, string Serial, decimal WidthMm, decimal HeightMm, int Dpi, int Layout, bool Qr, bool AutoFont = true, int FontPercent = 100, decimal MarginMm = 2, decimal OffsetXmm = 0, decimal OffsetYmm = 0, bool ShowBrand = true, bool ShowModel = true, bool ShowSerialText = true, string PartNumber = "", string MacAddress = "", bool ShowPartNumber = true, bool ShowMacAddress = true, string AssetType = "", bool ShowAssetType = true, bool ShowCode = true, string FontFamily = "Arial", decimal FontSizePt = 10, bool Bold = false, bool HeadingBold = true, int ContentRotation = 0);
+/// <summary>
+/// Draws complete labels and converts bitmaps into raster ZPL. Preview, export and printing share this
+/// renderer.
+/// </summary>
 public static class LabelRenderer
 {
+    /// <summary>
+    /// Validates settings, fits visible text/code and returns a new label bitmap. Quarter turns use an
+    /// intermediate with swapped dimensions.
+    /// </summary>
+    /// <param name="d">Complete rendering settings, independent of UI controls.</param>
+    /// <param name="guides">Includes preview-only margin guides; output actions leave this false.</param>
+    /// <returns>A new bitmap owned by the caller; dispose after use.</returns>
+    /// <exception cref="ArgumentException">Rotation/settings are unsupported, required content is missing, or text/code cannot fit.</exception>
     public static Bitmap Render(LabelData d, bool guides = false)=>Render(d,guides,out _);
+    /// <summary>
+    /// Validates settings, fits visible text/code and returns a new label bitmap. Quarter turns use an
+    /// intermediate with swapped dimensions.
+    /// </summary>
+    /// <param name="d">Complete rendering settings, independent of UI controls.</param>
+    /// <param name="guides">Includes preview-only margin guides; output actions leave this false.</param>
+    /// <param name="usedFontPercent">Receives the effective percentage of the configured base text size.</param>
+    /// <returns>A new bitmap owned by the caller; dispose after use.</returns>
+    /// <exception cref="ArgumentException">Rotation/settings are unsupported, required content is missing, or text/code cannot fit.</exception>
     public static Bitmap Render(LabelData d, bool guides, out int usedFontPercent)
     {
         if(d.ContentRotation is not (0 or 90 or 180 or 270))throw new ArgumentException("Invalid rotation.");
+        // Quarter turns render into swapped temporary dimensions, then rotate into the requested physical
+        // media. Recursion stops because the temporary rotation is zero.
         if(d.ContentRotation!=0)
         {
             bool quarter=d.ContentRotation is 90 or 270;
@@ -22,14 +77,19 @@ public static class LabelRenderer
         usedFontPercent=100;
         if (d.ShowCode && string.IsNullOrWhiteSpace(d.Serial)) throw new ArgumentException(Ui.T("Escribe un serial.", "Enter a serial number."));
         if (d.ShowCode && !d.Qr && d.Serial.Any(c => c < 32 || c > 126)) throw new ArgumentException(Ui.T("Code 128 admite aquí caracteres ASCII. Usa QR para otros caracteres.", "Use QR for non-ASCII serial numbers."));
+        // w/h are bitmap pixels. One inch is 25.4 mm: pixels = millimeters * DPI / 25.4.
         int w = (int)Math.Round((double)d.WidthMm * d.Dpi / 25.4), h = (int)Math.Round((double)d.HeightMm * d.Dpi / 25.4);
         if(d.MarginMm < 1 || d.MarginMm > 5 || d.FontPercent < 50 || d.FontPercent > 200 || Math.Abs(d.OffsetXmm)>5 || Math.Abs(d.OffsetYmm)>5)
             throw new ArgumentException(Ui.T("Los ajustes están fuera del rango permitido.","Settings are outside the supported range."));
+        // m is the pixel inset; dx/dy shift the content rectangle. Bounds checks reject shifts that leave
+        // the physical bitmap.
         int m = (int)Math.Round((double)d.MarginMm * d.Dpi / 25.4);
         int dx = (int)Math.Round((double)d.OffsetXmm * d.Dpi / 25.4), dy = (int)Math.Round((double)d.OffsetYmm * d.Dpi / 25.4);
         var content = new Rectangle(m+dx, m+dy, w - 2*m, h - 2*m);
         if(content.Left<0 || content.Top<0 || content.Right>w || content.Bottom>h)
             throw new ArgumentException(Ui.T("El desplazamiento supera el espacio disponible. Auméntalo menos o amplía el margen.","The offset exceeds the available space. Reduce it or increase the margin."));
+        // Keep only visible nonempty lines. Each tuple holds text and a heading flag; the first available
+        // type/brand supplies the heading.
         var lines = new List<(string Text, bool IsHeading)>();
         bool hasAssetType=d.ShowAssetType && !string.IsNullOrWhiteSpace(d.AssetType);
         if(hasAssetType)lines.Add((d.AssetType,true));
@@ -40,6 +100,8 @@ public static class LabelRenderer
         if(d.ShowMacAddress && !string.IsNullOrWhiteSpace(d.MacAddress))lines.Add(("MAC: "+d.MacAddress,false));
         int lineCount=lines.Count;
         if(!d.ShowCode && lineCount==0)throw new ArgumentException(Ui.T("Incluye al menos un campo con texto o activa el código.","Include at least one text field or enable the code."));
+        // textW/textH reserve text space. codeArea receives the remainder; code-only output receives the
+        // whole inset rectangle.
         bool side = d.Layout == 3;
         int textW = !d.ShowCode ? content.Width : side ? (int)(content.Width * (d.Qr ? .54 : .40)) : content.Width;
         int textH = !d.ShowCode ? content.Height : side ? content.Height : (int)(content.Height * .48);
@@ -51,6 +113,8 @@ public static class LabelRenderer
             BarcodeFormat format = d.Qr ? BarcodeFormat.QR_CODE : BarcodeFormat.CODE_128;
             matrix = new MultiFormatWriter().encode(d.Serial, format, 0, 0,
                 new Dictionary<EncodeHintType, object> { [EncodeHintType.MARGIN] = d.Qr ? 4 : 10, [EncodeHintType.CHARACTER_SET] = "UTF-8" });
+            // One module is one QR cell or barcode unit. Integer scaling keeps edges sharp; scale below one
+            // means the symbol cannot fit.
             scale = Math.Min(codeArea.Width / matrix.Width, codeArea.Height / matrix.Height);
             if (scale < 1) throw new ArgumentException(Ui.T("El código no cabe. Aumenta la etiqueta o usa el código abajo.", "The code does not fit. Use a larger label or a bottom layout."));
             int cw = matrix.Width * scale; ch = d.Qr ? matrix.Height * scale : Math.Min(codeArea.Height, d.Dpi / 4);
@@ -63,8 +127,10 @@ public static class LabelRenderer
             using var g = Graphics.FromImage(bmp); g.Clear(Color.White);
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SingleBitPerPixelGridFit;
             using var fmt = new StringFormat(StringFormat.GenericTypographic) { Trimming = StringTrimming.None };
+            // Points convert to pixels with DPI / 72. textRects gives every visible line an equal-height slot.
             float[] baseSizes = lines.Select(line=>d.Dpi*(float)d.FontSizePt*(line.IsHeading?1.3f:1f)/72f).ToArray();
             var textRects=Enumerable.Range(0,lineCount).Select(i=>new RectangleF(content.Left,content.Top+textH*i/(float)lineCount,textW,textH/(float)lineCount)).ToArray();
+            // Measures each line at a proposed scale and checks width/height against its assigned rectangle.
             bool Fits(float factor)
             {
                 for(int i=0;i<lineCount;i++)
@@ -75,6 +141,8 @@ public static class LabelRenderer
                 }
                 return true;
             }
+            // Auto mode starts at 100 percent and shrinks one percentage point at a time to 50. Manual mode
+            // uses FontPercent. Both reject remaining overflow.
             float factor=d.AutoFont?1f:d.FontPercent/100f;
             if(d.AutoFont)
             {
@@ -87,6 +155,8 @@ public static class LabelRenderer
                 using var font=new Font(d.FontFamily,baseSizes[i]*factor,(d.Bold || (lines[i].IsHeading && d.HeadingBold))?FontStyle.Bold:FontStyle.Regular,GraphicsUnit.Pixel);
                 g.DrawString(lines[i].Text,font,Brushes.Black,textRects[i],fmt);
             }
+            // Paint individual modules as solid rectangles rather than stretching an image, preserving
+            // scanner-readable edges.
             if(matrix is not null)for(int row=0; row<matrix.Height; row++) for(int col=0; col<matrix.Width; col++)
                 if(matrix[col,row])
                     g.FillRectangle(Brushes.Black,x+col*scale,d.Qr ? y+row*scale : y,scale,d.Qr ? scale : ch);
@@ -99,12 +169,23 @@ public static class LabelRenderer
         }
         catch { bmp.Dispose(); throw; }
     }
+    /// <summary>
+    /// Packs dark pixels into hexadecimal bytes and wraps them in raster ZPL with dimensions and requested
+    /// quantity.
+    /// </summary>
+    /// <param name="image">Existing bitmap to read; ownership stays with the caller.</param>
+    /// <param name="copies">Requested quantity for the ZPL print command.</param>
+    /// <returns>ASCII-compatible raster ZPL with requested quantity.</returns>
     public static string ToZpl(Bitmap image, int copies)
     {
+        // stride is bytes per raster row, rounded up: each byte packs eight monochrome pixels. Unused
+        // trailing bits stay white.
         int stride=(image.Width+7)/8;
         var hex = new StringBuilder();
         for(int y=0;y<image.Height;y++) for(int b=0;b<stride;b++)
         {
+            // The leftmost pixel uses bit 7 (128). Dark pixels set bits; hexadecimal byte pairs form the ZPL
+            // ^GFA payload.
             int value=0;
             for(int bit=0;bit<8;bit++) { int x=b*8+bit; if(x<image.Width && image.GetPixel(x,y).GetBrightness()<.5f) value|=128>>bit; }
             hex.Append(value.ToString("X2"));

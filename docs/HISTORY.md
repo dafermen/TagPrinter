@@ -1,70 +1,66 @@
-# Historial SQLite y Reportes — v0.13
+# SQLite history, Reports and Dashboard — 0.15
 
-## Qué se registra
+## Event contract
 
-Cada operación completada genera un evento independiente, aunque el serial se repita:
+Each completed output creates one independent event, even when its serial repeats.
 
-| Acción estable | Significado |
+| Stable action | Meaning |
 |---|---|
-| ExportTag | Se guardó el PNG de la etiqueta completa |
-| ExportCode | Se guardó el PNG del código |
-| ExportZpl | Se guardó el archivo ZPL |
-| PrintSubmitted | Terminó la llamada de envío al sistema de impresión |
+| ExportTag | Full-label PNG written successfully. |
+| ExportCode | Standalone symbol PNG written successfully. |
+| ExportZpl | Raster ZPL file written successfully. |
+| PrintSubmitted | The application's print submission call completed. |
 
-Se conserva fecha/hora UTC, los seis campos, todos los valores/checkboxes del diseño, resolución, dimensiones, fuente, márgenes, offsets, impresora, copias, ruta del archivo exportado y registro origen cuando se recuperó de Reportes.
+One submission with several copies is one event. It does not confirm physical printing or RFID. Preview edits, autosave, New asset, report exports and backups do not create label events. Canceled/failed output is not recorded as successful.
 
-Una fila representa una operación; la columna Copias indica la cantidad solicitada. **PrintSubmitted no confirma salida física ni RFID**. No se graba una fila por pulsación, cambio de vista previa, Nuevo activo o guardado de preferencias. Una exportación cancelada o fallida no crea un evento exitoso.
+Each event stores UTC time, six asset fields, full WorkState JSON (format, dimensions, visibility, fonts, rotation, margins, printer/copies), output path and optional source event ID. If an external output succeeds but SQLite fails, the app warns without retrying output. They are not one atomic transaction.
 
-Si el archivo/impresión terminó pero la escritura del historial falla, se muestra un aviso independiente. No se reenvía automáticamente el trabajo. No existe una transacción conjunta entre Windows/archivos externos y SQLite.
+## Location and schema
 
-## Ubicación y compatibilidad
+The live file is %LOCALAPPDATA%/TagPrinter/TagPrinter.db, outside the portable. History begins with actions recorded since v0.13; old output files are not automatically imported. Tests/screenshots use separate synthetic databases.
 
-La base real está en `%LOCALAPPDATA%\TagPrinter\TagPrinter.db`. No está dentro del portable y no se reemplaza al actualizar. Los archivos `-wal` y `-shm` pueden existir mientras SQLite está abierto; no deben manipularse mientras la aplicación esté en uso.
+SQLite user_version is 1. The events table holds id, created_utc, action, serial, asset_type, brand, model, part_number, mac_address, state_json, output_path and source_event_id. Serial/date indexes assist queries; source_event_id is a foreign key. Serial is intentionally not unique.
 
-El historial empieza desde v0.13, sin importar automáticamente archivos de versiones anteriores. Los datos sintéticos de las capturas/pruebas nunca se insertan en la base del usuario. `config.json` sigue separado del historial y del último trabajo.
+The trash table holds event_id and deleted_utc. v0.15 adds it idempotently without changing existing events or raising user_version. Normal queries exclude its IDs; recycled queries include them. Get(id) can retrieve either scope. Connections enable WAL, foreign keys and a five-second busy timeout without pooling.
 
-## Buscar, filtrar y ordenar
+## Search, sorting and date scope
 
-Abre Reportes / Reports. Escribe parte del serial o de otro dato, elige el campo y pulsa Buscar / actualizar o Enter. «Todos los campos» busca en los seis datos del activo. Los caracteres `%` y `_` se buscan literalmente. La comparación de mayúsculas de SQLite es insensible para ASCII.
+Search literal substrings in all six fields or one selected field. Percent and underscore are literal, not wildcard syntax. SQL field expressions are whitelisted and values are parameterized. SQLite case-insensitive matching here is ASCII-oriented.
 
-La acción se puede filtrar con su selector. Las fechas están desactivadas por defecto: marca Desde y/o Hasta para usarlas. Se interpretan como fechas locales, incluyendo todo el día Hasta. «Limpiar filtros» vuelve a mostrar todo. Pulsa los encabezados para ordenar por fecha, serial, copias u otra columna. Desplázate horizontalmente para ver impresora y columnas adicionales.
+Action/date conditions combine with text using AND. Dates start unchecked. From includes local midnight; To includes its complete day using an exclusive boundary at the next local midnight. Each boundary is converted to UTC. Display dates are local; CSV timestamps remain UTC.
 
-## Recuperar para reimprimir
+Click column headers to sort. Numeric/date columns use typed values. Horizontal scrolling reveals additional columns. Export view follows the current filtered/sorted DataView.
 
-Pulsa el serial o selecciona una fila y usa Cargar etiqueta. Se cambia a Etiquetas y se recuperan datos y diseño, sin imprimir automáticamente ni crear otro evento.
+## Load a label
 
-Las dimensiones se recuperan como Personalizado para respetar el diseño histórico incluso si el catálogo fue modificado. Se conserva el idioma actual de la interfaz. Si la impresora guardada no está instalada, queda sin seleccionar: elige una disponible en 04 antes de imprimir. Revisa siempre la vista previa.
+Click its serial link or select a row and choose Load label. Blank serials display (No serial) but resolve through the numeric ID. Recovery creates no event and sends no print job.
 
-Cuando vuelvas a exportar o enviar a impresión, se crea un nuevo evento con el registro origen. Nuevo activo borra esa referencia y limpia solo los datos del activo.
+Physical dimensions become Custom to preserve the old design despite catalog changes. Current UI language is retained. An unavailable saved printer is cleared; choose an installed printer before submitting. A later output is a new event with the loaded event ID as source. New asset clears that reference.
 
-## Exportar CSV
+New properties use compatible defaults: older records keep ShowCode=true, Arial 10 pt, heading emphasis and rotation zero. Legacy Title/ShowTitle migration applies when loading last-work JSON; history was introduced after the brand fields.
 
-- Exportar vista CSV: filas actualmente mostradas, respetando su orden.
-- Exportar todo CSV: todos los eventos, sin filtros.
+## Recycle and restore
 
-Separador `;`, UTF-8 con BOM y todas las celdas entre comillas. Las comillas, punto y coma y saltos de línea se conservan correctamente. Fechas ISO-8601 en UTC, números con formato invariante. Los encabezados/acciones estables están en inglés para facilitar importación en bases de datos.
+Select rows and confirm Delete. A transaction inserts their IDs into trash; event contents and source links remain unchanged. Check Recycle bin to inspect and restore them. Duplicate deletion is harmless. There is no permanent-delete or event-edit UI. Deleted events do not contribute to Dashboard. Exported files and queued jobs are never removed by this action.
 
-Incluye StateJson con la instantánea completa del diseño. Al importar en Excel u otra herramienta, declara serial/MAC/No. de parte como texto para conservar su representación. Exportar un reporte no crea eventos de etiquetas.
+## CSV
 
-## Copia de seguridad
+Export view CSV exports currently shown rows in order. Export all CSV ignores search/date/group filters but respects active versus recycle-bin scope. Output is UTF-8 with BOM, semicolon separated, every value quoted, embedded quotes doubled. Newlines and delimiters round-trip.
 
-«Copia de seguridad» genera una copia SQLite consistente con su API de backup, incluso con la aplicación abierta. No permite elegir la base activa como destino. Conserva las copias fuera de la carpeta del portable.
+Columns: Id, CreatedUtc, Action, Serial, AssetType, Brand, Model, PartNumber, MacAddress, Printer, Copies, CodeType, WidthMm, HeightMm, OutputPath, SourceEventId, StateJson.
 
-No hay botón de restauración en esta versión. Para restaurar manualmente, cierra todas las instancias, conserva una copia de la carpeta de datos actual y reemplaza la base por una copia válida; no mezcles archivos WAL/SHM de bases distintas.
+Dates use ISO-8601 UTC; numbers use invariant formatting. CodeType is TextOnly for full-label actions with ShowCode=false, otherwise QR/Code128; standalone ExportCode always remains a symbol. Empty serials remain empty. Import identifier columns as text to preserve leading zeroes. CSV is an export format; the app does not currently import it.
 
-## Modelo y límites
+## Backup and manual restoration
 
-SQLite con esquema user_version=1, índices por serial y fecha, inserciones parametrizadas y sin edición/borrado de eventos desde la interfaz. La tabla carga los resultados de la búsqueda; un historial muy grande podría requerir paginación en una versión posterior. Los filtros por texto parcial pueden recorrer filas. La base local no está cifrada ni sincronizada con otros equipos.
+Back up database uses SQLite's backup API to produce a consistent .db, including recycled events, while the app is open. It refuses the active database as destination. Keep backups outside the portable folder.
 
-## Etiquetas sin código (v0.14)
+There is no restore-backup UI. For manual restoration, close every app instance, preserve a copy of the complete existing data folder, then replace the database using a known valid backup. Do not combine unrelated -wal/-shm files with a restored .db. Backup does not include external PNG/ZPL files, installation config.json or last-work settings.json; preserve those separately when needed.
 
-WorkState conserva ShowCode. Los registros antiguos sin esa propiedad usan true. Las etiquetas de solo texto pueden no tener serial: la base guarda una cadena vacía, la tabla muestra un enlace (Sin serial)/(No serial) y carga por ID. Los CSV conservan el serial vacío. CodeType es TextOnly para ExportTag/ExportZpl/PrintSubmitted sin código; ExportCode siempre conserva QR/Code128. El formato de tabla SQLite y sus datos previos no necesitan recrearse.
+## Dashboard counting
 
-## v0.15 — Fuente, orientación, papelera y Dashboard
+Filters apply before deduplication. The latest matching event ID represents each trimmed, case-insensitive nonblank serial. Representative snapshots group by trimmed type/brand/model; these group strings are case-sensitive. Thus metadata edits or different spelling may change grouping.
 
-- Fuente instalada en Windows, tamaño base 4–72 pt, negrilla general y encabezado en negrilla independiente. El encabezado conserva proporción 1.3; ajuste automático y escala porcentual siguen disponibles. El tamaño efectivo puede reducirse con ajuste automático. Si falta la fuente al mover el portable, se usa Arial al recuperar el trabajo.
-- En 02: horizontal/vertical intercambia ancho y alto y pasa a tamaño personalizado. Rotación del contenido 0/90/180/270 gira texto y código juntos dentro del tamaño físico elegido; no gira solo el texto. Vista previa, PNG, ZPL e impresión usan el mismo resultado. Export Code permanece independiente.
-- Reportes permite seleccionar varias filas, Eliminar y confirmar. Papelera muestra los registros retirados y permite restaurarlos. No se borran archivos PNG/ZPL ni trabajos en la impresora. Backup incluye la papelera; CSV exporta registros activos o de la papelera según la vista.
-- Dashboard muestra agrupaciones tipo + marca + modelo, activos únicos por serial (sin distinguir mayúsculas y con espacios extremos eliminados), acciones, exportaciones PNG de etiquetas, trabajos y copias enviados. Fechas y búsqueda limitan los eventos analizados: se toma el registro más reciente de cada serial dentro de esos resultados. Sin serial se informa aparte como cantidad de acciones, no de activos. Los registros en papelera no cuentan. Doble clic abre los registros del grupo en Reportes; la vista de detalle muestra todo su historial activo.
-- Trabajos enviados y copias no confirman impresión física. El Dashboard representa historial de etiquetas, no inventario verificado. Identificadores reutilizados pueden representar activos distintos; por ahora un serial identifica un activo.
-- Estado de formato recuperable en último trabajo y snapshots históricos. Registros antiguos conservan Arial 10 pt, encabezado resaltado y rotación 0. SQLite añade tabla trash sin alterar los registros anteriores. Los historiales grandes todavía se cargan en memoria.
+Blank serials cannot establish asset identity and count only as separate actions. Totals distinguish all actions, ExportTag actions, PrintSubmitted jobs and their sum of Copies. Standalone code/ZPL exports are not counted as PNG tag exports. Reusing one serial for different physical assets merges them under this rule.
+
+Double-click opens a type/brand/model equality filter over active Reports history, clearing ordinary report filters. Reports uses original stored strings and default DataView comparison, whereas Dashboard trims grouping values. Case variants can match together in Reports, and edge-space differences can make drill-down differ from the displayed group count. It does not preserve Dashboard dates/search. History is local, unencrypted and unsynchronized; large results are loaded into memory without pagination.

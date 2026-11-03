@@ -1,63 +1,45 @@
-# Validación v0.4
+# Validation
 
-Ejecutar scripts/Test.ps1. Resultado: src/TagPrinter/bin/Release/net8.0-windows/verification/results.txt.
+## How to run
 
-Cobertura:
+From Windows with the .NET 8 SDK:
 
-- 32 etiquetas completas (dos tamaños, dos DPI, cuatro distribuciones, dos tipos de código), generadas y decodificadas.
-- 12 combinaciones adicionales de margen/DPI/tipo.
-- Fuente manual/automática, independencia del código, guías excluidas, márgenes blancos, desplazamiento exacto y rechazo de recortes.
-- Persistencia/reapertura/migración de datos e idioma y ajustes; nombres de archivo.
-- Cuatro PNG de código independiente (QR/Code 128 a 203/300 DPI), guardados, reabiertos y decodificados: contenido, formato, resolución, QR cuadrado, fondo opaco blanco/negro y zonas blancas.
-- Rechazo de serial vacío y ASCII inválido para Code 128. Generación independiente del diseño de etiqueta.
-- Capturas en inglés/español. Configuración de prueba separada de los datos del usuario.
+```powershell
+./scripts/Test.ps1
+./scripts/Publish.ps1
+```
 
-Compilación Release sin errores ni advertencias y pruebas satisfactorias. Publish.ps1 ejecuta también --self-test con el EXE portable antes de crear el ZIP.
+Test builds Release and runs the managed --self-test path. Publish builds the self-contained executable and runs that executable's tests before packaging. Test paths isolate last-work settings and SQLite from live user data. No test submits printer jobs or opens the project website. A failed check throws and stops its script.
 
-No se imprimieron etiquetas ni se grabaron chips. Leer PNG no garantiza lectura de la impresión. No se ha probado en una máquina Windows limpia sin SDK.
+## Automated coverage
 
-## v0.5
+| Area | Checks |
+|---|---|
+| Full-label codes | 32 combinations: two sizes, two DPI values, four layouts, QR/Code128; generated pixels decode to the intended serial. |
+| ZPL | Raster dimensions, framing and requested quantity. |
+| Typography | Manual/automatic scale, fit rejection, margins, guide exclusion and exact offsets. |
+| Standalone codes | PNG save/reopen, DPI, quiet zones, decoding and safe filenames. |
+| Visibility | Field combinations, unchanged code payload, saved flags and empty-output rejection. |
+| Config/compatibility | Catalog validation/stable IDs, old Title/ShowTitle, extra fields, asset heading and missing-new-field defaults. |
+| UI state | English/Spanish restoration, section defaults/toggle, About hints, New asset and print summary. |
+| SQLite | Append/reopen, repeated serials, complete snapshots, source foreign keys, literal/injection-like searches, actions and UTC bounds. |
+| CSV/backup | UTF-8/semicolon round trip including quotes/newlines/JSON; consistent backup reopen and active-destination rejection. |
+| Integration | Successful output creates events; failed exports do not; report sorting/loading preserves intended IDs and exact dimensions; missing printer cleared. |
+| Text-only | No symbol, layout-independent pixels, optional/Unicode serial, empty-label rejection, history/CSV and no-serial recovery. |
+| 0.15 | Four rotated QR decodes, unchanged physical dimensions, font/bold/rotation UI/snapshot recovery, latest-per-serial selection and recycle/restore across reopen. |
 
-Comprobación de inicio contraído, expansión/contracción de ambas secciones y conservación del trabajo. Reapertura con secciones contraídas. Se mantienen las pruebas de render, exportación y persistencia.
+Screenshots use synthetic Monitor/Dell and laptop examples. They demonstrate presentation; assertions and decoded pixels provide functional checks.
 
-## v0.6
+## Documentation update validation
 
-Cambio de etiquetas y eliminación del botón manual. Se conserva el temporizador de autoguardado y el guardado al cerrar/exportar/imprimir. Ejecutar los scripts de prueba y publicación para validar render, exportación y recuperación.
+- Generate compiler XML documentation and treat malformed/missing public XML documentation diagnostics as errors.
+- Compare C# syntax tokens with the previous committed source to verify comments do not change executable statements, literals, signatures or attributes.
+- Audit explicit types, methods/constructors, properties and fields for nearby documentation, including private/local helpers and native declarations.
+- Check local Markdown links and source references.
+- Run the existing source and published-executable verification suites.
 
-## v0.7
+The project now generates its compiler XML file under build output; this is not committed as a generated artifact. The source audit confirmed identical C# syntax tokens in all 14 files and documentation on all 244 explicit declarations (types, methods/constructors, properties, fields and local helpers). This measures declaration coverage; complex local variables and algorithms are explained by adjacent comments and the student guide. All 43 relative Markdown targets were resolved. Build with XML diagnostics enforced completed with zero warnings/errors. Both scripts/Test.ps1 and scripts/Publish.ps1 completed successfully for this update. The source build and self-contained executable passed their existing isolated verification suites; no printer jobs were submitted. A final compiler XML check also completed with zero warnings/errors. The portable includes the English manuals, their images and compiler XML output.
 
-Las comprobaciones de estado inicial, expansión, contracción, conservación del trabajo y reapertura ahora incluyen la sección 04 Printing / Impresión.
+## Limits of evidence
 
-## v0.8
-
-32 combinaciones de visibilidad (ocho máscaras de campos, dos tipos de código, dos distribuciones) decodificadas con el mismo serial. Comparación de imágenes al cambiar valores de campos ocultos. Comprobaciones de selección inicial, persistencia/reapertura, migración y serial obligatorio aunque su texto esté oculto. Se mantienen las comprobaciones anteriores.
-
-## v0.9
-
-Ocho combinaciones de P/N/MAC y QR/Code 128 decodificadas. Pruebas de persistencia de campos/flags, migración Title/ShowTitle, defaults desde JSON, rechazo de JSON inválido/configuración fuera de rango, selección estable tras reordenar tamaños y recuperación como personalizado al retirar un preset. Capturas sintéticas asset-fields-en.png y asset-fields-es.png. La prueba no envía etiquetas a impresoras ni toca el último trabajo del usuario.
-
-## v0.10
-
-Ocho combinaciones de Tipo visible/oculto, 203/300 DPI y QR/Code 128; los seis campos del ejemplo se renderizan y se recupera siempre ABC123 del código. Comparación de imágenes con Tipo oculto, persistencia del valor/checkbox, carga de trabajos anteriores sin inventar un tipo y capturas en ambos idiomas.
-
-## v0.11
-
-La sección 05 está incluida en las comprobaciones de inicio/reapertura contraídos, expansión/contracción y conservación del trabajo. Se conserva la prueba de recuperación del idioma y las capturas en inglés y español.
-
-## v0.12
-
-Comprobación de que Nuevo activo limpia solo los seis valores y los guarda, conserva el resto del WorkState y mantiene copias/método en el resumen. Verificación de URL fija sin abrir el navegador en las pruebas. Se mantienen las pruebas de render/exportación/persistencia.
-
-## v0.13
-
-Pruebas reales con SQLite nativo: eventos duplicados, persistencia, snapshots, vínculos origen, búsquedas parametrizadas por campo, comodines literales, inyección como texto, acciones, límites UTC inclusivo/exclusivo, CSV reabierto con TextFieldParser (comillas/punto y coma/saltos de línea/JSON), backup reabierto y rechazo de destino activo.
-
-Integración: exportaciones PNG/código/ZPL crean eventos; rutas inválidas, serial vacío, cambios de formulario y Nuevo activo no crean éxitos. Reportes ordena y exporta en ese orden, recupera dimensiones históricas pese a cambios en config.json, no imprime al cargar y no usa silenciosamente una impresora ausente. Cambiar idioma conserva filtros desactivados. 01 se expande/contrae sin alterar datos; tooltip About/Acerca de. Capturas de Labels/Reports con tres eventos sintéticos. No se abrió navegador ni se envió impresión física en las pruebas.
-
-## v0.14
-
-Render de etiquetas de solo texto a 203/300 DPI: sin símbolos detectables y píxeles independientes de la distribución/tipo del código. Serial vacío permitido sin código, validado con código; texto Unicode sin pasar por Code 128; bloqueo de etiqueta vacía. Exportaciones PNG/ZPL registradas con serial vacío y ShowCode=false; CSV TextOnly, carga por ID desde (No serial), autoguardado/reapertura y compatibilidad con datos previos. Export Code sigue funcionando con la etiqueta sin código cuando hay serial. Captura de interfaz compacta y de etiqueta de solo texto.
-
-## v0.15
-
-Pruebas de QR decodificado con rotación 0/90/180/270 sin cambiar dimensiones físicas; fuente Calibri/tamaño/negrilla recuperados en formulario y snapshot; etiqueta vertical recuperada; deduplicación de seriales, exclusión de registros sin serial, papelera múltiple, reapertura SQLite y restauración. Capturas de formato inglés/español y Dashboard. Suite anterior completa ejecutada sin impresoras; validación física pendiente.
+Automated checks do not verify a physical printer, media calibration, driver scaling, printhead condition or scanner performance on paper. RAW or driver submission success does not prove physical output. RFID writing/read-back is absent. Large-history performance, concurrent app instances and platform-specific font differences are not comprehensively tested.

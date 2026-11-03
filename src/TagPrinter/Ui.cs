@@ -1,8 +1,15 @@
 namespace TagPrinter;
+/// <summary>Selects English/Spanish captions while preserving user-entered data and selections.</summary>
 public static class Ui
 {
+    /// <summary>Global current UI language; es selects Spanish, all other values fall back to English.</summary>
     public static string Language {get;set;}="en";
+    /// <summary>Selects supplied language alternatives; English is fallback.</summary>
+    /// <param name="es">Spanish alternative.</param>
+    /// <param name="en">English alternative.</param>
+    /// <returns>Current-language alternative.</returns>
     public static string T(string es,string en)=>Language=="es"?es:en;
+    // Known captions map in both directions. Asset values never belong in the translation catalog.
     static readonly (string Es,string En)[] Catalog=[
         ("Fuente","Font"),("Tamaño base · pt","Base size · pt"),("Negrilla","Bold"),("Resaltar encabezado","Bold heading"),
         ("Orientación de etiqueta","Label orientation"),("Horizontal","Landscape"),("Vertical","Portrait"),("Rotación del contenido","Content rotation"),
@@ -64,15 +71,25 @@ public static class Ui
         ("La aplicación usa el tamaño seleccionado en Etiqueta y plantilla. Ajusta también el tamaño del material y la calibración en el controlador de Windows.","The app uses the size selected in Label and template. Also configure media size and calibration in the Windows driver."),
         ("Imagen PNG|*.png","PNG image|*.png"),
     ];
+    /// <summary>Translates a known catalog caption, leaving unknown text unchanged.</summary>
+    /// <param name="value">Text to sanitize/translate, or initial numeric editor value, according to the signature.</param>
+    /// <returns>Translated caption or unchanged unknown text.</returns>
     static string TranslateText(string value)
     {
         foreach(var entry in Catalog)if(value==entry.Es||value==entry.En)return T(entry.Es,entry.En);
         return value;
     }
+    /// <summary>
+    /// Visits controls recursively, preserving combo selections and skipping editable text, numbers and
+    /// dates.
+    /// </summary>
+    /// <param name="root">Root of the control subtree to translate.</param>
     public static void Translate(Control root)
     {
         if(root is ComboBox combo)
         {
+            // Keep selection while translating item captions; avoid replacing identical text and generating
+            // needless change events.
             int index=combo.SelectedIndex;
             var translated=combo.Items.Cast<object>().Select(item=>TranslateText(item.ToString()??"")).ToArray();
             if(translated.Where((text,i)=>text!=(combo.Items[i]?.ToString()??"")).Any())
@@ -82,6 +99,7 @@ public static class Ui
                 finally {combo.EndUpdate();}
             }
         }
+        // Do not translate user inputs. Writing DateTimePicker.Text can also accidentally enable its optional filter.
         else if(root is not TextBox && root is not NumericUpDown && root is not DateTimePicker)
         {
             string translated=TranslateText(root.Text);

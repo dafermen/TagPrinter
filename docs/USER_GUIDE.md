@@ -1,84 +1,77 @@
-# Guía de uso — TagPrinter 0.13
+# User guide — TagPrinter 0.15
 
-## Abrir
+## Start and update
 
-Extrae todo el ZIP portable y abre TagPrinter.exe. Conserva sus archivos y carpetas, incluido config.json. Incluye .NET. Para imprimir se requiere el controlador Windows de la impresora.
+Extract the entire Windows x64 ZIP and open TagPrinter.exe. The portable includes .NET and SQLite; install the Windows printer driver separately. Keep the full folder together. Data is stored under your Windows user profile, outside the portable, so replacing the application folder does not replace history.
 
-## Datos del activo
+English is the initial language. Change it in the collapsed 05 Settings section; the application remembers the selection. Asset text is never translated.
 
-Tipo de activo / Asset type, Marca / Brand, Modelo / Model, Serial, No. de parte / Part number y Dirección MAC / MAC address. Las seis casillas comienzan marcadas para trabajos nuevos. Desmarcar oculta solo el texto y conserva el valor editable.
+## Create a label
 
-Si Código está activado, el serial es obligatorio y alimenta el QR o Code 128 incluso si ocultas su texto. Si desactivas Código, el serial puede estar vacío. No. de parte y MAC son opcionales; si están vacíos no consumen espacio en la etiqueta. MAC se imprime tal como se escribe; no se normaliza ni se valida como dirección de red en esta versión.
+01 Asset details starts expanded. Enter asset type, brand, model, serial, part number and MAC address. The checkbox to the right of each input includes/hides its text without erasing the value. Asset type is the heading; brand becomes the heading if type is absent.
 
-Los textos visibles se redistribuyen. Si desmarcas todos los textos y Código sigue marcado, queda únicamente el código. Sin código debe quedar al menos un texto visible con contenido. Seis campos pueden no caber en etiquetas pequeñas; usa un tamaño mayor o desmarca los que no necesitas. No se recortan textos silenciosamente.
+The Code row chooses QR or Code 128 and whether the complete label includes a symbol. Both encode the serial. Code 128 accepts printable ASCII; use QR for other characters. Hiding serial text does not remove the serial from the symbol.
 
-## Secciones plegables
+Turn off Code for text-only output. Text then uses the entire content area and serial becomes optional. At least one nonempty visible text field is required. New asset clears the six text fields and loaded-record reference, retaining design/printer preferences.
 
-01 Datos del activo empieza expandida y también se puede contraer. 02 a 05 comienzan contraídas. Pulsa el encabezado o usa Enter/Espacio con el foco en él para expandir. Contraerlas no cambia sus valores.
+## Media and orientation — section 02
 
-- 01: filas compactas con campos, selector QR/Code 128 y checkbox Código a la derecha.
-- 02: tamaño de etiqueta (ancho × alto), medidas personalizadas y distribución. Los tamaños vienen de config.json.
-- 03: ajuste automático de texto o botones −/+ (manual, 50–200 %), margen 1–5 mm (inicial 2 mm), guía azul de vista previa y desplazamientos.
-- 04: impresora instalada, método Windows/ZPL, 203/300 DPI y copias.
-- 05 Configuración / Settings: idioma English / Español. La selección se aplica al instante y se conserva al reabrir.
+Choose a catalog preset or Custom dimensions in millimeters. Horizontal/vertical swaps width and height and selects Custom. Supported custom dimensions in the editor are 20–200 mm for each side; catalog validation has its own bounds documented in CONFIGURATION.md. A printer must physically support the chosen media.
 
-La fuente se ajusta conjuntamente sin modificar el código. La guía no se imprime ni se exporta. Desplazamientos positivos mueven a la derecha/abajo; se bloquea la salida del área disponible.
+Choose one of four layouts: code below centered, below left, below right or to the right of text. When the code is hidden, this selection does not constrain text space.
 
-## Exportación
+Content rotation is 0, 90, 180 or 270 degrees clockwise. It rotates text and symbol together inside the selected physical media. It does not rotate text independently. The preview shows the resulting output.
 
-**Export Tag / Exportar etiqueta** guarda la etiqueta completa como serial.png.
+## Fonts and margins — section 03
 
-**Export Code / Exportar código** guarda únicamente el símbolo: serial_QR.png o serial_barcode.png. Usa fondo blanco opaco, zona blanca de lectura, escala entera y el DPI seleccionado; no depende de la fuente, márgenes ni distribución de la etiqueta.
+Select an installed Windows font, body base size from 4 to 72 points, general Bold and independent Bold heading. The heading is 1.3 times the body size. Font files are not embedded; missing saved fonts fall back to Arial in the editor.
 
-**Save ZPL / Guardar ZPL** exporta la etiqueta completa como comandos gráficos para un dispositivo compatible. Los nombres de archivo sustituyen caracteres que Windows no permite.
+Fit automatically shrinks text from 100 down to 50 percent when necessary. Plus/minus changes scale in ten percentage-point increments and switches to manual mode. An oversized design shows an error instead of silently clipping. For an exact requested size, disable automatic fitting and check the preview.
 
-## Impresión
+Inner margin is 1–5 mm. The optional guide is preview-only. Print offsets shift content by up to 5 mm horizontally/vertically before rotation; shifts outside the physical label are rejected.
 
-Selecciona la impresora real instalada en Windows. El método Windows usa su controlador. Direct ZPL requiere que la unidad acepte ZPL. Configura material/calibración y verifica que el tamaño coincida. Imprime una muestra y escanea el código antes de un lote. Enviar a la cola no confirma impresión física. No se escribe RFID.
+![Font controls and rotated portrait label](images/format-en.png)
 
-## Guardado automático
+## Print — section 04
 
-Los cambios se guardan tras 600 ms, al cerrar, exportar o imprimir. El formulario recupera el último trabajo; el historial independiente está en SQLite y se consulta en Reportes. Se conserva la ruta histórica %LOCALAPPDATA%\InventoryLabels\settings.json para compatibilidad.
+Select an installed printer, resolution (203/300 DPI), copies and method. Windows driver works through PrintDocument; direct ZPL is for printers that understand ZPL. Selecting a printer model alone does not establish ZPL compatibility.
 
-Los antiguos Title / ShowTitle migran a Brand / ShowBrand sin borrar valores. Revisa la marca después de actualizar, ya que el contenido antiguo podría ser un tipo de equipo como «Monitor».
+The visible summary repeats destination, copies and method. Check it before Print labels. Also configure material, calibration and scaling in the driver. Print a sample and scan it before a batch. A successful submission does not confirm physical output or RFID encoding.
 
-## Configuración general
+## Export
 
-[config.json: tamaños y valores iniciales](CONFIGURATION.md). Edita el archivo junto al EXE y reinicia. La aplicación no lo reescribe al guardar el trabajo.
+| Button | Result | Default filename |
+|---|---|---|
+| Export Tag | Full-label PNG without guides | serial.png, or label.png if serial is empty |
+| Export Code | Standalone QR/barcode with white quiet zones | serial_QR.png or serial_barcode.png |
+| Save ZPL | Full-label raster commands and quantity | serial.zpl, or label.zpl |
 
-Tipo de activo / Asset type aparece antes de Marca y tiene checkbox y autoguardado. Ejemplo: Monitor / Dell / H22203H / ABC123 / ZYX123 / 00:1A:2B:3C:4D:5E. El código representa ABC123. En trabajos existentes el nuevo campo empieza vacío para no inventar el tipo; completa su valor cuando corresponda.
+Export Code works independently of the Code checkbox and full-label layout; it always needs a valid serial. Names are sanitized for Windows. Canceling a dialog does not create a successful event.
 
-El selector de idioma está en **05 Configuración / Settings**, contraída por defecto junto con 02, 03 y 04. Abre su encabezado para cambiarlo. La zona principal comienza con los datos del activo.
+## Automatic saving
 
-## v0.12: trabajo diario
+Edits are saved after a short delay and when closing. Reopening restores the last values/preferences. This is independent of output history: autosave does not add report rows. If a save fails, the status area reports it.
 
-**New asset / Nuevo activo** vacía los seis datos del activo y guarda el trabajo vacío, conservando impresora, copias, plantilla, idioma, tamaños, fuente, márgenes y checkboxes. No mantiene una copia del activo anterior ni un historial; exporta su etiqueta antes si necesitas conservarla.
+## Reports and recycle bin
 
-El resumen junto a los botones muestra siempre impresora, copias y método Windows/ZPL, aunque 04 esté contraída. Se actualiza al cambiar opciones o idioma.
+Reports lists completed exports/submissions. Search any asset field, optionally restrict action/dates and click headers to sort. Serial links (including No serial) load the original design without printing. Review it before sending again. Missing historical printers are left unselected.
 
-El icono de GitHub está siempre visible en la esquina inferior izquierda. Su tooltip es Acerca de / About y abre el repositorio al pulsarlo. Ya no está dentro de 05.
+Select one or multiple rows, click Delete and confirm to recycle them. Check Recycle bin and use Restore to recover selected events. Original PNG/ZPL files and printer queues are unaffected. Export view CSV preserves visible sorting; Export all CSV exports all rows in the current active/trash scope. Back up database copies both scopes.
 
-## v0.13: pestaña Reportes
+![Reports and recycle-bin controls](images/reports-en.png)
 
-Exporta una etiqueta o código, abre Reportes y busca su serial. La tabla admite filtros y ordenación. Pulsa el serial para recuperar el diseño y volver a Etiquetas, revisa y pulsa Imprimir. Usa Exportar vista CSV, Exportar todo CSV o Copia de seguridad. [Guía completa del historial](HISTORY.md). El historial comienza con nuevas operaciones de v0.13 y nunca implica confirmación de impresión física.
+## Dashboard
 
-## v0.14: filas compactas y código opcional
+Search and optional dates restrict active events. The grouping table shows asset type + brand + model and quantity of unique normalized serials. Repeated actions for the same serial count once using its latest matching snapshot. Blank serials are reported separately as actions. Group spelling/case differences can create separate groups.
 
-Cada campo tiene su nombre, control y checkbox en la misma fila. Los checkboxes solo incluyen/ocultan el elemento en la etiqueta; no borran datos ni deshabilitan edición. Sus tooltips y nombres accesibles explican la acción.
-
-En 01, la fila Código permite elegir QR/Code 128 y activar/desactivar su inclusión. Sin código, los textos usan toda el área y el serial puede estar vacío. Se bloquean las etiquetas completamente vacías. Vista previa, Export Tag, ZPL e impresión comparten ese diseño. Export Code es independiente: siempre genera un símbolo y necesita serial.
-
-La selección se guarda y se recupera del historial. En Reportes las etiquetas sin serial muestran (Sin serial) / (No serial) como enlace; se recuperan por su ID, sin inventar un serial. Los datos anteriores siguen mostrando su código por defecto.
-
-## v0.15 — Fuente, orientación, papelera y Dashboard
-
-- Fuente instalada en Windows, tamaño base 4–72 pt, negrilla general y encabezado en negrilla independiente. El encabezado conserva proporción 1.3; ajuste automático y escala porcentual siguen disponibles. El tamaño efectivo puede reducirse con ajuste automático. Si falta la fuente al mover el portable, se usa Arial al recuperar el trabajo.
-- En 02: horizontal/vertical intercambia ancho y alto y pasa a tamaño personalizado. Rotación del contenido 0/90/180/270 gira texto y código juntos dentro del tamaño físico elegido; no gira solo el texto. Vista previa, PNG, ZPL e impresión usan el mismo resultado. Export Code permanece independiente.
-- Reportes permite seleccionar varias filas, Eliminar y confirmar. Papelera muestra los registros retirados y permite restaurarlos. No se borran archivos PNG/ZPL ni trabajos en la impresora. Backup incluye la papelera; CSV exporta registros activos o de la papelera según la vista.
-- Dashboard muestra agrupaciones tipo + marca + modelo, activos únicos por serial (sin distinguir mayúsculas y con espacios extremos eliminados), acciones, exportaciones PNG de etiquetas, trabajos y copias enviados. Fechas y búsqueda limitan los eventos analizados: se toma el registro más reciente de cada serial dentro de esos resultados. Sin serial se informa aparte como cantidad de acciones, no de activos. Los registros en papelera no cuentan. Doble clic abre los registros del grupo en Reportes; la vista de detalle muestra todo su historial activo.
-- Trabajos enviados y copias no confirman impresión física. El Dashboard representa historial de etiquetas, no inventario verificado. Identificadores reutilizados pueden representar activos distintos; por ahora un serial identifica un activo.
-- Estado de formato recuperable en último trabajo y snapshots históricos. Registros antiguos conservan Arial 10 pt, encabezado resaltado y rotación 0. SQLite añade tabla trash sin alterar los registros anteriores. Los historiales grandes todavía se cargan en memoria.
-
-![Font and orientation](images/format-en.png)
+Summary indicators separate actions, PNG tag exports, submitted jobs and requested copies. They are not physical inventory/print verification. Double-click a group to open its full active matching history in Reports; Dashboard search/date restrictions are not carried over.
 
 ![Dashboard](images/dashboard-en.png)
+
+## Further reading
+
+- [Configuration and data locations](CONFIGURATION.md)
+- [History, reporting and backups](HISTORY.md)
+- [Troubleshooting](TROUBLESHOOTING.md)
+- [Student source walkthrough](STUDENT_GUIDE.md)
+- [Project](https://github.com/dafermen/TagPrinter) — also opened by the lower-left GitHub icon with About tooltip.

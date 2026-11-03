@@ -5,6 +5,8 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Emit editor/API documentation; this does not change application behavior. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <AssemblyName>TagPrinter</AssemblyName>
     <RootNamespace>TagPrinter</RootNamespace>
     <ApplicationIcon>TagPrinter.ico</ApplicationIcon>
