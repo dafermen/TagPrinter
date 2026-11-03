@@ -12,6 +12,7 @@
     <ApplicationIcon>TagPrinter.ico</ApplicationIcon>
     <Version>0.15.0</Version>
     <Product>TagPrinter</Product>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
   <ItemGroup><PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.28" /><PackageReference Include="ZXing.Net" Version="0.16.11" /></ItemGroup>
   <ItemGroup><EmbeddedResource Include="TagPrinter.ico" /><EmbeddedResource Include="GitHub.png" /></ItemGroup>

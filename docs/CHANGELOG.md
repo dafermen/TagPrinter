@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased — MIT license
+
+Added the standard MIT license for TagPrinter source and project documentation, Copyright (c) 2026 Dario Meneses. Declared MIT project metadata and added LICENSE to future portable packages. Third-party components/artwork retain their original terms. No application behavior/version change.
+
 ## Unreleased — documentation update
 
 English XML documentation for source contracts, English explanations of complex blocks and meaningful variables, annotated build scripts, student walkthrough, troubleshooting and consolidated current manuals. Corrected stale statements about deletion/history and release filenames. XML documentation output enabled. No application behavior or version change.

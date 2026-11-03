@@ -12,7 +12,8 @@ if($LASTEXITCODE -ne 0){throw 'Publish failed.'}
 # Test the published native executable, not only the development DLL. Keep the helper window hidden.
 $result=Start-Process -FilePath (Join-Path $publishPath 'TagPrinter.exe') -ArgumentList '--self-test' -WindowStyle Hidden -PassThru -Wait
 if($result.ExitCode -ne 0){throw 'Portable verification failed.'}
-# Ship user-facing guides alongside the executable.
+# Ship the project license and user-facing guides alongside the executable.
+Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE') -Destination (Join-Path $publishPath 'LICENSE') -Force
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs/USER_GUIDE.md') -Destination (Join-Path $publishPath 'README.md') -Force
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs/CONFIGURATION.md') -Destination (Join-Path $publishPath 'CONFIGURATION.md') -Force
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs/HISTORY.md') -Destination (Join-Path $publishPath 'HISTORY.md') -Force

@@ -43,3 +43,7 @@ The project now generates its compiler XML file under build output; this is not 
 ## Limits of evidence
 
 Automated checks do not verify a physical printer, media calibration, driver scaling, printhead condition or scanner performance on paper. RAW or driver submission success does not prove physical output. RFID writing/read-back is absent. Large-history performance, concurrent app instances and platform-specific font differences are not comprehensively tested.
+
+## MIT licensing update
+
+The root LICENSE uses the standard MIT grant and disclaimer with Copyright (c) 2026 Dario Meneses. README and project metadata identify MIT; the publishing script copies LICENSE into the portable. Third-party terms remain separate. The text matches the GitHub MIT template after substituting year/holder. scripts/Test.ps1 and scripts/Publish.ps1 both passed with zero build warnings/errors and no printer jobs. The generated ZIP contains a byte-for-byte identical LICENSE. Application version remains 0.15.0.

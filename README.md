@@ -72,6 +72,13 @@ Updates do not replace user history. Last work overrides startup defaults. Datab
 
 RFID chip encoding/verification is not implemented. Submission does not confirm physical printing. Validate a real printed sample and scan before a batch. History loading never prints automatically. Dashboard summarizes recorded serials/actions, not verified inventory. There is no permanent-delete, bulk import, synchronization or database encryption.
 
+## License
+
+TagPrinter source code and project documentation are licensed under the [MIT License](LICENSE).
+Copyright (c) 2026 Dario Meneses.
+
+Third-party libraries, bundled runtimes and GitHub artwork retain their own licenses and notices. The project MIT license does not replace their terms or grant rights to third-party trademarks.
+
 ## Dependencies and artwork
 
 - ZXing.Net 0.16.11: https://github.com/micjahn/ZXing.Net — Apache-2.0.

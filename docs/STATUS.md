@@ -13,3 +13,5 @@ Source documentation covers classes/records, member functions, saved properties,
 Tests use synthetic data in isolated files/databases; no real user records or printer jobs are used. The live database is outside the portable and is not replaced by application updates. No historical output import occurs automatically.
 
 Pending: physical hardware validation, RFID, bulk import, pagination and optional backup-restoration UI. No physical-print confirmation, permanent event deletion, event editing, synchronization or database encryption is implemented. See ROADMAP and VALIDATION.
+
+License: MIT for TagPrinter source and project documentation, Copyright (c) 2026 Dario Meneses. The repository root LICENSE is copied into portable packages. Third-party licensing remains separate. Application version is unchanged.
