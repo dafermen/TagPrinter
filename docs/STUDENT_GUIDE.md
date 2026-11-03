@@ -140,3 +140,7 @@ Do not use the normal user database for experiments. A passing decode of a bitma
 Document responsibilities and invariants, not just syntax. Each method comment explains its purpose and inputs; returned owned resources explicitly require disposal. Keep non-obvious units and indexes near declarations. Explain why a complex block exists before its implementation. Simple loop counters need no repetitive comments; meaningful intermediate values are described beside the algorithm or in this guide.
 
 When changing a persisted field, document defaults and old-data compatibility. When changing a query/count, update reporting rules and tests. Keep historical release details in CHANGELOG and the current behavior in the manuals.
+
+## Startup checks (0.16)
+
+Open the root TagPrinter.exe to validate the immutable app/ payload before loading it. Editable config.json stays at the portable root; last work and SQLite are checked separately without deleting damaged data. See [startup validation](STARTUP_VALIDATION.md) for manifests, logs, recovery and limits.

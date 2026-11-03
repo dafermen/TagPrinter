@@ -46,6 +46,22 @@ public static class SelfTest
         using var dashboard=new DashboardView(reopened,(_,_,_)=>{});dashboard.Size=new Size(1100,650);dashboard.CreateControl();
         using(var screenshot=new Bitmap(1100,650)){dashboard.DrawToBitmap(screenshot,dashboard.ClientRectangle);screenshot.Save(Path.Combine(folder,"dashboard-en.png"));}
     }
+    /// <summary>Rejects corrupt saved work/database in isolated paths and proves the original bytes remain unchanged.</summary>
+    /// <param name="folder">Synthetic verification directory.</param>
+    static void TestStartupData(string folder)
+    {
+        string directory=Path.Combine(folder,"startup-"+Guid.NewGuid());Directory.CreateDirectory(directory);
+        string work=Path.Combine(directory,"work.json");File.WriteAllText(work,"{broken");
+        try{StartupDiagnostics.ValidateSavedWork(work);throw new Exception("Corrupt work accepted");}catch(System.Text.Json.JsonException){}
+        if(File.ReadAllText(work)!="{broken")throw new Exception("Corrupt work was overwritten");
+        WorkStore.Save(work,new WorkState{Language="es"});StartupDiagnostics.ValidateSavedWork(work);
+        StartupDiagnostics.ValidateSavedWork(Path.Combine(directory,"absent.json"));
+        string database=Path.Combine(directory,"corrupt.db");File.WriteAllText(database,"not a SQLite database");var original=File.ReadAllBytes(database);
+        try{_ = new HistoryStore(database);throw new Exception("Corrupt SQLite accepted");}catch(Microsoft.Data.Sqlite.SqliteException){}
+        if(!File.ReadAllBytes(database).SequenceEqual(original))throw new Exception("Corrupt database was overwritten");
+        var store=new HistoryStore(Path.Combine(directory,"valid.db"));store.Add("ExportTag",new WorkState());
+        if(new HistoryStore(store.DatabasePath).Query().Count!=1)throw new Exception("Healthy SQLite failed startup check");
+    }
     /// <summary>
     /// Runs verification scenarios and writes synthetic images/results.txt; thrown failures cause nonzero
     /// script exit.
@@ -70,6 +86,7 @@ public static class SelfTest
             bmp.Save(Path.Combine(folder,$"label-{width}-{dpi}-{layout}-{qr}.png"));count++;
         }
         try {using var invalid=LabelRenderer.Render(new LabelData("Monitor","Dell","",100,50,203,0,false));throw new Exception("Se aceptó un serial vacío");}catch(ArgumentException){}
+        TestStartupData(folder);
         TestNewFeatures(folder);
         TestTypographyAndMargins(folder);
         TestCodeExport(folder);

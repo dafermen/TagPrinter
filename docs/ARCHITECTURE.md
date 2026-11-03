@@ -1,4 +1,4 @@
-# Architecture — TagPrinter 0.15
+# Architecture — TagPrinter 0.16
 
 TagPrinter is a Windows Forms application targeting .NET 8. It uses ZXing.Net 0.16.11 for symbols and Microsoft.Data.Sqlite 8.0.28 for embedded local storage. The Windows x64 portable bundles its runtime; printer drivers remain external.
 
@@ -6,6 +6,8 @@ TagPrinter is a Windows Forms application targeting .NET 8. It uses ZXing.Net 0.
 
 | File | Responsibility |
 |---|---|
+| src/TagPrinter.Launcher/Launcher.cs | Windows Framework launcher, embedded payload hashes and pre-runtime diagnostics. |
+| StartupDiagnostics.cs | Mutable-data preflight, portable configuration root and startup logs. |
 | Program.cs | STA WinForms startup, configuration/data errors, --self-test routing. |
 | MainForm.cs | Editable controls, live preview, autosave, fonts, media, driver printing and export dialogs. |
 | MainForm.History.cs | Tabs/footer, output recording, snapshot recovery and report/dashboard navigation. |
@@ -65,3 +67,7 @@ The last-work path remains %LOCALAPPDATA%/InventoryLabels/settings.json. Legacy 
 No RFID write/verification, inventory synchronization, bulk import, background rendering, pagination or permanent history deletion exists. Dashboard derives assets from event serials; it does not verify physical inventory. Driver behavior and scans require real hardware validation.
 
 Read [the student guide](STUDENT_GUIDE.md) for an algorithm walkthrough and [validation](VALIDATION.md) for actual checks.
+
+## Startup checks (0.16)
+
+Open the root TagPrinter.exe to validate the immutable app/ payload before loading it. Editable config.json stays at the portable root; last work and SQLite are checked separately without deleting damaged data. See [startup validation](STARTUP_VALIDATION.md) for manifests, logs, recovery and limits.

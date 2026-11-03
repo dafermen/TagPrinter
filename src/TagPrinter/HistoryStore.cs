@@ -43,6 +43,13 @@ public sealed class HistoryStore
     {
         DatabasePath=Path.GetFullPath(path);Directory.CreateDirectory(Path.GetDirectoryName(DatabasePath)!);
         using var connection=Open();
+        // Validate SQLite pages before schema initialization; never replace a damaged database automatically.
+        using(var check=connection.CreateCommand())
+        {
+            check.CommandText="PRAGMA quick_check";
+            using var reader=check.ExecuteReader();
+            while(reader.Read())if(!string.Equals(reader.GetString(0),"ok",StringComparison.OrdinalIgnoreCase))throw new InvalidDataException("SQLite integrity check failed: "+reader.GetString(0));
+        }
         using(var version=connection.CreateCommand())
         {
             version.CommandText="PRAGMA user_version";

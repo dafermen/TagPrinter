@@ -47,3 +47,9 @@ Automated checks do not verify a physical printer, media calibration, driver sca
 ## MIT licensing update
 
 The root LICENSE uses the standard MIT grant and disclaimer with Copyright (c) 2026 Dario Meneses. README and project metadata identify MIT; the publishing script copies LICENSE into the portable. Third-party terms remain separate. The text matches the GitHub MIT template after substituting year/holder. scripts/Test.ps1 and scripts/Publish.ps1 both passed with zero build warnings/errors and no printer jobs. The generated ZIP contains a byte-for-byte identical LICENSE. Application version remains 0.15.0.
+
+## Startup validation 0.16
+
+Isolated checks cover malformed saved-work preservation and corrupted/healthy SQLite. Portable verification runs through the root launcher. Package mutation tests cover paths with spaces, missing app/runtime/native files, changed/missing manifest, same-length corrupt runtime, malformed/missing config, legitimate config edit and successful restoration. No printer work or real user data is used.
+
+Result: source verification passed; final root-launcher/application self-tests passed; all 11 package scenarios passed; compiler XML build completed with zero warnings/errors. Every manifest entry was rehashed from the final ZIP; no verification files/databases were included. Tests did not print or write user settings/history.

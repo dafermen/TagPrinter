@@ -1,4 +1,4 @@
-# User guide — TagPrinter 0.15
+# User guide — TagPrinter 0.16
 
 ## Start and update
 
@@ -75,3 +75,7 @@ Summary indicators separate actions, PNG tag exports, submitted jobs and request
 - [Troubleshooting](TROUBLESHOOTING.md)
 - [Student source walkthrough](STUDENT_GUIDE.md)
 - [Project](https://github.com/dafermen/TagPrinter) — also opened by the lower-left GitHub icon with About tooltip.
+
+## Startup checks (0.16)
+
+Open the root TagPrinter.exe to validate the immutable app/ payload before loading it. Editable config.json stays at the portable root; last work and SQLite are checked separately without deleting damaged data. See [startup validation](STARTUP_VALIDATION.md) for manifests, logs, recovery and limits.

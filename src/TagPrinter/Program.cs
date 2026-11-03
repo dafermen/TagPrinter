@@ -11,17 +11,39 @@ internal static class Program
     static void Main(string[] args)
     {
         ApplicationConfiguration.Initialize();
-        if (args.Contains("--self-test")) { SelfTest.Run(); return; }
+        if(args.Contains("--self-test"))
+        {
+            try { SelfTest.Run(); }
+            catch(Exception error)
+            {
+                string folder=Path.Combine(AppContext.BaseDirectory,"verification");Directory.CreateDirectory(folder);
+                File.WriteAllText(Path.Combine(folder,"self-test-error.txt"),error.ToString());
+                Environment.ExitCode=1;
+            }
+            return;
+        }
+        Application.ThreadException+=(_,e)=>Report(e.Exception);
+        AppDomain.CurrentDomain.UnhandledException+=(_,e)=>{if(e.ExceptionObject is Exception error)StartupDiagnostics.Log(error);};
         AppConfig configuration;
-        try {configuration=AppConfig.Load(Path.Combine(AppContext.BaseDirectory,"config.json"));}
-        catch(Exception ex) when(ex is IOException or InvalidDataException or System.Text.Json.JsonException)
+        try {configuration=AppConfig.Load(Path.Combine(StartupDiagnostics.InstallationRoot,"config.json"));}
+        catch(Exception ex)
         {
-            MessageBox.Show("Could not load config.json. Correct the file and restart.\n\n"+ex.Message,"TagPrinter",MessageBoxButtons.OK,MessageBoxIcon.Error);return;
+            Report(ex);return;
         }
-        try {Application.Run(new MainForm(configuration:configuration));}
-        catch(Exception ex) when(ex is Microsoft.Data.Sqlite.SqliteException or IOException or InvalidDataException)
+        try
         {
-            MessageBox.Show("Could not open TagPrinter data. Check the data folder or restore a backup.\n\n"+ex.Message,"TagPrinter",MessageBoxButtons.OK,MessageBoxIcon.Error);
+            StartupDiagnostics.ValidateSavedWork(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"InventoryLabels","settings.json"));
+            Application.Run(new MainForm(configuration:configuration));
         }
+        catch(Exception ex)
+        {
+            Report(ex);
+        }
+    }
+    /// <summary>Reports/logs startup or UI failures and offers recovery without automatically deleting user data.</summary>
+    static void Report(Exception error)
+    {
+        string log=StartupDiagnostics.Log(error);
+        MessageBox.Show(Ui.T("No se pudo completar la operación. Revisa config.json, el último trabajo y la base de datos. Conserva los archivos afectados antes de restaurar una copia.\n\n","The operation could not complete. Check config.json, last work and the database. Preserve affected files before restoring a backup.\n\n")+error.Message+"\n\n"+log,"TagPrinter",MessageBoxButtons.OK,MessageBoxIcon.Error);
     }
 }

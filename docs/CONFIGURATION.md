@@ -1,4 +1,4 @@
-# Configuration and data contracts — 0.15
+# Configuration and data contracts — 0.16
 
 ## Three separate stores
 
@@ -62,3 +62,7 @@ Missing new fields retain property initializers. Legacy Title/ShowTitle map to B
 Stable IDs preserve selection across reordering. If a saved ID is removed, legacy dimension matching may recover an equivalent preset; otherwise the size becomes Custom. Editing an existing preset's dimensions updates ordinary last-work selection when that preset is applied. Keep IDs stable and update LabelPresetId when removing its default.
 
 History loading deliberately forces Custom dimensions, preserving the original recorded design regardless of catalog changes. It also keeps current language and clears unavailable printers. See [history](HISTORY.md) for database scope and backups.
+
+## Startup checks (0.16)
+
+Open the root TagPrinter.exe to validate the immutable app/ payload before loading it. Editable config.json stays at the portable root; last work and SQLite are checked separately without deleting damaged data. See [startup validation](STARTUP_VALIDATION.md) for manifests, logs, recovery and limits.

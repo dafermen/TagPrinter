@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.0 — 2026-11-03
+
+Root startup launcher validates the embedded SHA-256 payload manifest before loading .NET 8. Detects missing/changed runtime, application and SQLite files; validates editable root config separately. Startup logs, saved-work preflight and SQLite quick_check preserve damaged data. Portable app/ layout and isolated mutation/launch tests.
+
+
 ## Unreleased — MIT license
 
 Added the standard MIT license for TagPrinter source and project documentation, Copyright (c) 2026 Dario Meneses. Declared MIT project metadata and added LICENSE to future portable packages. Third-party components/artwork retain their original terms. No application behavior/version change.

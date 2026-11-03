@@ -2,6 +2,8 @@
 
 ## Completed
 
+- 0.16: startup payload integrity launcher, editable configuration validation, preserved corrupt-data diagnostics and isolated package mutation tests.
+
 - 0.13: SQLite events and snapshots, Reports search/sort/load, CSV and backup, collapsible Asset details, footer About link.
 - 0.14: inline right-side inclusion checkboxes and optional QR/barcode; text-only labels and blank-serial recovery.
 - 0.15: installed-font selector, point size, bold, physical media orientation, complete-content rotation, recycle/restore and Dashboard.

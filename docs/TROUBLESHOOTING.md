@@ -45,3 +45,7 @@ Use Back up database for a consistent live SQLite copy. It includes recycled eve
 ## RFID expectations
 
 This version prints visible labels on compatible printers. RFID chip encoding and read-back verification are not implemented. Printing successfully on RFID media does not mean its chip contains the serial.
+
+## Package integrity or damaged startup data
+
+Open the root EXE, not the app/ executable. Read the affected filenames and diagnostic log. Re-extract all program files into a fresh directory; preserve custom root config and user data. Malformed work or SQLite corruption is not automatically deleted. See [startup validation](STARTUP_VALIDATION.md).

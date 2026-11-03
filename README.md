@@ -8,7 +8,9 @@ Windows desktop application for inventory labels, local event history and report
 
 [Download the portable release](https://github.com/dafermen/TagPrinter/releases/latest). Extract the entire ZIP and open **TagPrinter.exe**. The .NET runtime and SQLite are included. Install the printer's Windows driver separately.
 
-## Current features — 0.15
+Open the root executable; app/ contains the verified payload. Edit config.json at the root. See [startup validation](docs/STARTUP_VALIDATION.md).
+
+## Current features — 0.16
 
 - Asset type, brand, model, serial, part number and MAC address, with inline visibility controls.
 - Optional QR/Code128, text-only labels, preset/custom media and four layouts.
@@ -56,7 +58,7 @@ dotnet run --project src/TagPrinter
 
 The project emits an XML API documentation file alongside build output for editor/tooling use. Source comments explain every explicit class/record and method, saved properties, meaningful state and complex algorithms. Read the student guide before changing rendering or persistence.
 
-Publish builds and verifies the self-contained executable, then creates artifacts/TagPrinter-v0.15-PORTABLE-Windows-x64.zip. Generated outputs and personal databases are excluded from Git. Distribute the entire portable folder.
+Publish builds and verifies the self-contained executable, then creates artifacts/TagPrinter-v0.16-PORTABLE-Windows-x64.zip. Generated outputs and personal databases are excluded from Git. Distribute the entire portable folder.
 
 ## Data
 
