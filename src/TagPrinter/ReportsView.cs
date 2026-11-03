@@ -10,7 +10,9 @@ public sealed class ReportsView : UserControl
     readonly DateTimePicker from=new(){Format=DateTimePickerFormat.Short,ShowCheckBox=true,Checked=false,Width=125,Value=DateTime.Today.AddDays(-7)}, to=new(){Format=DateTimePickerFormat.Short,ShowCheckBox=true,Checked=false,Width=125};
     readonly Label searchLabel=new(){AutoSize=true}, fromLabel=new(){AutoSize=true}, toLabel=new(){AutoSize=true}, count=new(){Dock=DockStyle.Fill,AutoSize=false};
     readonly Button apply=new(){AutoSize=true}, reset=new(){AutoSize=true}, export=new(){AutoSize=true}, exportAll=new(){AutoSize=true}, backup=new(){AutoSize=true}, open=new(){AutoSize=true};
-    internal readonly DataGridView Grid=new(){Dock=DockStyle.Fill,ReadOnly=true,AllowUserToAddRows=false,AllowUserToDeleteRows=false,AutoGenerateColumns=false,SelectionMode=DataGridViewSelectionMode.FullRowSelect,MultiSelect=false,BackgroundColor=Color.White,RowHeadersVisible=false};
+    internal readonly DataGridView Grid=new(){Dock=DockStyle.Fill,ReadOnly=true,AllowUserToAddRows=false,AllowUserToDeleteRows=false,AutoGenerateColumns=false,SelectionMode=DataGridViewSelectionMode.FullRowSelect,MultiSelect=true,BackgroundColor=Color.White,RowHeadersVisible=false};
+    readonly CheckBox trash=new(){AutoSize=true};
+    readonly Button remove=new(){AutoSize=true};
     List<HistoryEvent> current=[];
     DataTable? table;
     static readonly string[] Fields=["all","serial","asset_type","brand","model","part_number","mac_address"];
@@ -22,7 +24,7 @@ public sealed class ReportsView : UserControl
         var filters=new FlowLayoutPanel{Dock=DockStyle.Fill,WrapContents=true};
         filters.Controls.AddRange([searchLabel,search,field,action,fromLabel,from,toLabel,to,apply,reset]);
         layout.Controls.Add(filters,0,0);layout.Controls.Add(Grid,0,1);layout.Controls.Add(count,0,2);
-        var buttons=new FlowLayoutPanel{Dock=DockStyle.Fill};buttons.Controls.AddRange([open,export,exportAll,backup]);layout.Controls.Add(buttons,0,3);Controls.Add(layout);
+        var buttons=new FlowLayoutPanel{Dock=DockStyle.Fill};buttons.Controls.AddRange([open,export,exportAll,backup,trash,remove]);layout.Controls.Add(buttons,0,3);Controls.Add(layout);
         void Column(string name,int width,bool link=false)
         {
             DataGridViewColumn column=link?new DataGridViewLinkColumn{TrackVisitedState=false}:new DataGridViewTextBoxColumn();
@@ -35,6 +37,14 @@ public sealed class ReportsView : UserControl
         Grid.CellContentClick+=(_,e)=>{if(e.RowIndex>=0 && e.ColumnIndex>=0 && Grid.Columns[e.ColumnIndex].Name=="Serial")Run(()=>OpenRow(e.RowIndex));};
         open.Click+=(_,_)=>Run(()=>OpenRow(Grid.CurrentRow?.Index??-1));
         export.Click+=(_,_)=>Run(()=>Export(false));exportAll.Click+=(_,_)=>Run(()=>Export(true));backup.Click+=(_,_)=>Run(Backup);
+        trash.CheckedChanged+=(_,_)=>Run(()=>{RefreshLanguage();});
+        remove.Click+=(_,_)=>Run(()=>{
+            var ids=Grid.SelectedRows.Cast<DataGridViewRow>().Select(r=>Convert.ToInt64(r.Cells["Id"].Value)).ToArray();
+            if(ids.Length==0)return;
+            string message=trash.Checked?Ui.T("¿Restaurar los registros seleccionados?","Restore selected records?"):Ui.T("¿Mover los registros seleccionados a la papelera?","Move selected records to the recycle bin?");
+            if(MessageBox.Show(FindForm(),message,"TagPrinter",MessageBoxButtons.YesNo,MessageBoxIcon.Question)!=DialogResult.Yes)return;
+            store.SetDeleted(ids,!trash.Checked);RefreshData();
+        });
         field.Items.AddRange(new object[Fields.Length].Select(_=>(object)"").ToArray());field.SelectedIndex=0;
         action.Items.AddRange(new object[HistoryStore.Actions.Length+1].Select(_=>(object)"").ToArray());action.SelectedIndex=0;
         from.Checked=false;to.Checked=false;RefreshLanguage();
@@ -45,6 +55,7 @@ public sealed class ReportsView : UserControl
     };
     public void RefreshLanguage()
     {
+        trash.Text=Ui.T("Papelera","Recycle bin");remove.Text=trash.Checked?Ui.T("Restaurar","Restore"):Ui.T("Eliminar","Delete");
         searchLabel.Text=Ui.T("Buscar","Search");fromLabel.Text=Ui.T("Desde","From");toLabel.Text=Ui.T("Hasta","To");
         apply.Text=Ui.T("Buscar / actualizar","Search / refresh");reset.Text=Ui.T("Limpiar filtros","Clear filters");open.Text=Ui.T("Cargar etiqueta","Load label");
         export.Text=Ui.T("Exportar vista CSV","Export view CSV");exportAll.Text=Ui.T("Exportar todo CSV","Export all CSV");backup.Text=Ui.T("Copia de seguridad","Back up database");
@@ -61,7 +72,7 @@ public sealed class ReportsView : UserControl
         if(from.Checked && to.Checked && from.Value.Date>to.Value.Date)throw new ArgumentException(Ui.T("La fecha inicial debe ser anterior o igual a la final.","Start date must not be after end date."));
         DateTimeOffset? start=from.Checked?new DateTimeOffset(DateTime.SpecifyKind(from.Value.Date,DateTimeKind.Local)).ToUniversalTime():null;
         DateTimeOffset? end=to.Checked?new DateTimeOffset(DateTime.SpecifyKind(to.Value.Date.AddDays(1),DateTimeKind.Local)).ToUniversalTime():null;
-        return new(search.Text.Trim(),Fields[Math.Max(0,field.SelectedIndex)],action.SelectedIndex>0?HistoryStore.Actions[action.SelectedIndex-1]:"",start,end);
+        return new(search.Text.Trim(),Fields[Math.Max(0,field.SelectedIndex)],action.SelectedIndex>0?HistoryStore.Actions[action.SelectedIndex-1]:"",start,end,trash.Checked);
     }
     public void RefreshData()
     {
@@ -72,6 +83,11 @@ public sealed class ReportsView : UserControl
         if(sort.Length>0)next.DefaultView.Sort=sort;
         var old=table;table=next;Grid.DataSource=next;old?.Dispose();
         count.Text=string.Format(Ui.T("{0} registros. Pulsa un serial para cargar la etiqueta; no se imprime automáticamente.","{0} records. Click a serial to load its label; it will not print automatically."),current.Count);
+    }
+    public void ShowGroup(string type,string brand,string model)
+    {
+        trash.Checked=false;search.Text="";field.SelectedIndex=0;action.SelectedIndex=0;from.Checked=false;to.Checked=false;
+        RefreshData();table!.DefaultView.RowFilter=$"AssetType = '{type.Replace("'","''")}' AND Brand = '{brand.Replace("'","''")}' AND Model = '{model.Replace("'","''")}'";
     }
     void OpenRow(int index)
     {
@@ -87,7 +103,7 @@ public sealed class ReportsView : UserControl
     {
         using var dialog=new SaveFileDialog{Filter="CSV|*.csv",FileName=all?"TagPrinter-all.csv":"TagPrinter-report.csv"};
         if(dialog.ShowDialog(FindForm())!=DialogResult.OK)return;
-        HistoryStore.ExportCsv(dialog.FileName,all?store.Query():VisibleRows());
+        HistoryStore.ExportCsv(dialog.FileName,all?store.Query(new HistoryQuery(Deleted:trash.Checked)):VisibleRows());
     }
     void Backup()
     {

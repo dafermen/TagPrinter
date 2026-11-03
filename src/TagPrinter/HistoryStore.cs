@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json;
 namespace TagPrinter;
 
-public record HistoryQuery(string Search="",string Field="all",string Action="",DateTimeOffset? FromUtc=null,DateTimeOffset? ToUtcExclusive=null);
+public record HistoryQuery(string Search="",string Field="all",string Action="",DateTimeOffset? FromUtc=null,DateTimeOffset? ToUtcExclusive=null,bool Deleted=false);
 public record HistoryEvent(long Id,DateTimeOffset CreatedUtc,string Action,WorkState State,string OutputPath,long? SourceEventId);
 public sealed class HistoryStore
 {
@@ -38,6 +38,7 @@ public sealed class HistoryStore
             );
             CREATE INDEX IF NOT EXISTS ix_events_serial ON events(serial COLLATE NOCASE);
             CREATE INDEX IF NOT EXISTS ix_events_created ON events(created_utc);
+            CREATE TABLE IF NOT EXISTS trash(event_id INTEGER PRIMARY KEY REFERENCES events(id), deleted_utc TEXT NOT NULL);
             PRAGMA user_version=1;
             """;
         command.ExecuteNonQuery();
@@ -74,7 +75,7 @@ public sealed class HistoryStore
     public List<HistoryEvent> Query(HistoryQuery? query=null)
     {
         query??=new();using var connection=Open();using var command=connection.CreateCommand();
-        var where=new List<string>();
+        var where=new List<string>{query.Deleted?"id IN (SELECT event_id FROM trash)":"id NOT IN (SELECT event_id FROM trash)"};
         if(query.Search.Length>0)
         {
             string column=query.Field switch {"serial"=>"serial","asset_type"=>"asset_type","brand"=>"brand","model"=>"model","part_number"=>"part_number","mac_address"=>"mac_address",_=>"serial || char(10) || asset_type || char(10) || brand || char(10) || model || char(10) || part_number || char(10) || mac_address"};
@@ -86,6 +87,17 @@ public sealed class HistoryStore
         if(query.ToUtcExclusive is { } to){where.Add("created_utc < $to");command.Parameters.AddWithValue("$to",to.ToUniversalTime().ToString("O",CultureInfo.InvariantCulture));}
         command.CommandText="SELECT id,created_utc,action,state_json,output_path,source_event_id FROM events"+(where.Count>0?" WHERE "+string.Join(" AND ",where):"")+" ORDER BY id DESC";
         using var reader=command.ExecuteReader();var rows=new List<HistoryEvent>();while(reader.Read())rows.Add(Read(reader));return rows;
+    }
+    public void SetDeleted(IEnumerable<long> ids,bool deleted)
+    {
+        using var connection=Open();using var transaction=connection.BeginTransaction();
+        foreach(long id in ids.Distinct())
+        {
+            using var command=connection.CreateCommand();command.Transaction=transaction;
+            command.CommandText=deleted?"INSERT OR IGNORE INTO trash(event_id,deleted_utc) SELECT id,$date FROM events WHERE id=$id":"DELETE FROM trash WHERE event_id=$id";
+            command.Parameters.AddWithValue("$id",id);if(deleted)command.Parameters.AddWithValue("$date",DateTimeOffset.UtcNow.ToString("O"));command.ExecuteNonQuery();
+        }
+        transaction.Commit();
     }
     public void Backup(string target)
     {

@@ -4,7 +4,8 @@ public partial class MainForm
 {
     readonly HistoryStore history;
     readonly TabControl workspaceTabs=new(){Dock=DockStyle.Fill};
-    readonly TabPage labelTab=new(), reportsTab=new();
+    readonly TabPage labelTab=new(), reportsTab=new(), dashboardTab=new();
+    DashboardView? dashboard;
     readonly ToolTip aboutTip=new();
     readonly Button aboutButton=new(){Width=42,Height=42,FlatStyle=FlatStyle.Flat,BackColor=Color.White};
     ReportsView? reports;
@@ -16,9 +17,11 @@ public partial class MainForm
     void InitializeWorkspace(Control labelContent)
     {
         labelTab.BackColor=Color.White;reportsTab.BackColor=Color.White;
-        labelTab.Controls.Add(labelContent);workspaceTabs.TabPages.AddRange([labelTab,reportsTab]);
+        labelTab.Controls.Add(labelContent);workspaceTabs.TabPages.AddRange([labelTab,reportsTab,dashboardTab]);
         reports=new ReportsView(history,LoadHistoryEvent);reportsTab.Controls.Add(reports);
         workspaceTabs.SelectedIndexChanged+=(_,_)=>{if(ready && workspaceTabs.SelectedTab==reportsTab)Guard(()=>reports.RefreshData());};
+        dashboard=new DashboardView(history,(type,brand,model)=>{workspaceTabs.SelectedTab=reportsTab;reports.ShowGroup(type,brand,model);});dashboardTab.Controls.Add(dashboard);
+        workspaceTabs.SelectedIndexChanged+=(_,_)=>{if(ready && workspaceTabs.SelectedTab==dashboardTab)Guard(()=>dashboard.RefreshData());};
         aboutButton.FlatAppearance.BorderSize=0;
         using(var stream=typeof(MainForm).Assembly.GetManifestResourceStream("TagPrinter.GitHub.png"))
         {
@@ -39,7 +42,7 @@ public partial class MainForm
             string hint=string.Format(Ui.T("Incluir {0} en la etiqueta","Include {0} on the label"),item.Caption.Text);
             item.Check.AccessibleName=hint;aboutTip.SetToolTip(item.Check,hint);
         }
-        reports?.RefreshLanguage();
+        reports?.RefreshLanguage();dashboardTab.Text="Dashboard";dashboard?.RefreshLanguage();
     }
     WorkState GenerationState()=>CaptureWork() with
     {

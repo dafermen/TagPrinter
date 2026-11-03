@@ -57,3 +57,7 @@ Integración: exportaciones PNG/código/ZPL crean eventos; rutas inválidas, ser
 ## v0.14
 
 Render de etiquetas de solo texto a 203/300 DPI: sin símbolos detectables y píxeles independientes de la distribución/tipo del código. Serial vacío permitido sin código, validado con código; texto Unicode sin pasar por Code 128; bloqueo de etiqueta vacía. Exportaciones PNG/ZPL registradas con serial vacío y ShowCode=false; CSV TextOnly, carga por ID desde (No serial), autoguardado/reapertura y compatibilidad con datos previos. Export Code sigue funcionando con la etiqueta sin código cuando hay serial. Captura de interfaz compacta y de etiqueta de solo texto.
+
+## v0.15
+
+Pruebas de QR decodificado con rotación 0/90/180/270 sin cambiar dimensiones físicas; fuente Calibri/tamaño/negrilla recuperados en formulario y snapshot; etiqueta vertical recuperada; deduplicación de seriales, exclusión de registros sin serial, papelera múltiple, reapertura SQLite y restauración. Capturas de formato inglés/español y Dashboard. Suite anterior completa ejecutada sin impresoras; validación física pendiente.

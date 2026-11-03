@@ -2,6 +2,8 @@
 
 ## Completado
 
+- v0.15: fuente, tamaño, negrilla, orientación de etiqueta, rotación completa, papelera y Dashboard.
+
 - v0.13: SQLite, Reportes, CSV, recuperación para reimpresión, 01 plegable y enlace GitHub como icono.
 - v0.14: checkbox para incluir/ocultar QR/Code 128 en la etiqueta; texto utiliza todo el espacio; serial opcional en etiquetas sin código; estado preservado en trabajo/historial. Export Code sigue disponible y exige serial.
 - v0.14: checkboxes a la derecha de los campos, en su misma fila, con etiquetas, tooltips y nombres accesibles bilingües. También se muestra el selector de código con su checkbox en 01.

@@ -16,7 +16,7 @@ public partial class MainForm : Form
     readonly CheckBox showPartNumber=new(){Checked=true,AutoSize=true}, showMacAddress=new(){Checked=true,AutoSize=true};
     readonly CheckBox showBrand=new(){Checked=true,AutoSize=true}, showModel=new(){Checked=true,AutoSize=true}, showSerialText=new(){Checked=true,AutoSize=true};
     readonly ComboBox printers=Combo(), sizes=Combo(), layout=Combo(), code=Combo(), mode=Combo(), dpi=Combo();
-    readonly NumericUpDown width=Number(25,150,100), height=Number(20,200,50), copies=Number(1,999,1);
+    readonly NumericUpDown width=Number(20,200,100), height=Number(20,200,50), copies=Number(1,999,1);
     readonly Label previewDescription=new(){AutoSize=true};
     readonly PictureBox preview=new(){Dock=DockStyle.Fill,SizeMode=PictureBoxSizeMode.Zoom,BackColor=Color.FromArgb(226,232,240)};
     readonly Label status=new(){AutoSize=false,Dock=DockStyle.Bottom,Height=66,Padding=new Padding(12),ForeColor=Color.FromArgb(30,64,110)};
@@ -30,6 +30,9 @@ public partial class MainForm : Form
     readonly CheckBox showGuides=new(){Checked=true,AutoSize=true,Text=Ui.T("Mostrar guía (no se imprime)","Show margin guide (not printed)")};
     readonly Label fontValue=new(){AutoSize=true,Padding=new Padding(6)};
     readonly NumericUpDown margin=Number(1,5,2), offsetX=Number(-5,5,0), offsetY=Number(-5,5,0);
+    readonly ComboBox fontFamily=Combo(), rotation=Combo(), orientation=Combo();
+    readonly NumericUpDown fontSize=Number(4,72,10);
+    readonly CheckBox bold=new(){AutoSize=true,Text=Ui.T("Negrilla","Bold")}, headingBold=new(){AutoSize=true,Checked=true,Text=Ui.T("Resaltar encabezado","Bold heading")};
     int fontPercent=100, effectiveFontPercent=100;
     internal readonly CollapsibleSection assetSection, templateSection, textSection, printingSection, settingsSection;
     bool ready, translating;
@@ -41,7 +44,7 @@ public partial class MainForm : Form
         history=new HistoryStore(historyPath ?? (configPath is not null?Path.ChangeExtension(configPath,".db"):Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"TagPrinter","TagPrinter.db")));
         appConfig=configuration ?? AppConfig.Load(Path.Combine(AppContext.BaseDirectory,"config.json"));
         Ui.Language=appConfig.Defaults.Language;
-        Text="TagPrinter | v0.14";
+        Text="TagPrinter | v0.15";
         using var iconStream=typeof(MainForm).Assembly.GetManifestResourceStream("TagPrinter.TagPrinter.ico");
         if(iconStream is not null)Icon=new Icon(iconStream); Width=1160; Height=850; MinimumSize=new Size(980,720);
         Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;
@@ -85,9 +88,17 @@ public partial class MainForm : Form
         width.DecimalPlaces=1; height.DecimalPlaces=1;
         var dims=new FlowLayoutPanel{AutoSize=true}; dims.Controls.AddRange([new Label{Text=Ui.T("Ancho mm","Width mm"),AutoSize=true},width,new Label{Text=Ui.T("Alto mm","Height mm"),AutoSize=true},height]); width.Width=65;height.Width=65;
         target.Controls.Add(dims);
+        orientation.Items.AddRange([Ui.T("Horizontal","Landscape"),Ui.T("Vertical","Portrait")]);orientation.SelectedIndex=0;
+        Field(Ui.T("Orientación de etiqueta","Label orientation"),orientation);
+        rotation.Items.AddRange(["0°","90°","180°","270°"]);rotation.SelectedIndex=0;
+        Field(Ui.T("Rotación del contenido","Content rotation"),rotation);
         layout.Items.AddRange([Ui.T("Código abajo · centrado","Code below · centered"),Ui.T("Código abajo · izquierda","Code below · left"),Ui.T("Código abajo · derecha","Code below · right"),Ui.T("Código a la derecha del texto","Code to the right of text")]); Field(Ui.T("Distribución de la plantilla","Template layout"),layout);
         textSection=new CollapsibleSection(Ui.T("03  Texto y márgenes","03  Text and margins"));
         fields.Controls.Add(textSection);target=textSection.Body;
+        foreach(var name in FontFamily.Families.Select(f=>f.Name).OrderBy(n=>n))fontFamily.Items.Add(name);
+        fontFamily.SelectedItem="Arial";if(fontFamily.SelectedIndex<0)fontFamily.SelectedIndex=0;
+        Field(Ui.T("Fuente","Font"),fontFamily);Field(Ui.T("Tamaño base · pt","Base size · pt"),fontSize);
+        target.Controls.Add(bold);target.Controls.Add(headingBold);
         target.Controls.Add(autoFont);
         var fontRow=new FlowLayoutPanel{AutoSize=true};
         var smaller=new Button{Text="−",Width=42,Height=32};var bigger=new Button{Text="+",Width=42,Height=32};
@@ -137,6 +148,9 @@ public partial class MainForm : Form
         sizes.SelectedIndexChanged+=(_,_)=>ApplySize(); width.ValueChanged+=(_,_)=>UpdatePreview();height.ValueChanged+=(_,_)=>UpdatePreview();
         language.SelectedIndex=Ui.Language=="es"?1:0;
         language.SelectedIndexChanged+=(_,_)=>{if(translating)return;translating=true;bool active=ready;ready=false;try{Ui.Language=language.SelectedIndex==1?"es":"en";Ui.Translate(this);UpdateChrome();}finally{ready=active;translating=false;}UpdatePreview();if(ready)SaveConfig();};
+        fontFamily.SelectedIndexChanged+=(_,_)=>UpdatePreview();rotation.SelectedIndexChanged+=(_,_)=>UpdatePreview();
+        fontSize.ValueChanged+=(_,_)=>UpdatePreview();bold.CheckedChanged+=(_,_)=>UpdatePreview();headingBold.CheckedChanged+=(_,_)=>UpdatePreview();
+        orientation.SelectedIndexChanged+=(_,_)=>Guard(()=>{if(!ready)return;bool portrait=orientation.SelectedIndex==1;if((portrait && width.Value>height.Value)||(!portrait && width.Value<height.Value)){bool active=ready;ready=false;decimal w=width.Value,h=height.Value;if(h<width.Minimum || h>width.Maximum || w<height.Minimum || w>height.Maximum){ready=active;throw new ArgumentException(Ui.T("Dimensiones no compatibles con esa orientación.","Dimensions do not support that orientation."));}sizes.SelectedIndex=appConfig.LabelSizes.Count;width.Value=h;height.Value=w;ready=active;ApplySize();}});
         autoFont.CheckedChanged+=(_,_)=>UpdatePreview();showGuides.CheckedChanged+=(_,_)=>UpdatePreview();
         foreach(var number in new[]{margin,offsetX,offsetY})number.ValueChanged+=(_,_)=>UpdatePreview();
         copies.ValueChanged+=(_,_)=>{UpdatePrintSummary();ScheduleSave();};printers.SelectedIndexChanged+=(_,_)=>{UpdatePrintSummary();ScheduleSave();};
@@ -156,7 +170,7 @@ public partial class MainForm : Form
         printSummary.Text=string.Format(Ui.T("Impresora: {0}\nCopias: {1} · {2}","Printer: {0}\nCopies: {1} · {2}"),printerName,copies.Value,mode.SelectedIndex==1?"ZPL":"Windows");
     }
     void Guard(Action action) {try {action();}catch(Exception ex){MessageBox.Show(this,ex.Message,Ui.T("Etiquetas","TagPrinter"),MessageBoxButtons.OK,MessageBoxIcon.Warning);}}
-    LabelData Data()=>new(brand.Text.Trim(),model.Text.Trim(),serial.Text.Trim(),width.Value,height.Value,int.Parse(dpi.Text),layout.SelectedIndex,code.SelectedIndex==1,autoFont.Checked,fontPercent,margin.Value,offsetX.Value,offsetY.Value,showBrand.Checked,showModel.Checked,showSerialText.Checked,partNumber.Text.Trim(),macAddress.Text.Trim(),showPartNumber.Checked,showMacAddress.Checked,assetType.Text.Trim(),showAssetType.Checked,showCode.Checked);
+    LabelData Data()=>new(brand.Text.Trim(),model.Text.Trim(),serial.Text.Trim(),width.Value,height.Value,int.Parse(dpi.Text),layout.SelectedIndex,code.SelectedIndex==1,autoFont.Checked,fontPercent,margin.Value,offsetX.Value,offsetY.Value,showBrand.Checked,showModel.Checked,showSerialText.Checked,partNumber.Text.Trim(),macAddress.Text.Trim(),showPartNumber.Checked,showMacAddress.Checked,assetType.Text.Trim(),showAssetType.Checked,showCode.Checked,fontFamily.Text,fontSize.Value,bold.Checked,headingBold.Checked,rotation.SelectedIndex*90);
     internal void ChangeFont(int step)
     {
         fontPercent=Math.Clamp((autoFont.Checked?effectiveFontPercent:fontPercent)+step,50,200);
@@ -175,6 +189,7 @@ public partial class MainForm : Form
     void UpdatePreview()
     {
         if(!ready)return;
+        orientation.SelectedIndex=height.Value>width.Value?1:0;
         ScheduleSave();UpdatePrintSummary();
         previewDescription.Text=showCode.Checked?Ui.T("La vista previa se actualiza al cambiar datos, tamaño o distribución.\nEl código contiene el serial completo.","Preview updates when you change the data, size or layout.\nThe code contains the full serial number."):Ui.T("Vista previa de la etiqueta. El código está desactivado.\nEl texto utiliza toda el área disponible.","Label preview. The code is disabled.\nText uses the full available area.");
         try
@@ -257,7 +272,7 @@ public partial class MainForm : Form
         return name;
     }
     void ScheduleSave(){if(!ready)return;autosave.Stop();autosave.Start();}
-    internal WorkState CaptureWork()=>new(){Printer=printers.Text,Size=sizes.SelectedIndex,LabelPresetId=sizes.SelectedIndex<appConfig.LabelSizes.Count?appConfig.LabelSizes[sizes.SelectedIndex].Id:"custom",Width=width.Value,Height=height.Value,Layout=layout.SelectedIndex,Code=code.SelectedIndex,Mode=mode.SelectedIndex,Dpi=dpi.SelectedIndex,AssetType=assetType.Text,ShowAssetType=showAssetType.Checked,Brand=brand.Text,PartNumber=partNumber.Text,MacAddress=macAddress.Text,ShowPartNumber=showPartNumber.Checked,ShowMacAddress=showMacAddress.Checked,Model=model.Text,Serial=serial.Text,Language=Ui.Language,ShowBrand=showBrand.Checked,ShowModel=showModel.Checked,ShowSerialText=showSerialText.Checked,ShowCode=showCode.Checked,ShowGuides=showGuides.Checked,AutoFont=autoFont.Checked,FontPercent=fontPercent,MarginMm=margin.Value,OffsetXmm=offsetX.Value,OffsetYmm=offsetY.Value,Copies=(int)copies.Value};
+    internal WorkState CaptureWork()=>new(){Printer=printers.Text,Size=sizes.SelectedIndex,LabelPresetId=sizes.SelectedIndex<appConfig.LabelSizes.Count?appConfig.LabelSizes[sizes.SelectedIndex].Id:"custom",Width=width.Value,Height=height.Value,Layout=layout.SelectedIndex,Code=code.SelectedIndex,Mode=mode.SelectedIndex,Dpi=dpi.SelectedIndex,AssetType=assetType.Text,ShowAssetType=showAssetType.Checked,Brand=brand.Text,PartNumber=partNumber.Text,MacAddress=macAddress.Text,ShowPartNumber=showPartNumber.Checked,ShowMacAddress=showMacAddress.Checked,Model=model.Text,Serial=serial.Text,Language=Ui.Language,ShowBrand=showBrand.Checked,ShowModel=showModel.Checked,ShowSerialText=showSerialText.Checked,ShowCode=showCode.Checked,ShowGuides=showGuides.Checked,AutoFont=autoFont.Checked,FontPercent=fontPercent,MarginMm=margin.Value,OffsetXmm=offsetX.Value,OffsetYmm=offsetY.Value,Copies=(int)copies.Value,FontFamily=fontFamily.Text,FontSizePt=fontSize.Value,Bold=bold.Checked,HeadingBold=headingBold.Checked,ContentRotation=rotation.SelectedIndex*90};
     internal void Restore(WorkState s)
     {
         bool wasReady=ready;ready=false;
@@ -270,6 +285,8 @@ public partial class MainForm : Form
         partNumber.Text=s.PartNumber;macAddress.Text=s.MacAddress;showPartNumber.Checked=s.ShowPartNumber;showMacAddress.Checked=s.ShowMacAddress;
         showBrand.Checked=s.ShowBrand;showModel.Checked=s.ShowModel;showSerialText.Checked=s.ShowSerialText;
         showCode.Checked=s.ShowCode;
+        fontFamily.SelectedItem=fontFamily.Items.Contains(s.FontFamily)?s.FontFamily:"Arial";
+        fontSize.Value=Math.Clamp(s.FontSizePt,4,72);bold.Checked=s.Bold;headingBold.Checked=s.HeadingBold;rotation.SelectedIndex=Math.Clamp(s.ContentRotation/90,0,3);
         showGuides.Checked=s.ShowGuides;autoFont.Checked=s.AutoFont;fontPercent=Math.Clamp(s.FontPercent,50,200);margin.Value=Math.Clamp(s.MarginMm,1,5);offsetX.Value=Math.Clamp(s.OffsetXmm,-5,5);offsetY.Value=Math.Clamp(s.OffsetYmm,-5,5);
         brand.Text=s.Brand;model.Text=s.Model;serial.Text=s.Serial;copies.Value=Math.Clamp(s.Copies,1,999);Ui.Language=s.Language=="es"?"es":"en";
         language.SelectedIndex=Ui.Language=="es"?1:0;

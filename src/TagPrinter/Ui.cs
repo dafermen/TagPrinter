@@ -4,6 +4,8 @@ public static class Ui
     public static string Language {get;set;}="en";
     public static string T(string es,string en)=>Language=="es"?es:en;
     static readonly (string Es,string En)[] Catalog=[
+        ("Fuente","Font"),("Tamaño base · pt","Base size · pt"),("Negrilla","Bold"),("Resaltar encabezado","Bold heading"),
+        ("Orientación de etiqueta","Label orientation"),("Horizontal","Landscape"),("Vertical","Portrait"),("Rotación del contenido","Content rotation"),
         ("Ajustar automáticamente","Fit automatically"),
         ("+ mueve a la derecha / abajo","+ moves right / down"),
         ("Mostrar guía (no se imprime)","Show margin guide (not printed)"),

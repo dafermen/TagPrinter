@@ -31,6 +31,11 @@ public record WorkState
     public decimal MarginMm {get;init;}=2;
     public decimal OffsetXmm {get;init;}
     public decimal OffsetYmm {get;init;}
+    public string FontFamily {get;init;}="Arial";
+    public decimal FontSizePt {get;init;}=10;
+    public bool Bold {get;init;}
+    public bool HeadingBold {get;init;}=true;
+    public int ContentRotation {get;init;}
     public int Copies {get;init;}=1;
 }
 public static class WorkStore

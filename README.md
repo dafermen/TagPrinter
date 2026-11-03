@@ -87,3 +87,7 @@ Cada campo tiene su nombre, control y checkbox en la misma fila. Los checkboxes 
 En 01, la fila Código permite elegir QR/Code 128 y activar/desactivar su inclusión. Sin código, los textos usan toda el área y el serial puede estar vacío. Se bloquean las etiquetas completamente vacías. Vista previa, Export Tag, ZPL e impresión comparten ese diseño. Export Code es independiente: siempre genera un símbolo y necesita serial.
 
 La selección se guarda y se recupera del historial. En Reportes las etiquetas sin serial muestran (Sin serial) / (No serial) como enlace; se recuperan por su ID, sin inventar un serial. Los datos anteriores siguen mostrando su código por defecto.
+
+## v0.15
+
+Font family, base point size and bold; portrait/landscape media and content rotation; reports recycle bin with restore; Dashboard grouping unique serials by asset type, brand and model. See [user guide](docs/USER_GUIDE.md) for counting rules.

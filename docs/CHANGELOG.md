@@ -1,3 +1,7 @@
+# v0.15.0 — 2026-11-03
+
+Fuente/tamaño/negrilla, orientación y rotación del contenido; eliminación reversible y restauración de registros; Dashboard con agrupaciones y conteo separado de seriales únicos y acciones. Estado anterior compatible.
+
 # Cambios
 
 ## 0.14.0

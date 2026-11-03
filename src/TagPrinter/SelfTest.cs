@@ -2,6 +2,39 @@ using ZXing;
 namespace TagPrinter;
 public static class SelfTest
 {
+    static void TestNewFeatures(string folder)
+    {
+        var data=new LabelData("Dell","Model","ROTATE123",100,50,203,3,true,FontFamily:"Calibri",FontSizePt:11,Bold:true);
+        foreach(int rotation in new[]{0,90,180,270})
+        {
+            using var bitmap=LabelRenderer.Render(data with {ContentRotation=rotation});
+            if(bitmap.Width!=799 || bitmap.Height!=400)throw new Exception("Rotation changed physical media dimensions.");
+            bitmap.Save(Path.Combine(folder,$"rotation-{rotation}.png"));
+            var rgb=new byte[bitmap.Width*bitmap.Height*3];
+            for(int y=0;y<bitmap.Height;y++)for(int x=0;x<bitmap.Width;x++){var c=bitmap.GetPixel(x,y);int i=(y*bitmap.Width+x)*3;rgb[i]=c.R;rgb[i+1]=c.G;rgb[i+2]=c.B;}
+            var decoded=new BarcodeReaderGeneric{AutoRotate=true,Options=new ZXing.Common.DecodingOptions{TryHarder=true}}.Decode(new RGBLuminanceSource(rgb,bitmap.Width,bitmap.Height,RGBLuminanceSource.BitmapFormat.RGB24));
+            if(decoded?.Text!=data.Serial)throw new Exception("Rotated QR failed decoding.");
+        }
+        string db=Path.Combine(folder,"features-"+Guid.NewGuid()+".db");var store=new HistoryStore(db);
+        var state=new WorkState{Serial="DUPLICATE",FontFamily="Calibri",FontSizePt=11,Bold=true,ContentRotation=90};
+        long first=store.Add("ExportTag",state);long second=store.Add("PrintSubmitted",state with {Model="Latest"});
+        store.Add("ExportTag",state with {Serial="",ShowCode=false});
+        if(DashboardView.UniqueAssets(store.Query()).Count!=1 || DashboardView.UniqueAssets(store.Query())[0].State.Model!="Latest")throw new Exception("Dashboard duplicate counting failed.");
+        store.SetDeleted([first,second],true);
+        if(store.Query().Count!=1 || store.Query(new HistoryQuery(Deleted:true)).Count!=2)throw new Exception("Soft deletion failed.");
+        var reopened=new HistoryStore(db);reopened.SetDeleted([second],false);
+        if(reopened.Query().Count!=2 || reopened.Get(second)!.State!=state with {Model="Latest"})throw new Exception("Restore or format persistence failed.");
+        string path=Path.Combine(folder,"format-"+Guid.NewGuid()+".json");
+        using var form=new MainForm(path,AppConfig.CreateDefault());form.Restore(state with {Width=50,Height=100,LabelPresetId="custom"});
+        var saved=form.CaptureWork();if(saved.FontFamily!="Calibri" || saved.FontSizePt!=11 || !saved.Bold || saved.ContentRotation!=90 || saved.Width!=50 || saved.Height!=100)throw new Exception("Format UI restoration failed.");
+        form.Show();Application.DoEvents();form.textSection.Expanded=true;
+        using(var screenshot=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(screenshot,form.ClientRectangle);screenshot.Save(Path.Combine(folder,"format-en.png"));}
+        form.Restore(saved with {Language="es"});Application.DoEvents();
+        using(var screenshot=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(screenshot,form.ClientRectangle);screenshot.Save(Path.Combine(folder,"format-es.png"));}
+        form.Close();Ui.Language="en";
+        using var dashboard=new DashboardView(reopened,(_,_,_)=>{});dashboard.Size=new Size(1100,650);dashboard.CreateControl();
+        using(var screenshot=new Bitmap(1100,650)){dashboard.DrawToBitmap(screenshot,dashboard.ClientRectangle);screenshot.Save(Path.Combine(folder,"dashboard-en.png"));}
+    }
     public static void Run()
     {
         string folder=Path.Combine(AppContext.BaseDirectory,"verification");Directory.CreateDirectory(folder);
@@ -20,6 +53,7 @@ public static class SelfTest
             bmp.Save(Path.Combine(folder,$"label-{width}-{dpi}-{layout}-{qr}.png"));count++;
         }
         try {using var invalid=LabelRenderer.Render(new LabelData("Monitor","Dell","",100,50,203,0,false));throw new Exception("Se aceptó un serial vacío");}catch(ArgumentException){}
+        TestNewFeatures(folder);
         TestTypographyAndMargins(folder);
         TestCodeExport(folder);
         TestFieldVisibility(folder);

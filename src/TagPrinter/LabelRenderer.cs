@@ -4,12 +4,21 @@ using ZXing;
 using ZXing.Common;
 namespace TagPrinter;
 
-public record LabelData(string Brand, string Model, string Serial, decimal WidthMm, decimal HeightMm, int Dpi, int Layout, bool Qr, bool AutoFont = true, int FontPercent = 100, decimal MarginMm = 2, decimal OffsetXmm = 0, decimal OffsetYmm = 0, bool ShowBrand = true, bool ShowModel = true, bool ShowSerialText = true, string PartNumber = "", string MacAddress = "", bool ShowPartNumber = true, bool ShowMacAddress = true, string AssetType = "", bool ShowAssetType = true, bool ShowCode = true);
+public record LabelData(string Brand, string Model, string Serial, decimal WidthMm, decimal HeightMm, int Dpi, int Layout, bool Qr, bool AutoFont = true, int FontPercent = 100, decimal MarginMm = 2, decimal OffsetXmm = 0, decimal OffsetYmm = 0, bool ShowBrand = true, bool ShowModel = true, bool ShowSerialText = true, string PartNumber = "", string MacAddress = "", bool ShowPartNumber = true, bool ShowMacAddress = true, string AssetType = "", bool ShowAssetType = true, bool ShowCode = true, string FontFamily = "Arial", decimal FontSizePt = 10, bool Bold = false, bool HeadingBold = true, int ContentRotation = 0);
 public static class LabelRenderer
 {
     public static Bitmap Render(LabelData d, bool guides = false)=>Render(d,guides,out _);
     public static Bitmap Render(LabelData d, bool guides, out int usedFontPercent)
     {
+        if(d.ContentRotation is not (0 or 90 or 180 or 270))throw new ArgumentException("Invalid rotation.");
+        if(d.ContentRotation!=0)
+        {
+            bool quarter=d.ContentRotation is 90 or 270;
+            var rotated=Render(d with {WidthMm=quarter?d.HeightMm:d.WidthMm,HeightMm=quarter?d.WidthMm:d.HeightMm,ContentRotation=0},guides,out usedFontPercent);
+            rotated.RotateFlip(d.ContentRotation==90?RotateFlipType.Rotate90FlipNone:d.ContentRotation==180?RotateFlipType.Rotate180FlipNone:RotateFlipType.Rotate270FlipNone);
+            return rotated;
+        }
+        if(d.FontSizePt<4 || d.FontSizePt>72)throw new ArgumentException("Font size must be between 4 and 72 pt.");
         usedFontPercent=100;
         if (d.ShowCode && string.IsNullOrWhiteSpace(d.Serial)) throw new ArgumentException(Ui.T("Escribe un serial.", "Enter a serial number."));
         if (d.ShowCode && !d.Qr && d.Serial.Any(c => c < 32 || c > 126)) throw new ArgumentException(Ui.T("Code 128 admite aquí caracteres ASCII. Usa QR para otros caracteres.", "Use QR for non-ASCII serial numbers."));
@@ -54,13 +63,13 @@ public static class LabelRenderer
             using var g = Graphics.FromImage(bmp); g.Clear(Color.White);
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SingleBitPerPixelGridFit;
             using var fmt = new StringFormat(StringFormat.GenericTypographic) { Trimming = StringTrimming.None };
-            float[] baseSizes = lines.Select(line=>d.Dpi*(line.IsHeading?13f:10f)/72f).ToArray();
+            float[] baseSizes = lines.Select(line=>d.Dpi*(float)d.FontSizePt*(line.IsHeading?1.3f:1f)/72f).ToArray();
             var textRects=Enumerable.Range(0,lineCount).Select(i=>new RectangleF(content.Left,content.Top+textH*i/(float)lineCount,textW,textH/(float)lineCount)).ToArray();
             bool Fits(float factor)
             {
                 for(int i=0;i<lineCount;i++)
                 {
-                    using var font=new Font("Arial",baseSizes[i]*factor,lines[i].IsHeading?FontStyle.Bold:FontStyle.Regular,GraphicsUnit.Pixel);
+                    using var font=new Font(d.FontFamily,baseSizes[i]*factor,(d.Bold || (lines[i].IsHeading && d.HeadingBold))?FontStyle.Bold:FontStyle.Regular,GraphicsUnit.Pixel);
                     var measured=g.MeasureString(lines[i].Text,font,new SizeF(textRects[i].Width,10000),fmt);
                     if(measured.Width>textRects[i].Width || measured.Height>textRects[i].Height)return false;
                 }
@@ -75,7 +84,7 @@ public static class LabelRenderer
             if(!Fits(factor))throw new ArgumentException(Ui.T("El texto no cabe. Reduce la fuente con −, activa el ajuste automático o amplía la etiqueta.","Text does not fit. Reduce text size with −, enable automatic fit or use a larger label."));
             for(int i=0;i<lineCount;i++)
             {
-                using var font=new Font("Arial",baseSizes[i]*factor,lines[i].IsHeading?FontStyle.Bold:FontStyle.Regular,GraphicsUnit.Pixel);
+                using var font=new Font(d.FontFamily,baseSizes[i]*factor,(d.Bold || (lines[i].IsHeading && d.HeadingBold))?FontStyle.Bold:FontStyle.Regular,GraphicsUnit.Pixel);
                 g.DrawString(lines[i].Text,font,Brushes.Black,textRects[i],fmt);
             }
             if(matrix is not null)for(int row=0; row<matrix.Height; row++) for(int col=0; col<matrix.Width; col++)
