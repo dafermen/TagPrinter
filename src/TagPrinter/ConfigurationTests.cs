@@ -14,7 +14,7 @@ internal static class ConfigurationTests
         string export=Path.Combine(directory,"transfer.json");ConfigurationBundle expected;
         using(var source=new MainForm(sourcePath,catalog))
         {
-            source.Restore(new WorkState{LabelPresetId="wide",Width=100,Height=50,AssetType="Laptop",Brand="Dell",Model="5420",Serial="IMPORT123",PartNumber="PN9",MacAddress="00:11:22:33:44:55",Printer="Missing-transfer-printer",Code=1,Mode=1,Dpi=1,Copies=7,Language="es",ShowBrand=false,ShowMacAddress=false,ShowSerialText=false,ShowGuides=false,AutoFont=false,FontPercent=80,FontFamily="Segoe UI",FontSizePt=8,Bold=true,HeadingBold=false,MarginMm=3,OffsetXmm=.5m,OffsetYmm=-.5m,ContentRotation=180,CodePercent=80});
+            source.Restore(new WorkState{LabelPresetId="wide",Width=100,Height=50,AssetType="Laptop",Brand="Dell",Model="5420",Serial="IMPORT123",PartNumber="PN9",MacAddress="00:11:22:33:44:55",Printer="Missing-transfer-printer",Code=1,Mode=1,Dpi=1,Copies=7,Language="es",ShowBrand=false,ShowMacAddress=false,ShowSerialText=false,ShowGuides=false,AutoFont=false,FontPercent=80,FontFamily="Segoe UI",FontSizePt=8,Bold=true,HeadingBold=false,MarginMm=3,OffsetXmm=.5m,OffsetYmm=-.5m,ContentRotation=180,CodePercent=80,CenterText=true});
             // Restore does not select unavailable printers, so export expectations use the actual captured UI.
             expected=source.CaptureConfiguration();source.ExportConfigurationFile(export);
             if(source.History.Query().Count!=0)throw new Exception("Configuration export created history");

@@ -74,6 +74,8 @@ public record WorkState
     public bool HeadingBold {get;init;}=true;
     /// <summary>Clockwise degrees: 0, 90, 180 or 270.</summary>
     public int ContentRotation {get;init;}
+    /// <summary>Centers the visible text block inside its allocated text area; false preserves legacy placement.</summary>
+    public bool CenterText {get;init;}
     /// <summary>Symbol size percentage, 25 through 200; 100 preserves the original fitted size.</summary>
     public int CodePercent {get;init;}=100;
     /// <summary>Requested copies; a whole submission produces one history event.</summary>

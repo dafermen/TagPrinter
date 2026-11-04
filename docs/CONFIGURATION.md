@@ -1,4 +1,4 @@
-# Configuration and data contracts — 0.17
+# Configuration and data contracts — 0.18
 
 ## Three separate stores
 
@@ -70,3 +70,7 @@ Open the root TagPrinter.exe to validate the immutable app/ payload before loadi
 ## Full settings transfer and CodePercent
 
 05 Settings exports/imports a complete versioned ConfigurationBundle (catalog/defaults plus all current WorkState values). Import replaces rather than merges, with confirmation, automatic backup and I/O rollback. See [configuration transfer](CONFIGURATION_TRANSFER.md) for scope and limits. Defaults.CodePercent and WorkState.CodePercent are integers 25–200, default 100, preserving older designs. Root config remains editable and excluded from payload hashes.
+
+## Centering, recycle-bin purge and printer status — 0.18
+
+03 Text and margins adds Center text for the whole text block. Reports > Recycle bin adds irreversible Empty recycle bin with all-filter scope confirmation. The visible printer summary now includes an automatically refreshed Windows status indicator. CenterText persists in work/history/full transfer; live status does not. See [centering, recycle-bin purge and Windows status](TEXT_TRASH_PRINTER_STATUS.md).

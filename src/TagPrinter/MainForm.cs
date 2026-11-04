@@ -62,6 +62,8 @@ public partial class MainForm : Form
     readonly Label previewError=new(){Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleCenter,ForeColor=Color.Firebrick,BackColor=Color.FromArgb(226,232,240),Visible=false};
     // autoFont allows shrinking text. showGuides affects only the preview; fontValue displays
     // requested/effective scale.
+    // Centers the whole visible text block; the allocated code area remains separate.
+    readonly CheckBox centerText=new(){AutoSize=true,Text=Ui.T("Centrar texto","Center text")};
     readonly CheckBox autoFont=new(){Checked=true,AutoSize=true,Text=Ui.T("Ajustar automáticamente","Fit automatically")};
     // Draws a preview margin guide only; never changes normal output pixels.
     readonly CheckBox showGuides=new(){Checked=true,AutoSize=true,Text=Ui.T("Mostrar guía (no se imprime)","Show margin guide (not printed)")};
@@ -100,14 +102,25 @@ public partial class MainForm : Form
     /// <param name="configPath">Optional last-work path; supplying it also isolates the default test database.</param>
     /// <param name="configuration">Optional validated installation config; null loads config.json beside the application.</param>
     /// <param name="historyPath">Optional database path; null selects normal user data or the test-specific path.</param>
-    public MainForm(string? configPath=null, AppConfig? configuration=null,string? historyPath=null)
+    public MainForm(string? configPath=null,AppConfig? configuration=null,string? historyPath=null)
+        :this(configPath,configuration,historyPath,null) { }
+
+    /// <summary>Constructs the editor with an optional asynchronous Windows-status provider for isolated tests.</summary>
+    /// <param name="configPath">Optional isolated last-work path.</param>
+    /// <param name="configuration">Validated media catalog and defaults.</param>
+    /// <param name="historyPath">Optional isolated SQLite path.</param>
+    /// <param name="printerStatusReader">Optional asynchronous status provider; isolated tests otherwise avoid native printer queries.</param>
+    internal MainForm(string? configPath,AppConfig? configuration,string? historyPath,Func<string,Task<PrinterStatusSnapshot>>? printerStatusReader)
     {
+        statusReader=printerStatusReader ?? (configPath is null
+            ? name=>Task.Run(()=>WindowsPrinterStatus.Read(name))
+            : name=>Task.FromResult(new PrinterStatusSnapshot("unknown",Detail:"Isolated tests do not query printer hardware.")));
         config=configPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"InventoryLabels","settings.json");
         history=new HistoryStore(historyPath ?? (configPath is not null?Path.ChangeExtension(configPath,".db"):Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"TagPrinter","TagPrinter.db")));
         catalogPath=configPath is not null?Path.Combine(Path.GetDirectoryName(Path.GetFullPath(configPath))!,"catalog.json"):Path.Combine(StartupDiagnostics.InstallationRoot,"config.json");
         appConfig=configuration ?? AppConfig.Load(catalogPath);
         Ui.Language=appConfig.Defaults.Language;
-        Text="TagPrinter | v0.17";
+        Text="TagPrinter | v0.18";
         using var iconStream=typeof(MainForm).Assembly.GetManifestResourceStream("TagPrinter.TagPrinter.ico");
         if(iconStream is not null)Icon=new Icon(iconStream); Width=1160; Height=850; MinimumSize=new Size(980,720);
         Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;
@@ -175,7 +188,7 @@ public partial class MainForm : Form
         foreach(var name in FontFamily.Families.Select(f=>f.Name).OrderBy(n=>n))fontFamily.Items.Add(name);
         fontFamily.SelectedItem="Arial";if(fontFamily.SelectedIndex<0)fontFamily.SelectedIndex=0;
         Field(Ui.T("Fuente","Font"),fontFamily);Field(Ui.T("Tamaño base · pt","Base size · pt"),fontSize);
-        target.Controls.Add(bold);target.Controls.Add(headingBold);
+        target.Controls.Add(bold);target.Controls.Add(headingBold);target.Controls.Add(centerText);
         target.Controls.Add(autoFont);
         var fontRow=new FlowLayoutPanel{AutoSize=true};
         var smaller=new Button{Text="−",Width=42,Height=32};var bigger=new Button{Text="+",Width=42,Height=32};
@@ -191,6 +204,7 @@ public partial class MainForm : Form
         target.Controls.Add(offsets);advanced.Click+=(_,_)=>offsets.Visible=!offsets.Visible;
         printingSection=new CollapsibleSection(Ui.T("04  Impresión","04  Printing"));
         fields.Controls.Add(printingSection);target=printingSection.Body;
+        printers.Name="PrinterSelector";
         Field(Ui.T("Impresora instalada en Windows","Windows printer"),printers);
         var refresh=new Button{Text=Ui.T("Actualizar impresoras","Refresh printers"),AutoSize=true};refresh.Click+=(_,_)=>LoadPrinters();target.Controls.Add(refresh);
         mode.Items.AddRange([Ui.T("Controlador de Windows (general)","Windows driver (general)"),Ui.T("ZPL directo (solo equipos compatibles)","Direct ZPL (compatible printers only)")]); Field(Ui.T("Método de impresión","Print method"),mode);
@@ -206,23 +220,23 @@ public partial class MainForm : Form
         transferButtons.Controls.AddRange([exportSettings,importSettings]);target.Controls.Add(transferButtons);
         // Fixed rows reserve title/help/actions; the remaining percentage row expands the preview.
         var right=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=5,Padding=new Padding(16,0,0,0)};
-        right.RowStyles.Add(new RowStyle(SizeType.Absolute,48));right.RowStyles.Add(new RowStyle(SizeType.Absolute,46));right.RowStyles.Add(new RowStyle(SizeType.Percent,100));right.RowStyles.Add(new RowStyle(SizeType.Absolute,74));right.RowStyles.Add(new RowStyle(SizeType.Absolute,128));
+        right.RowStyles.Add(new RowStyle(SizeType.Absolute,48));right.RowStyles.Add(new RowStyle(SizeType.Absolute,46));right.RowStyles.Add(new RowStyle(SizeType.Percent,100));right.RowStyles.Add(new RowStyle(SizeType.Absolute,74));right.RowStyles.Add(new RowStyle(SizeType.Absolute,158));
         right.Controls.Add(new Label{Text=Ui.T("Vista de la plantilla","Template preview"),Font=new Font("Segoe UI",20,FontStyle.Bold),AutoSize=true});
         right.Controls.Add(previewDescription);var previewHost=new Panel{Dock=DockStyle.Fill};previewHost.Controls.Add(preview);previewHost.Controls.Add(previewError);right.Controls.Add(previewHost);
         right.Controls.Add(new Label{Text=Ui.T("RFID: esta versión imprime el contenido visible.\nLa grabación y verificación del chip todavía no están habilitadas.","RFID: this version prints the visible content.\nChip encoding and verification are not enabled yet."),Dock=DockStyle.Fill,Padding=new Padding(8),ForeColor=Color.FromArgb(120,70,10)});
-        var actionArea=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=2,Margin=Padding.Empty};
-        actionArea.RowStyles.Add(new RowStyle(SizeType.Absolute,48));actionArea.RowStyles.Add(new RowStyle(SizeType.Percent,100));
-        actionArea.Controls.Add(printSummary,0,0);
+        var actionArea=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=3,Margin=Padding.Empty};
+        actionArea.RowStyles.Add(new RowStyle(SizeType.Absolute,42));actionArea.RowStyles.Add(new RowStyle(SizeType.Absolute,30));actionArea.RowStyles.Add(new RowStyle(SizeType.Percent,100));
+        actionArea.Controls.Add(printSummary,0,0);actionArea.Controls.Add(CreatePrinterStatusRow(),0,1);
         var buttons=new FlowLayoutPanel{Dock=DockStyle.Fill,Margin=Padding.Empty};
         var newAsset=new Button{Text=Ui.T("Nuevo activo","New asset"),AutoSize=true};
         newAsset.Click+=(_,_)=>StartNewAsset();buttons.Controls.Add(newAsset); var export=new Button{Text=Ui.T("Exportar etiqueta","Export Tag"),AutoSize=true};var zpl=new Button{Text=Ui.T("Guardar ZPL…","Save ZPL…"),AutoSize=true};
         var codeExport=new Button{Text=Ui.T("Exportar código","Export Code"),AutoSize=true};
         codeExport.Click+=(_,_)=>Guard(ExportCode);
-        export.Click+=(_,_)=>Guard(()=>Export(false));zpl.Click+=(_,_)=>Guard(()=>Export(true));print.Click+=(_,_)=>Guard(Print);buttons.Controls.AddRange([export,codeExport,zpl,print]);actionArea.Controls.Add(buttons,0,1);right.Controls.Add(actionArea);
+        export.Click+=(_,_)=>Guard(()=>Export(false));zpl.Click+=(_,_)=>Guard(()=>Export(true));print.Click+=(_,_)=>Guard(Print);buttons.Controls.AddRange([export,codeExport,zpl,print]);actionArea.Controls.Add(buttons,0,2);right.Controls.Add(actionArea);
         root.Controls.Add(fields,0,0);root.Controls.Add(right,1,0);InitializeWorkspace(root);
         sizes.SelectedIndex=appConfig.LabelSizes.FindIndex(p=>p.Id==appConfig.Defaults.LabelPresetId);
         layout.SelectedIndex=appConfig.Defaults.Layout;code.SelectedIndex=appConfig.Defaults.Qr?1:0;mode.SelectedIndex=0;dpi.SelectedIndex=appConfig.Defaults.Dpi==300?1:0;
-        showCode.Checked=appConfig.Defaults.ShowCode;codePercent.Value=appConfig.Defaults.CodePercent;
+        showCode.Checked=appConfig.Defaults.ShowCode;centerText.Checked=appConfig.Defaults.CenterText;codePercent.Value=appConfig.Defaults.CodePercent;
         margin.Value=appConfig.Defaults.MarginMm;autoFont.Checked=appConfig.Defaults.AutoFont;fontPercent=appConfig.Defaults.FontPercent;
         // Restore before enabling events so partially assigned controls cannot overwrite saved work or
         // trigger misleading errors.
@@ -241,9 +255,10 @@ public partial class MainForm : Form
         // Orientation swaps physical dimensions and changes the preset to custom. Pause events until both
         // dimensions are assigned.
         orientation.SelectedIndexChanged+=(_,_)=>Guard(()=>{if(!ready)return;bool portrait=orientation.SelectedIndex==1;if((portrait && width.Value>height.Value)||(!portrait && width.Value<height.Value)){bool active=ready;ready=false;decimal w=width.Value,h=height.Value;if(h<width.Minimum || h>width.Maximum || w<height.Minimum || w>height.Maximum){ready=active;throw new ArgumentException(Ui.T("Dimensiones no compatibles con esa orientación.","Dimensions do not support that orientation."));}sizes.SelectedIndex=appConfig.LabelSizes.Count;width.Value=h;height.Value=w;ready=active;ApplySize();}});
+        centerText.CheckedChanged+=(_,_)=>UpdatePreview();
         autoFont.CheckedChanged+=(_,_)=>UpdatePreview();showGuides.CheckedChanged+=(_,_)=>UpdatePreview();
         foreach(var number in new[]{margin,offsetX,offsetY})number.ValueChanged+=(_,_)=>UpdatePreview();
-        copies.ValueChanged+=(_,_)=>{UpdatePrintSummary();ScheduleSave();};printers.SelectedIndexChanged+=(_,_)=>{UpdatePrintSummary();ScheduleSave();};
+        copies.ValueChanged+=(_,_)=>{UpdatePrintSummary();ScheduleSave();};printers.SelectedIndexChanged+=(_,_)=>{UpdatePrintSummary();ScheduleSave();_ = RefreshPrinterStatusAsync();};
         // Debounce edit bursts, but save immediately when closing. No history event is created by autosave.
         autosave.Tick+=(_,_)=>{autosave.Stop();SaveConfig();};
         FormClosing+=(_,_)=>SaveConfig();Ui.Translate(this);UpdateChrome();ready=true;ApplySize();
@@ -276,7 +291,7 @@ public partial class MainForm : Form
     /// indexes to DPI and rotation.
     /// </summary>
     /// <returns>Rendering-only snapshot of current controls.</returns>
-    LabelData Data()=>new(brand.Text.Trim(),model.Text.Trim(),serial.Text.Trim(),width.Value,height.Value,int.Parse(dpi.Text),layout.SelectedIndex,code.SelectedIndex==1,autoFont.Checked,fontPercent,margin.Value,offsetX.Value,offsetY.Value,showBrand.Checked,showModel.Checked,showSerialText.Checked,partNumber.Text.Trim(),macAddress.Text.Trim(),showPartNumber.Checked,showMacAddress.Checked,assetType.Text.Trim(),showAssetType.Checked,showCode.Checked,fontFamily.Text,fontSize.Value,bold.Checked,headingBold.Checked,rotation.SelectedIndex*90,(int)codePercent.Value);
+    LabelData Data()=>new(brand.Text.Trim(),model.Text.Trim(),serial.Text.Trim(),width.Value,height.Value,int.Parse(dpi.Text),layout.SelectedIndex,code.SelectedIndex==1,autoFont.Checked,fontPercent,margin.Value,offsetX.Value,offsetY.Value,showBrand.Checked,showModel.Checked,showSerialText.Checked,partNumber.Text.Trim(),macAddress.Text.Trim(),showPartNumber.Checked,showMacAddress.Checked,assetType.Text.Trim(),showAssetType.Checked,showCode.Checked,fontFamily.Text,fontSize.Value,bold.Checked,headingBold.Checked,rotation.SelectedIndex*90,(int)codePercent.Value,centerText.Checked);
     /// <summary>
     /// Changes scale in percentage points, starting from the effective auto scale when appropriate, then
     /// selects manual fitting.
@@ -428,7 +443,7 @@ public partial class MainForm : Form
     void ScheduleSave(){if(!ready)return;autosave.Stop();autosave.Start();}
     /// <summary>Copies all editor values/preferences to WorkState without trimming or writing files.</summary>
     /// <returns>Complete serializable editor snapshot.</returns>
-    internal WorkState CaptureWork()=>new(){Printer=printers.Text,Size=sizes.SelectedIndex,LabelPresetId=sizes.SelectedIndex<appConfig.LabelSizes.Count?appConfig.LabelSizes[sizes.SelectedIndex].Id:"custom",Width=width.Value,Height=height.Value,Layout=layout.SelectedIndex,Code=code.SelectedIndex,Mode=mode.SelectedIndex,Dpi=dpi.SelectedIndex,AssetType=assetType.Text,ShowAssetType=showAssetType.Checked,Brand=brand.Text,PartNumber=partNumber.Text,MacAddress=macAddress.Text,ShowPartNumber=showPartNumber.Checked,ShowMacAddress=showMacAddress.Checked,Model=model.Text,Serial=serial.Text,Language=Ui.Language,ShowBrand=showBrand.Checked,ShowModel=showModel.Checked,ShowSerialText=showSerialText.Checked,ShowCode=showCode.Checked,ShowGuides=showGuides.Checked,AutoFont=autoFont.Checked,FontPercent=fontPercent,MarginMm=margin.Value,OffsetXmm=offsetX.Value,OffsetYmm=offsetY.Value,Copies=(int)copies.Value,FontFamily=fontFamily.Text,FontSizePt=fontSize.Value,Bold=bold.Checked,HeadingBold=headingBold.Checked,ContentRotation=rotation.SelectedIndex*90,CodePercent=(int)codePercent.Value};
+    internal WorkState CaptureWork()=>new(){Printer=printers.Text,Size=sizes.SelectedIndex,LabelPresetId=sizes.SelectedIndex<appConfig.LabelSizes.Count?appConfig.LabelSizes[sizes.SelectedIndex].Id:"custom",Width=width.Value,Height=height.Value,Layout=layout.SelectedIndex,Code=code.SelectedIndex,Mode=mode.SelectedIndex,Dpi=dpi.SelectedIndex,AssetType=assetType.Text,ShowAssetType=showAssetType.Checked,Brand=brand.Text,PartNumber=partNumber.Text,MacAddress=macAddress.Text,ShowPartNumber=showPartNumber.Checked,ShowMacAddress=showMacAddress.Checked,Model=model.Text,Serial=serial.Text,Language=Ui.Language,ShowBrand=showBrand.Checked,ShowModel=showModel.Checked,ShowSerialText=showSerialText.Checked,ShowCode=showCode.Checked,ShowGuides=showGuides.Checked,AutoFont=autoFont.Checked,FontPercent=fontPercent,MarginMm=margin.Value,OffsetXmm=offsetX.Value,OffsetYmm=offsetY.Value,Copies=(int)copies.Value,FontFamily=fontFamily.Text,FontSizePt=fontSize.Value,Bold=bold.Checked,HeadingBold=headingBold.Checked,ContentRotation=rotation.SelectedIndex*90,CodePercent=(int)codePercent.Value,CenterText=centerText.Checked};
     /// <summary>
     /// Restores a snapshot with range checks and preset lookup while suppressing preview events; missing
     /// presets become custom media.
@@ -448,13 +463,13 @@ public partial class MainForm : Form
         assetType.Text=s.AssetType;showAssetType.Checked=s.ShowAssetType;
         partNumber.Text=s.PartNumber;macAddress.Text=s.MacAddress;showPartNumber.Checked=s.ShowPartNumber;showMacAddress.Checked=s.ShowMacAddress;
         showBrand.Checked=s.ShowBrand;showModel.Checked=s.ShowModel;showSerialText.Checked=s.ShowSerialText;
-        showCode.Checked=s.ShowCode;codePercent.Value=Math.Clamp(s.CodePercent,25,200);
+        showCode.Checked=s.ShowCode;centerText.Checked=s.CenterText;codePercent.Value=Math.Clamp(s.CodePercent,25,200);
         fontFamily.SelectedItem=fontFamily.Items.Contains(s.FontFamily)?s.FontFamily:"Arial";
         fontSize.Value=Math.Clamp(s.FontSizePt,4,72);bold.Checked=s.Bold;headingBold.Checked=s.HeadingBold;rotation.SelectedIndex=Math.Clamp(s.ContentRotation/90,0,3);
         showGuides.Checked=s.ShowGuides;autoFont.Checked=s.AutoFont;fontPercent=Math.Clamp(s.FontPercent,50,200);margin.Value=Math.Clamp(s.MarginMm,1,5);offsetX.Value=Math.Clamp(s.OffsetXmm,-5,5);offsetY.Value=Math.Clamp(s.OffsetYmm,-5,5);
         brand.Text=s.Brand;model.Text=s.Model;serial.Text=s.Serial;copies.Value=Math.Clamp(s.Copies,1,999);Ui.Language=s.Language=="es"?"es":"en";
         language.SelectedIndex=Ui.Language=="es"?1:0;
-        ready=wasReady;if(ready){Ui.Translate(this);UpdateChrome();ApplySize();}
+        ready=wasReady;if(ready){Ui.Translate(this);UpdateChrome();ApplySize();_ = RefreshPrinterStatusAsync();}
     }
     /// <summary>Writes current work and displays errors in the status area; does not create history.</summary>
     internal void SaveConfig()
@@ -470,5 +485,5 @@ public partial class MainForm : Form
     }
     /// <summary>Releases owned timer, tooltip and bitmaps, then lets the base form dispose controls.</summary>
     /// <param name="disposing">True for explicit managed disposal; passed to the base class.</param>
-    protected override void Dispose(bool disposing) {if(disposing){autosave.Dispose();aboutTip.Dispose();aboutButton.Image?.Dispose();preview.Image?.Dispose();}base.Dispose(disposing);}
+    protected override void Dispose(bool disposing) {if(disposing){DisposePrinterStatus();autosave.Dispose();aboutTip.Dispose();aboutButton.Image?.Dispose();preview.Image?.Dispose();}base.Dispose(disposing);}
 }

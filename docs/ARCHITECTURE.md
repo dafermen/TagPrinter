@@ -1,4 +1,4 @@
-# Architecture — TagPrinter 0.17
+# Architecture — TagPrinter 0.18
 
 TagPrinter is a Windows Forms application targeting .NET 8. It uses ZXing.Net 0.16.11 for symbols and Microsoft.Data.Sqlite 8.0.28 for embedded local storage. The Windows x64 portable bundles its runtime; printer drivers remain external.
 
@@ -64,7 +64,7 @@ Output must succeed before an event is appended. File/spooler output and SQLite 
 
 The last-work path remains %LOCALAPPDATA%/InventoryLabels/settings.json. Legacy Title/ShowTitle migrate to Brand/ShowBrand only when replacement keys are absent. New properties use compatible defaults. Historical recovery uses Custom media to preserve dimensions, retains current language and clears missing printers.
 
-No RFID write/verification, inventory synchronization, bulk import, background rendering, pagination or permanent history deletion exists. Dashboard derives assets from event serials; it does not verify physical inventory. Driver behavior and scans require real hardware validation.
+No RFID write/verification, inventory synchronization, bulk import, background rendering, pagination exists. Permanent deletion is limited to the recycle bin after explicit confirmation. Dashboard derives assets from event serials; it does not verify physical inventory. Driver behavior and scans require real hardware validation.
 
 Read [the student guide](STUDENT_GUIDE.md) for an algorithm walkthrough and [validation](VALIDATION.md) for actual checks.
 
@@ -72,6 +72,10 @@ Read [the student guide](STUDENT_GUIDE.md) for an algorithm walkthrough and [val
 
 Open the root TagPrinter.exe to validate the immutable app/ payload before loading it. Editable config.json stays at the portable root; last work and SQLite are checked separately without deleting damaged data. See [startup validation](STARTUP_VALIDATION.md) for manifests, logs, recovery and limits.
 
-## Configuration transfer — 0.17
+## Configuration transfer — 0.18
 
 ConfigurationTransfer.cs defines the versioned bundle, strict validation and staged paired persistence/rollback. MainForm.Configuration.cs owns import confirmation, local-resource fallback, pre-import backups and catalog refresh. ConfigurationTests.cs checks form round trips/restart, invalid input, rollback and resized symbol decoding. CodePercent is separate from FontPercent and is included automatically in snapshots/transfer. See CONFIGURATION_TRANSFER.md.
+
+## Centering, recycle-bin purge and printer status — 0.18
+
+03 Text and margins adds Center text for the whole text block. Reports > Recycle bin adds irreversible Empty recycle bin with all-filter scope confirmation. The visible printer summary now includes an automatically refreshed Windows status indicator. CenterText persists in work/history/full transfer; live status does not. See [centering, recycle-bin purge and Windows status](TEXT_TRASH_PRINTER_STATUS.md).

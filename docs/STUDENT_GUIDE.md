@@ -145,6 +145,10 @@ When changing a persisted field, document defaults and old-data compatibility. W
 
 Open the root TagPrinter.exe to validate the immutable app/ payload before loading it. Editable config.json stays at the portable root; last work and SQLite are checked separately without deleting damaged data. See [startup validation](STARTUP_VALIDATION.md) for manifests, logs, recovery and limits.
 
-## Configuration transfer and symbol scaling — 0.17
+## Configuration transfer and symbol scaling — 0.18
 
 Read [the transfer/scale walkthrough](CONFIGURATION_TRANSFER.md) with ConfigurationTransfer.cs and MainForm.Configuration.cs. Notice the distinction between validating a draft and requiring a printable label, between a single-file atomic replacement and a two-file rollback, and between continuous percentages and integer pixel modules.
+
+## Centering, recycle-bin purge and printer status — 0.18
+
+03 Text and margins adds Center text for the whole text block. Reports > Recycle bin adds irreversible Empty recycle bin with all-filter scope confirmation. The visible printer summary now includes an automatically refreshed Windows status indicator. CenterText persists in work/history/full transfer; live status does not. See [centering, recycle-bin purge and Windows status](TEXT_TRASH_PRINTER_STATUS.md).

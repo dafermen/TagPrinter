@@ -46,3 +46,7 @@ ConfigurationBundle combines AppConfig with WorkState and explicit format/schema
 LabelRenderer computes the old fitted integer scale, multiplies by CodePercent, rounds down to whole modules, then checks/grows the reserved area along the layout's shared axis. CodeRenderer independently scales its baseline integer modules/bar height. CodePercent is an optional default-100 property in LabelData/WorkState/ConfigDefaults; existing snapshot and pixel behavior remains unchanged at 100.
 
 ConfigurationTests uses real forms, separate paths/catalogs, before-import round trips, restart recovery, missing resources, rejection/rollback and pixel decoding at both DPIs. No printer submission or real user-state mutation is involved.
+
+## CenterText compatibility — 0.18
+
+CenterText is included with the full WorkState/catalog defaults and restores the centered block setting. Earlier transfer files without it preserve legacy placement (false). Live Windows queue status and report/recycle-bin contents remain outside configuration transfer.

@@ -2,6 +2,8 @@
 
 ## Completed
 
+- 0.18: text block centering, empty recycle bin and read-only Windows queue-status indicator.
+
 - 0.17: full configuration export/import and QR/barcode size control.
 
 - 0.16: startup payload integrity launcher, editable configuration validation, preserved corrupt-data diagnostics and isolated package mutation tests.
@@ -12,6 +14,8 @@
 - Documentation update: English source contracts/algorithm explanations, consolidated manuals, student walkthrough and troubleshooting.
 
 ## Pending
+
+- Separate physical roll media size from reading/design orientation, with follow-up hardware validation (reported 100 × 50 media case).
 
 1. Validate actual printing, calibration and scans with user hardware.
 2. Define RFID identifiers/memory and implement write/read-back verification.

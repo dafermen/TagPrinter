@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.18.0 — 2026-11-04
+
+Centered text blocks with compatible persistence/transfer; permanent recycle-bin emptying with explicit all-record confirmation and transactional source-link cleanup; read-only asynchronous Windows queue-status indicator with refresh, timeout and cached-status limitations. Hardware orientation work remains separate.
+
+
 ## 0.17.0 — 2026-11-03
 
 Full configuration export/import in Settings, with live editor/catalog capture, strict validation, scope confirmation, automatic pre-import backup and staged I/O rollback. Missing printers remain unselected across restart; unavailable fonts are reported/fallback. Code size 25–200 percent with plus/minus/reset, integer module scaling, safe text-space reallocation and overflow rejection; scale persists in snapshots/transfers and standalone export.

@@ -65,6 +65,6 @@ public partial class MainForm
             printers.SelectedIndex=-1;Restore(resolved.Work);sourceHistoryId=null;
         }
         finally {ready=active;}
-        Ui.Translate(this);UpdateChrome();ApplySize();SaveConfig();return backup;
+        Ui.Translate(this);UpdateChrome();ApplySize();_ = RefreshPrinterStatusAsync();SaveConfig();return backup;
     }
 }

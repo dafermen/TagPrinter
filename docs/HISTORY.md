@@ -41,7 +41,7 @@ New properties use compatible defaults: older records keep ShowCode=true, Arial 
 
 ## Recycle and restore
 
-Select rows and confirm Delete. A transaction inserts their IDs into trash; event contents and source links remain unchanged. Check Recycle bin to inspect and restore them. Duplicate deletion is harmless. There is no permanent-delete or event-edit UI. Deleted events do not contribute to Dashboard. Exported files and queued jobs are never removed by this action.
+Select rows and confirm Delete. A transaction inserts their IDs into trash; event contents and source links remain unchanged. Check Recycle bin to inspect and restore them. Duplicate deletion is harmless. Empty recycle bin can permanently remove recycled events after confirmation; active events cannot be edited or directly purged. Deleted events do not contribute to Dashboard. Exported files and queued jobs are never removed by this action.
 
 ## CSV
 
@@ -68,3 +68,7 @@ Double-click opens a type/brand/model equality filter over active Reports histor
 ## Configuration transfer and code scale — 0.17
 
 Settings transfer does not import/export/change history or create output events. Back up the database separately. WorkState snapshots now store CodePercent (25–200, default 100); loading older events preserves their existing size. New exports record/recover the chosen scale.
+
+## Permanent recycle-bin emptying — 0.18
+
+Empty recycle bin deletes all recycled events after confirmation, independent of filters. Active records survive; source_event_id links to removed records become null within the same transaction. The editor drops a purged loaded-source reference. Exported files/queued jobs are untouched. CenterText is included in WorkState; older rows use false. See TEXT_TRASH_PRINTER_STATUS.md.

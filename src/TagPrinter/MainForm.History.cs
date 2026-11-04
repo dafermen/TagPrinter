@@ -39,7 +39,7 @@ public partial class MainForm
     {
         labelTab.BackColor=Color.White;reportsTab.BackColor=Color.White;
         labelTab.Controls.Add(labelContent);workspaceTabs.TabPages.AddRange([labelTab,reportsTab,dashboardTab]);
-        reports=new ReportsView(history,LoadHistoryEvent);reportsTab.Controls.Add(reports);
+        reports=new ReportsView(history,LoadHistoryEvent,()=>{if(sourceHistoryId is { } id && history.Get(id) is null)sourceHistoryId=null;});reportsTab.Controls.Add(reports);
         // Refresh on selection so recent output appears without continuous background polling.
         workspaceTabs.SelectedIndexChanged+=(_,_)=>{if(ready && workspaceTabs.SelectedTab==reportsTab)Guard(()=>reports.RefreshData());};
         dashboard=new DashboardView(history,(type,brand,model)=>{workspaceTabs.SelectedTab=reportsTab;reports.ShowGroup(type,brand,model);});dashboardTab.Controls.Add(dashboard);
@@ -65,6 +65,7 @@ public partial class MainForm
             string hint=string.Format(Ui.T("Incluir {0} en la etiqueta","Include {0} on the label"),item.Caption.Text);
             item.Check.AccessibleName=hint;aboutTip.SetToolTip(item.Check,hint);
         }
+        ShowPrinterStatus(lastPrinterState);
         reports?.RefreshLanguage();dashboardTab.Text="Dashboard";dashboard?.RefreshLanguage();
     }
     /// <summary>Captures saved work and trims asset values for a completed output event.</summary>

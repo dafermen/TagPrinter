@@ -33,6 +33,9 @@ public sealed class ReportsView : UserControl
     readonly Button remove=new(){AutoSize=true};
     // current is the original queried list; table is its typed/translatable projection and owns the current
     // sort/filter.
+    // Purge is explicit and irreversible; the callback invalidates any currently loaded source reference.
+    readonly Button emptyTrash=new(){AutoSize=true};
+    readonly Action? onTrashEmptied;
     List<HistoryEvent> current=[];
     // Owned typed projection; its DefaultView retains sorting and group filtering.
     DataTable? table;
@@ -44,15 +47,16 @@ public sealed class ReportsView : UserControl
     /// </summary>
     /// <param name="history">History store; tests supply an isolated instance.</param>
     /// <param name="onLoad">Callback loading a selected event into the editor without printing.</param>
-    public ReportsView(HistoryStore history,Action<HistoryEvent> onLoad)
+    /// <param name="onTrashEmptied">Optional callback after permanent deletion, used to clear a loaded source that no longer exists.</param>
+    public ReportsView(HistoryStore history,Action<HistoryEvent> onLoad,Action? onTrashEmptied=null)
     {
-        store=history;load=onLoad;BackColor=Color.White;Dock=DockStyle.Fill;Padding=new Padding(16);
+        store=history;load=onLoad;this.onTrashEmptied=onTrashEmptied;BackColor=Color.White;Dock=DockStyle.Fill;Padding=new Padding(16);
         var layout=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=4};
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute,88));layout.RowStyles.Add(new RowStyle(SizeType.Percent,100));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,46));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,58));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute,88));layout.RowStyles.Add(new RowStyle(SizeType.Percent,100));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,46));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,76));
         var filters=new FlowLayoutPanel{Dock=DockStyle.Fill,WrapContents=true};
         filters.Controls.AddRange([searchLabel,search,field,action,fromLabel,from,toLabel,to,apply,reset]);
         layout.Controls.Add(filters,0,0);layout.Controls.Add(Grid,0,1);layout.Controls.Add(count,0,2);
-        var buttons=new FlowLayoutPanel{Dock=DockStyle.Fill};buttons.Controls.AddRange([open,export,exportAll,backup,trash,remove]);layout.Controls.Add(buttons,0,3);Controls.Add(layout);
+        var buttons=new FlowLayoutPanel{Dock=DockStyle.Fill};buttons.Controls.AddRange([open,export,exportAll,backup,trash,remove,emptyTrash]);layout.Controls.Add(buttons,0,3);Controls.Add(layout);
         // Adds an explicitly bound sortable column; serial cells use links.
         void Column(string name,int width,bool link=false)
         {
@@ -76,6 +80,11 @@ public sealed class ReportsView : UserControl
             if(MessageBox.Show(FindForm(),message,"TagPrinter",MessageBoxButtons.YesNo,MessageBoxIcon.Question)!=DialogResult.Yes)return;
             store.SetDeleted(ids,!trash.Checked);RefreshData();
         });
+        emptyTrash.Click+=(_,_)=>Run(()=>{
+            int total=store.RecycleBinCount();if(total==0)return;
+            string warning=string.Format(Ui.T("¿Eliminar definitivamente TODOS los {0} registros de la papelera? Incluye los ocultos por filtros. Esta acción no se puede deshacer.","Permanently delete ALL {0} recycled records, including those hidden by filters? This cannot be undone."),total);
+            if(MessageBox.Show(FindForm(),warning,"TagPrinter",MessageBoxButtons.YesNo,MessageBoxIcon.Warning,MessageBoxDefaultButton.Button2)==DialogResult.Yes)PurgeRecycleBin();
+        });
         field.Items.AddRange(new object[Fields.Length].Select(_=>(object)"").ToArray());field.SelectedIndex=0;
         action.Items.AddRange(new object[HistoryStore.Actions.Length+1].Select(_=>(object)"").ToArray());action.SelectedIndex=0;
         from.Checked=false;to.Checked=false;RefreshLanguage();
@@ -92,6 +101,7 @@ public sealed class ReportsView : UserControl
     /// </summary>
     public void RefreshLanguage()
     {
+        emptyTrash.Text=Ui.T("Vaciar papelera…","Empty recycle bin…");
         trash.Text=Ui.T("Papelera","Recycle bin");remove.Text=trash.Checked?Ui.T("Restaurar","Restore"):Ui.T("Eliminar","Delete");
         searchLabel.Text=Ui.T("Buscar","Search");fromLabel.Text=Ui.T("Desde","From");toLabel.Text=Ui.T("Hasta","To");
         apply.Text=Ui.T("Buscar / actualizar","Search / refresh");reset.Text=Ui.T("Limpiar filtros","Clear filters");open.Text=Ui.T("Cargar etiqueta","Load label");
@@ -122,6 +132,7 @@ public sealed class ReportsView : UserControl
     public void RefreshData()
     {
         // Save sort before replacing typed data. Dates/numbers sort by value rather than their text representation.
+        emptyTrash.Visible=trash.Checked;emptyTrash.Enabled=trash.Checked && store.RecycleBinCount()>0;
         current=store.Query(Filter());string sort=table?.DefaultView.Sort??"";
         var next=new DataTable();
         next.Columns.Add("Id",typeof(long));next.Columns.Add("Date",typeof(DateTime));foreach(var name in new[]{"Action","Serial","AssetType","Brand","Model","PartNumber","MacAddress","Printer"})next.Columns.Add(name,typeof(string));next.Columns.Add("Copies",typeof(int));next.Columns.Add("CodeType",typeof(string));next.Columns.Add("SourceEventId",typeof(long));
@@ -177,6 +188,11 @@ public sealed class ReportsView : UserControl
     /// <summary>Displays report-action failures as warnings in the owning form.</summary>
     /// <param name="action">Stable event code or UI callback as specified by the containing method.</param>
     void Run(Action action){try{action();}catch(Exception ex){MessageBox.Show(FindForm(),ex.Message,"TagPrinter",MessageBoxButtons.OK,MessageBoxIcon.Warning);}}
+    /// <summary>Purges all recycled rows after UI confirmation; tests call this with isolated data only.</summary>
+    internal int PurgeRecycleBin()
+    {
+        int removed=store.EmptyRecycleBin();onTrashEmptied?.Invoke();RefreshData();return removed;
+    }
     /// <summary>Finds displayed ID and exercises normal row loading without printer work.</summary>
     /// <param name="id">Stable numeric event ID, independent of serial text and display order.</param>
     internal void OpenRecordForTest(long id){int index=Grid.Rows.Cast<DataGridViewRow>().First(row=>Convert.ToInt64(row.Cells["Id"].Value)==id).Index;OpenRow(index);}

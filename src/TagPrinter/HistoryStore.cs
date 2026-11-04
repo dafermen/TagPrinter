@@ -175,6 +175,27 @@ public sealed class HistoryStore
         }
         transaction.Commit();
     }
+    /// <summary>Counts the entire recycle bin, independent of report search/date filters.</summary>
+    public int RecycleBinCount()
+    {
+        using var connection=Open();using var command=connection.CreateCommand();
+        command.CommandText="SELECT COUNT(*) FROM trash";return Convert.ToInt32(command.ExecuteScalar());
+    }
+
+    /// <summary>Permanently removes all recycled events. Preserves active events and clears dangling provenance links.</summary>
+    /// <returns>Number of event rows deleted; zero when the recycle bin is already empty.</returns>
+    public int EmptyRecycleBin()
+    {
+        using var connection=Open();using var transaction=connection.BeginTransaction();
+        using var command=connection.CreateCommand();command.Transaction=transaction;
+        // Snapshot IDs before removing markers. Foreign keys stay enabled throughout the operation.
+        command.CommandText="CREATE TEMP TABLE purge_ids(id INTEGER PRIMARY KEY); INSERT INTO purge_ids SELECT event_id FROM trash;";
+        command.ExecuteNonQuery();
+        command.CommandText="SELECT COUNT(*) FROM purge_ids";int count=Convert.ToInt32(command.ExecuteScalar());
+        command.CommandText="UPDATE events SET source_event_id=NULL WHERE source_event_id IN (SELECT id FROM purge_ids); DELETE FROM trash WHERE event_id IN (SELECT id FROM purge_ids); DELETE FROM events WHERE id IN (SELECT id FROM purge_ids);";
+        command.ExecuteNonQuery();transaction.Commit();return count;
+    }
+
     /// <summary>
     /// Copies a consistent SQLite database including recycled events; rejects the active path as
     /// destination.

@@ -26,6 +26,8 @@ public record ConfigDefaults
     public bool AutoFont {get;init;}=true;
     /// <summary>Manual scale percentage from 50 through 200.</summary>
     public int FontPercent {get;init;}=100;
+    /// <summary>Centers the visible text block inside its allocated text area; false preserves legacy placement.</summary>
+    public bool CenterText {get;init;}
     /// <summary>Symbol size percentage, 25 through 200; 100 preserves the original fitted size.</summary>
     public int CodePercent {get;init;}=100;
     /// <summary>Inner margin from 1 through 5 millimeters.</summary>

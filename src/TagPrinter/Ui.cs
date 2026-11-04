@@ -15,6 +15,7 @@ public static class Ui
         ("Orientación de etiqueta","Label orientation"),("Horizontal","Landscape"),("Vertical","Portrait"),("Rotación del contenido","Content rotation"),
         ("Exportar configuración","Export configuration"),("Importar configuración…","Import configuration…"),
         ("Tamaño del código · %","Code size · %"),("100 % = tamaño ajustado. Los módulos cambian en pasos de píxeles completos.","100% = fitted size. Modules change in whole-pixel steps."),
+        ("Centrar texto","Center text"),
         ("Ajustar automáticamente","Fit automatically"),
         ("+ mueve a la derecha / abajo","+ moves right / down"),
         ("Mostrar guía (no se imprime)","Show margin guide (not printed)"),

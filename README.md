@@ -12,7 +12,9 @@ Open the root executable; app/ contains the verified payload. Edit config.json a
 
 See [full configuration transfer and code size](docs/CONFIGURATION_TRANSFER.md) for Settings export/import and 25–200% symbol scaling.
 
-## Current features — 0.17
+See [centering, empty recycle bin and Windows status](docs/TEXT_TRASH_PRINTER_STATUS.md) for the latest usability options.
+
+## Current features — 0.18
 
 - Asset type, brand, model, serial, part number and MAC address, with inline visibility controls.
 - Optional QR/Code128, text-only labels, preset/custom media and four layouts.
@@ -60,7 +62,7 @@ dotnet run --project src/TagPrinter
 
 The project emits an XML API documentation file alongside build output for editor/tooling use. Source comments explain every explicit class/record and method, saved properties, meaningful state and complex algorithms. Read the student guide before changing rendering or persistence.
 
-Publish builds and verifies the self-contained executable, then creates artifacts/TagPrinter-v0.17-PORTABLE-Windows-x64.zip. Generated outputs and personal databases are excluded from Git. Distribute the entire portable folder.
+Publish builds and verifies the self-contained executable, then creates artifacts/TagPrinter-v0.18-PORTABLE-Windows-x64.zip. Generated outputs and personal databases are excluded from Git. Distribute the entire portable folder.
 
 ## Data
 
@@ -74,7 +76,7 @@ Updates do not replace user history. Last work overrides startup defaults. Datab
 
 ## Limits
 
-RFID chip encoding/verification is not implemented. Submission does not confirm physical printing. Validate a real printed sample and scan before a batch. History loading never prints automatically. Dashboard summarizes recorded serials/actions, not verified inventory. There is no permanent-delete, bulk import, synchronization or database encryption.
+RFID chip encoding/verification is not implemented. Submission does not confirm physical printing. Validate a real printed sample and scan before a batch. History loading never prints automatically. Dashboard summarizes recorded serials/actions, not verified inventory. Permanent deletion is limited to confirmed recycle-bin emptying. There is no bulk import, synchronization or database encryption.
 
 ## License
 

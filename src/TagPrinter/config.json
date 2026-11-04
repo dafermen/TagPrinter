@@ -47,6 +47,7 @@
     "AutoFont": true,
     "FontPercent": 100,
     "CodePercent": 100,
+    "CenterText": false,
     "MarginMm": 2,
     "ShowCode": true
   }

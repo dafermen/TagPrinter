@@ -35,9 +35,10 @@ namespace TagPrinter;
 /// <param name="FontSizePt">Body base size 4 through 72 points; heading uses 1.3 times this value.</param>
 /// <param name="Bold">Applies bold to every text line.</param>
 /// <param name="HeadingBold">Applies heading bold independently of general Bold.</param>
+/// <param name="CenterText">Centers text as one block within the text area, horizontally and vertically.</param>
 /// <param name="CodePercent">Symbol size relative to the original fitted area, from 25 through 200 percent.</param>
 /// <param name="ContentRotation">Clockwise degrees: 0, 90, 180 or 270.</param>
-public record LabelData(string Brand, string Model, string Serial, decimal WidthMm, decimal HeightMm, int Dpi, int Layout, bool Qr, bool AutoFont = true, int FontPercent = 100, decimal MarginMm = 2, decimal OffsetXmm = 0, decimal OffsetYmm = 0, bool ShowBrand = true, bool ShowModel = true, bool ShowSerialText = true, string PartNumber = "", string MacAddress = "", bool ShowPartNumber = true, bool ShowMacAddress = true, string AssetType = "", bool ShowAssetType = true, bool ShowCode = true, string FontFamily = "Arial", decimal FontSizePt = 10, bool Bold = false, bool HeadingBold = true, int ContentRotation = 0, int CodePercent = 100);
+public record LabelData(string Brand, string Model, string Serial, decimal WidthMm, decimal HeightMm, int Dpi, int Layout, bool Qr, bool AutoFont = true, int FontPercent = 100, decimal MarginMm = 2, decimal OffsetXmm = 0, decimal OffsetYmm = 0, bool ShowBrand = true, bool ShowModel = true, bool ShowSerialText = true, string PartNumber = "", string MacAddress = "", bool ShowPartNumber = true, bool ShowMacAddress = true, string AssetType = "", bool ShowAssetType = true, bool ShowCode = true, string FontFamily = "Arial", decimal FontSizePt = 10, bool Bold = false, bool HeadingBold = true, int ContentRotation = 0, int CodePercent = 100, bool CenterText = false);
 /// <summary>
 /// Draws complete labels and converts bitmaps into raster ZPL. Preview, export and printing share this
 /// renderer.
@@ -144,20 +145,30 @@ public static class LabelRenderer
         {
             using var g = Graphics.FromImage(bmp); g.Clear(Color.White);
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SingleBitPerPixelGridFit;
-            using var fmt = new StringFormat(StringFormat.GenericTypographic) { Trimming = StringTrimming.None };
+            using var fmt = new StringFormat(StringFormat.GenericTypographic) { Trimming = StringTrimming.None, Alignment=d.CenterText?StringAlignment.Center:StringAlignment.Near };
             // Points convert to pixels with DPI / 72. textRects gives every visible line an equal-height slot.
             float[] baseSizes = lines.Select(line=>d.Dpi*(float)d.FontSizePt*(line.IsHeading?1.3f:1f)/72f).ToArray();
             var textRects=Enumerable.Range(0,lineCount).Select(i=>new RectangleF(content.Left,content.Top+textH*i/(float)lineCount,textW,textH/(float)lineCount)).ToArray();
             // Measures each line at a proposed scale and checks width/height against its assigned rectangle.
-            bool Fits(float factor)
+            float gap=d.Dpi/72f; // One point between centered lines; legacy equal-height rows are unchanged.
+            float[] MeasureHeights(float candidate)
             {
+                var heights=new float[lineCount];
                 for(int i=0;i<lineCount;i++)
                 {
-                    using var font=new Font(d.FontFamily,baseSizes[i]*factor,(d.Bold || (lines[i].IsHeading && d.HeadingBold))?FontStyle.Bold:FontStyle.Regular,GraphicsUnit.Pixel);
-                    var measured=g.MeasureString(lines[i].Text,font,new SizeF(textRects[i].Width,10000),fmt);
-                    if(measured.Width>textRects[i].Width || measured.Height>textRects[i].Height)return false;
+                    using var font=new Font(d.FontFamily,baseSizes[i]*candidate,(d.Bold || (lines[i].IsHeading && d.HeadingBold))?FontStyle.Bold:FontStyle.Regular,GraphicsUnit.Pixel);
+                    var measured=g.MeasureString(lines[i].Text,font,new SizeF(textW,10000),fmt);
+                    if(measured.Width>textW)return [];
+                    heights[i]=measured.Height;
                 }
-                return true;
+                return heights;
+            }
+            bool Fits(float candidate)
+            {
+                float[] heights=MeasureHeights(candidate);
+                if(heights.Length!=lineCount)return false;
+                return d.CenterText?heights.Sum()+gap*Math.Max(0,lineCount-1)<=textH:
+                    heights.Select((height,i)=>height<=textRects[i].Height).All(fits=>fits);
             }
             // Auto mode starts at 100 percent and shrinks one percentage point at a time to 50. Manual mode
             // uses FontPercent. Both reject remaining overflow.
@@ -168,6 +179,13 @@ public static class LabelRenderer
             }
             usedFontPercent=(int)Math.Round(factor*100);
             if(!Fits(factor))throw new ArgumentException(Ui.T("El texto no cabe. Reduce la fuente con −, activa el ajuste automático o amplía la etiqueta.","Text does not fit. Reduce text size with −, enable automatic fit or use a larger label."));
+            if(d.CenterText && lineCount>0)
+            {
+                // Center the entire measured block, not each line inside a widely spaced legacy row.
+                float[] heights=MeasureHeights(factor);
+                float top=content.Top+(textH-heights.Sum()-gap*(lineCount-1))/2;
+                for(int i=0;i<lineCount;i++){textRects[i]=new RectangleF(content.Left,top,textW,heights[i]);top+=heights[i]+gap;}
+            }
             for(int i=0;i<lineCount;i++)
             {
                 using var font=new Font(d.FontFamily,baseSizes[i]*factor,(d.Bold || (lines[i].IsHeading && d.HeadingBold))?FontStyle.Bold:FontStyle.Regular,GraphicsUnit.Pixel);

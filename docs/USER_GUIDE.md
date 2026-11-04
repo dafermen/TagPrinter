@@ -1,4 +1,4 @@
-# User guide — TagPrinter 0.17
+# User guide — TagPrinter 0.18
 
 ## Start and update
 
@@ -80,6 +80,10 @@ Summary indicators separate actions, PNG tag exports, submitted jobs and request
 
 Open the root TagPrinter.exe to validate the immutable app/ payload before loading it. Editable config.json stays at the portable root; last work and SQLite are checked separately without deleting damaged data. See [startup validation](STARTUP_VALIDATION.md) for manifests, logs, recovery and limits.
 
-## Complete configuration and code size — 0.17
+## Complete configuration and code size — 0.18
 
 Use 05 Settings > Export configuration / Import configuration to transfer catalog, data and all saved preferences. Imports show scope and create a before-import backup. History and Windows drivers/fonts are separate. In 02 use Code size · % (25–200), minus/plus or 100% reset. See [configuration transfer and code size](CONFIGURATION_TRANSFER.md).
+
+## Centering, recycle-bin purge and printer status — 0.18
+
+03 Text and margins adds Center text for the whole text block. Reports > Recycle bin adds irreversible Empty recycle bin with all-filter scope confirmation. The visible printer summary now includes an automatically refreshed Windows status indicator. CenterText persists in work/history/full transfer; live status does not. See [centering, recycle-bin purge and Windows status](TEXT_TRASH_PRINTER_STATUS.md).
