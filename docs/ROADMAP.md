@@ -2,6 +2,8 @@
 
 ## Completed
 
+- 0.19: wrapped asset headings, dedicated free-text mode, paper-feed preview rails and automatic text-space reclamation when codes shrink.
+
 - 0.18: text block centering, empty recycle bin and read-only Windows queue-status indicator.
 
 - 0.17: full configuration export/import and QR/barcode size control.

@@ -152,3 +152,9 @@ Read [the transfer/scale walkthrough](CONFIGURATION_TRANSFER.md) with Configurat
 ## Centering, recycle-bin purge and printer status — 0.18
 
 03 Text and margins adds Center text for the whole text block. Reports > Recycle bin adds irreversible Empty recycle bin with all-filter scope confirmation. The visible printer summary now includes an automatically refreshed Windows status indicator. CenterText persists in work/history/full transfer; live status does not. See [centering, recycle-bin purge and Windows status](TEXT_TRASH_PRINTER_STATUS.md).
+
+## Flexible layout — 0.19
+
+A text field is not necessarily one printed line. MeasureString receives the available width and reports wrapped height; the renderer rounds up for device pixels and checks characters fitted before drawing. Reserve that measured height before placing the next field. The code matrix already includes its quiet zones, so actual matrix width × integer scale can be subtracted from available width to give text the remainder. For bottom layouts, subtract actual code height and a gap instead. The initial fitted area only chooses the scale baseline, not a permanent reservation.
+
+Free text is a separate input source selected by a Boolean. It keeps ordinary edits in the work snapshot, but output history describes the content actually generated. Preview feed arrows belong to the enclosing panel Paint event rather than the bitmap renderer; therefore exports and PrintDocument cannot accidentally include them. Tests compare PNG bytes with the guides on and off.

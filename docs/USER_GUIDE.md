@@ -1,4 +1,4 @@
-# User guide — TagPrinter 0.18
+# User guide — TagPrinter 0.19
 
 ## Start and update
 
@@ -14,11 +14,13 @@ The Code row chooses QR or Code 128 and whether the complete label includes a sy
 
 Turn off Code for text-only output. Text then uses the entire content area and serial becomes optional. At least one nonempty visible text field is required. New asset clears the six text fields and loaded-record reference, retaining design/printer preferences.
 
+Enable **Free text only** to write a label without asset fields or codes. Long asset headings wrap; subsequent fields keep their space. See [Flexible labels](FLEXIBLE_LABELS.md) for examples, history behavior and paper-feed references.
+
 ## Media and orientation — section 02
 
 Choose a catalog preset or Custom dimensions in millimeters. Horizontal/vertical swaps width and height and selects Custom. Supported custom dimensions in the editor are 20–200 mm for each side; catalog validation has its own bounds documented in CONFIGURATION.md. A printer must physically support the chosen media.
 
-Choose one of four layouts: code below centered, below left, below right or to the right of text. When the code is hidden, this selection does not constrain text space.
+Choose one of four layouts: code below centered, below left, below right or to the right of text. When the code is hidden, this selection does not constrain text space. Shrinking the code returns its unused width/height to text. Feed arrows are an adjustable visual reference outside the label, never printed.
 
 Content rotation is 0, 90, 180 or 270 degrees clockwise. It rotates text and symbol together inside the selected physical media. It does not rotate text independently. The preview shows the resulting output.
 

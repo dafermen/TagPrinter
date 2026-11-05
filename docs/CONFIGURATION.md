@@ -74,3 +74,5 @@ Open the root TagPrinter.exe to validate the immutable app/ payload before loadi
 ## Centering, recycle-bin purge and printer status — 0.18
 
 03 Text and margins adds Center text for the whole text block. Reports > Recycle bin adds irreversible Empty recycle bin with all-filter scope confirmation. The visible printer summary now includes an automatically refreshed Windows status indicator. CenterText persists in work/history/full transfer; live status does not. See [centering, recycle-bin purge and Windows status](TEXT_TRASH_PRINTER_STATUS.md).
+
+Work snapshots also persist FreeTextMode, FreeText (up to 2000 characters), ShowFeedGuide and FeedDirection (0 Down, 1 Up, 2 Left, 3 Right). These are included in full configuration transfer; feed guides affect only the preview. See FLEXIBLE_LABELS.md.

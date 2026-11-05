@@ -68,12 +68,24 @@ public partial class MainForm
         ShowPrinterStatus(lastPrinterState);
         reports?.RefreshLanguage();dashboardTab.Text="Dashboard";dashboard?.RefreshLanguage();
     }
-    /// <summary>Captures saved work and trims asset values for a completed output event.</summary>
-    /// <returns>Complete snapshot with trimmed asset text.</returns>
-    WorkState GenerationState()=>CaptureWork() with
+    /// <summary>Captures the generated content without assigning hidden asset identifiers to free-text output.</summary>
+    /// <param name="codeOnly">Standalone code always uses the asset serial, independently of free-text label mode.</param>
+    /// <returns>Trimmed output snapshot; ordinary autosave separately preserves every editor value.</returns>
+    WorkState GenerationState(bool codeOnly=false)
     {
-        AssetType=assetType.Text.Trim(),Brand=brand.Text.Trim(),Model=model.Text.Trim(),Serial=serial.Text.Trim(),PartNumber=partNumber.Text.Trim(),MacAddress=macAddress.Text.Trim()
-    };
+        var state=CaptureWork() with
+        {
+            AssetType=assetType.Text.Trim(),Brand=brand.Text.Trim(),Model=model.Text.Trim(),
+            Serial=serial.Text.Trim(),PartNumber=partNumber.Text.Trim(),MacAddress=macAddress.Text.Trim(),
+            FreeText=freeText.Text.ReplaceLineEndings("\n").Trim()
+        };
+        if(codeOnly)return state with {FreeTextMode=false};
+        if(!state.FreeTextMode)return state;
+        // A short report description is searchable without linking a text-only box to the hidden asset serial.
+        // Full multiline content remains in the snapshot for exact rendering when loaded from Reports.
+        return state with {AssetType=state.FreeText[..Math.Min(80,state.FreeText.Length)],Brand="",Model="",
+            Serial="",PartNumber="",MacAddress="",ShowCode=false};
+    }
     /// <summary>
     /// Records an already completed external output; SQLite failure warns without resubmitting a print or
     /// recreating output.
@@ -111,7 +123,7 @@ public partial class MainForm
     /// <param name="path">File path to read or write; test callers use their isolated verification directory.</param>
     internal void ExportCodeFile(string path)
     {
-        var snapshot=GenerationState();using var image=CodeRenderer.Render(snapshot.Serial,snapshot.Code==1,int.Parse(dpi.Text),snapshot.CodePercent);
+        var snapshot=GenerationState(true);using var image=CodeRenderer.Render(snapshot.Serial,snapshot.Code==1,int.Parse(dpi.Text),snapshot.CodePercent);
         image.Save(path,System.Drawing.Imaging.ImageFormat.Png);RecordGeneration("ExportCode",path,snapshot);SaveConfig();
     }
     /// <summary>

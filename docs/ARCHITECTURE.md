@@ -1,4 +1,4 @@
-# Architecture — TagPrinter 0.18
+# Architecture — TagPrinter 0.19
 
 TagPrinter is a Windows Forms application targeting .NET 8. It uses ZXing.Net 0.16.11 for symbols and Microsoft.Data.Sqlite 8.0.28 for embedded local storage. The Windows x64 portable bundles its runtime; printer drivers remain external.
 
@@ -79,3 +79,7 @@ ConfigurationTransfer.cs defines the versioned bundle, strict validation and sta
 ## Centering, recycle-bin purge and printer status — 0.18
 
 03 Text and margins adds Center text for the whole text block. Reports > Recycle bin adds irreversible Empty recycle bin with all-filter scope confirmation. The visible printer summary now includes an automatically refreshed Windows status indicator. CenterText persists in work/history/full transfer; live status does not. See [centering, recycle-bin purge and Windows status](TEXT_TRASH_PRINTER_STATUS.md).
+
+## Flexible layout — 0.19
+
+LabelData includes a dedicated free-text source. LabelRenderer disables code for that mode, measures complete wrapped field heights, verifies that all characters fit, then assigns contiguous or spaced rectangles. Actual symbol dimensions determine text space after integral module scaling. MainForm.FeedGuide paints arrows on an outer preview frame, so the shared renderer never receives paper-guide state. WorkState stores free-text and physical-reference options; the output snapshot clears hidden asset identifiers for free-text history. See FLEXIBLE_LABELS.md.

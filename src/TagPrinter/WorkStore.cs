@@ -6,6 +6,15 @@ namespace TagPrinter;
 /// </summary>
 public record WorkState
 {
+    /// <summary>Uses the independent text editor instead of all asset fields and codes.</summary>
+    public bool FreeTextMode {get;init;}
+    /// <summary>Free-form multiline content, at most 2000 characters.</summary>
+    public string FreeText {get;init;}="";
+    /// <summary>Shows paper-feed arrows outside the label; excluded from every output bitmap.</summary>
+    public bool ShowFeedGuide {get;init;}=true;
+    /// <summary>User-selected physical feed direction: 0 down, 1 up, 2 left, 3 right.</summary>
+    public int FeedDirection {get;init;}
+
     /// <summary>Installed printer name; history recovery requires availability before printing.</summary>
     public string Printer {get;init;}="";
     /// <summary>Legacy preset index; stable LabelPresetId is preferred.</summary>

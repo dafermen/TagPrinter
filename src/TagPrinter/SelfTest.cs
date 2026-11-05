@@ -86,7 +86,7 @@ public static class SelfTest
             bmp.Save(Path.Combine(folder,$"label-{width}-{dpi}-{layout}-{qr}.png"));count++;
         }
         try {using var invalid=LabelRenderer.Render(new LabelData("Monitor","Dell","",100,50,203,0,false));throw new Exception("Se aceptó un serial vacío");}catch(ArgumentException){}
-        UsabilityTests.Run(folder);
+        UsabilityTests.Run(folder);LayoutImprovementsTests.Run(folder);
         ConfigurationTests.Run(folder);
         TestStartupData(folder);
         TestNewFeatures(folder);

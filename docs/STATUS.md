@@ -1,6 +1,6 @@
 # Current status
 
-Application version: 0.18.0. Project: https://github.com/dafermen/TagPrinter. Local checkout: C:/Projects/TagPrinter.
+Application version: 0.19.0. Project: https://github.com/dafermen/TagPrinter. Local checkout: C:/Projects/TagPrinter.
 
 The application supports six asset fields, independent visibility, optional QR/Code 128, text-only labels, media presets/custom dimensions, fonts/bold/fitting, margins/offsets, media orientation and content rotation. It restores last work, prints through Windows or RAW ZPL, exports label/code PNG and raster ZPL, and records successful actions in SQLite.
 
@@ -21,3 +21,5 @@ License: MIT for TagPrinter source and project documentation, Copyright (c) 2026
 0.17: full application configuration transfer and adjustable QR/barcode size. Configuration includes current asset data/preferences/catalog; history, driver setup, fonts and transient view state remain separate. See CONFIGURATION_TRANSFER.md.
 
 0.18 adds whole-block text centering, permanent recycle-bin purge and informational Windows printer status. Automated tests do not require a physical printer. The physical-media/design-orientation improvement remains pending and was not changed in this release.
+
+0.19 adds measured multiline asset headings, independent free-text labels, user-selected nonprinting feed arrows and automatic allocation of space left by the actual symbol size. See FLEXIBLE_LABELS.md. Physical printer orientation changes remain deferred.

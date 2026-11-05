@@ -37,8 +37,10 @@ namespace TagPrinter;
 /// <param name="HeadingBold">Applies heading bold independently of general Bold.</param>
 /// <param name="CenterText">Centers text as one block within the text area, horizontally and vertically.</param>
 /// <param name="CodePercent">Symbol size relative to the original fitted area, from 25 through 200 percent.</param>
+/// <param name="FreeTextMode">Uses only FreeText, without asset fields or a code.</param>
+/// <param name="FreeText">Multiline arbitrary label text, retained independently of asset fields.</param>
 /// <param name="ContentRotation">Clockwise degrees: 0, 90, 180 or 270.</param>
-public record LabelData(string Brand, string Model, string Serial, decimal WidthMm, decimal HeightMm, int Dpi, int Layout, bool Qr, bool AutoFont = true, int FontPercent = 100, decimal MarginMm = 2, decimal OffsetXmm = 0, decimal OffsetYmm = 0, bool ShowBrand = true, bool ShowModel = true, bool ShowSerialText = true, string PartNumber = "", string MacAddress = "", bool ShowPartNumber = true, bool ShowMacAddress = true, string AssetType = "", bool ShowAssetType = true, bool ShowCode = true, string FontFamily = "Arial", decimal FontSizePt = 10, bool Bold = false, bool HeadingBold = true, int ContentRotation = 0, int CodePercent = 100, bool CenterText = false);
+public record LabelData(string Brand, string Model, string Serial, decimal WidthMm, decimal HeightMm, int Dpi, int Layout, bool Qr, bool AutoFont = true, int FontPercent = 100, decimal MarginMm = 2, decimal OffsetXmm = 0, decimal OffsetYmm = 0, bool ShowBrand = true, bool ShowModel = true, bool ShowSerialText = true, string PartNumber = "", string MacAddress = "", bool ShowPartNumber = true, bool ShowMacAddress = true, string AssetType = "", bool ShowAssetType = true, bool ShowCode = true, string FontFamily = "Arial", decimal FontSizePt = 10, bool Bold = false, bool HeadingBold = true, int ContentRotation = 0, int CodePercent = 100, bool CenterText = false, bool FreeTextMode = false, string FreeText = "");
 /// <summary>
 /// Draws complete labels and converts bitmaps into raster ZPL. Preview, export and printing share this
 /// renderer.
@@ -65,6 +67,7 @@ public static class LabelRenderer
     /// <exception cref="ArgumentException">Rotation/settings are unsupported, required content is missing, or text/code cannot fit.</exception>
     public static Bitmap Render(LabelData d, bool guides, out int usedFontPercent)
     {
+        if(d.FreeTextMode)d=d with {ShowCode=false};
         if(d.ContentRotation is not (0 or 90 or 180 or 270))throw new ArgumentException("Invalid rotation.");
         // Quarter turns render into swapped temporary dimensions, then rotate into the requested physical
         // media. Recursion stops because the temporary rotation is zero.
@@ -101,6 +104,7 @@ public static class LabelRenderer
         if(d.ShowSerialText && !string.IsNullOrWhiteSpace(d.Serial))lines.Add(("Serial: "+d.Serial,false));
         if(d.ShowPartNumber && !string.IsNullOrWhiteSpace(d.PartNumber))lines.Add(("P/N: "+d.PartNumber,false));
         if(d.ShowMacAddress && !string.IsNullOrWhiteSpace(d.MacAddress))lines.Add(("MAC: "+d.MacAddress,false));
+        if(d.FreeTextMode){lines.Clear();if(!string.IsNullOrWhiteSpace(d.FreeText))lines.Add((d.FreeText.Trim(),false));}
         int lineCount=lines.Count;
         if(!d.ShowCode && lineCount==0)throw new ArgumentException(Ui.T("Incluye al menos un campo con texto o activa el código.","Include at least one text field or enable the code."));
         // textW/textH reserve text space. codeArea receives the remainder; code-only output receives the
@@ -124,15 +128,16 @@ public static class LabelRenderer
             int cw=matrix.Width*scale;
             int baseHeight=d.Qr?matrix.Height*fittedScale:Math.Min(codeArea.Height,d.Dpi/4);
             ch=d.Qr?matrix.Height*scale:Math.Max(1,(int)Math.Round(baseHeight*d.CodePercent/100.0));
-            // Growth can borrow text space on the layout's shared axis. Never clip modules or draw outside margins.
-            if(side && lineCount>0 && cw>codeArea.Width)
+            // Reclaim unused symbol space on the shared axis, including when the symbol shrinks.
+            // Matrix dimensions include scanner quiet zones; leave an additional gap before text.
+            if(side && lineCount>0)
             {
                 textW=content.Width-cw-m/2;
                 codeArea=new Rectangle(content.Right-cw,content.Top,cw,content.Height);
             }
-            else if(!side && lineCount>0 && ch>codeArea.Height)
+            else if(!side && lineCount>0)
             {
-                textH=content.Height-ch;
+                textH=content.Height-ch-m/2;
                 codeArea=new Rectangle(content.Left,content.Bottom-ch,content.Width,ch);
             }
             if(cw>codeArea.Width || ch>codeArea.Height || (lineCount>0 && (textW<=0 || textH<=0)))
@@ -150,7 +155,7 @@ public static class LabelRenderer
             float[] baseSizes = lines.Select(line=>d.Dpi*(float)d.FontSizePt*(line.IsHeading?1.3f:1f)/72f).ToArray();
             var textRects=Enumerable.Range(0,lineCount).Select(i=>new RectangleF(content.Left,content.Top+textH*i/(float)lineCount,textW,textH/(float)lineCount)).ToArray();
             // Measures each line at a proposed scale and checks width/height against its assigned rectangle.
-            float gap=d.Dpi/72f; // One point between centered lines; legacy equal-height rows are unchanged.
+            float gap=d.Dpi/72f; // Minimum one-point gap between measured text blocks.
             float[] MeasureHeights(float candidate)
             {
                 var heights=new float[lineCount];
@@ -159,15 +164,19 @@ public static class LabelRenderer
                     using var font=new Font(d.FontFamily,baseSizes[i]*candidate,(d.Bold || (lines[i].IsHeading && d.HeadingBold))?FontStyle.Bold:FontStyle.Regular,GraphicsUnit.Pixel);
                     var measured=g.MeasureString(lines[i].Text,font,new SizeF(textW,10000),fmt);
                     if(measured.Width>textW)return [];
-                    heights[i]=measured.Height;
+                    // Round upward and retain one device pixel for hinted glyphs on the final wrapped line.
+                    heights[i]=(float)Math.Ceiling(measured.Height)+1;
+                    g.MeasureString(lines[i].Text,font,new SizeF(textW,heights[i]),fmt,out int fitted,out _);
+                    if(fitted<lines[i].Text.Length)return [];
                 }
                 return heights;
             }
+            bool flowText=d.FreeTextMode || lines.Any(line=>line.IsHeading);
             bool Fits(float candidate)
             {
                 float[] heights=MeasureHeights(candidate);
                 if(heights.Length!=lineCount)return false;
-                return d.CenterText?heights.Sum()+gap*Math.Max(0,lineCount-1)<=textH:
+                return (d.CenterText || flowText)?heights.Sum()+gap*Math.Max(0,lineCount-1)<=textH:
                     heights.Select((height,i)=>height<=textRects[i].Height).All(fits=>fits);
             }
             // Auto mode starts at 100 percent and shrinks one percentage point at a time to 50. Manual mode
@@ -179,12 +188,15 @@ public static class LabelRenderer
             }
             usedFontPercent=(int)Math.Round(factor*100);
             if(!Fits(factor))throw new ArgumentException(Ui.T("El texto no cabe. Reduce la fuente con −, activa el ajuste automático o amplía la etiqueta.","Text does not fit. Reduce text size with −, enable automatic fit or use a larger label."));
-            if(d.CenterText && lineCount>0)
+            if((d.CenterText || flowText) && lineCount>0)
             {
-                // Center the entire measured block, not each line inside a widely spaced legacy row.
+                // Reserve the complete wrapped height. Centered/free text uses compact blocks;
+                // ordinary asset rows share remaining vertical space without clipping the heading.
                 float[] heights=MeasureHeights(factor);
-                float top=content.Top+(textH-heights.Sum()-gap*(lineCount-1))/2;
-                for(int i=0;i<lineCount;i++){textRects[i]=new RectangleF(content.Left,top,textW,heights[i]);top+=heights[i]+gap;}
+                float extra=Math.Max(0,textH-heights.Sum()-gap*(lineCount-1));
+                float top=content.Top+(d.CenterText?extra/2:0);
+                float rowGap=gap+(!d.CenterText && !d.FreeTextMode && lineCount>1?extra/(lineCount-1):0);
+                for(int i=0;i<lineCount;i++){textRects[i]=new RectangleF(content.Left,top,textW,heights[i]);top+=heights[i]+rowGap;}
             }
             for(int i=0;i<lineCount;i++)
             {

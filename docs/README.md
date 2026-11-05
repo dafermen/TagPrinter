@@ -1,6 +1,6 @@
 # Documentation index
 
-These English manuals describe application version 0.18. Source XML comments explain individual members; algorithm comments explain meaningful intermediate variables and decisions. The UI still supports English and Spanish.
+These English manuals describe application version 0.19. Source XML comments explain individual members; algorithm comments explain meaningful intermediate variables and decisions. The UI still supports English and Spanish.
 
 ## For users
 
@@ -30,3 +30,5 @@ These English manuals describe application version 0.18. Source XML comments exp
 - [Full configuration transfer and code size](CONFIGURATION_TRANSFER.md): complete settings, backup/rollback, local-resource constraints and symbol geometry.
 
 - [Centered text, empty recycle bin and Windows printer status](TEXT_TRASH_PRINTER_STATUS.md).
+
+- [Flexible labels](FLEXIBLE_LABELS.md): wrapped headings, free text, reclaimed code space and nonprinting paper-feed arrows.

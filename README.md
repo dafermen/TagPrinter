@@ -14,7 +14,7 @@ See [full configuration transfer and code size](docs/CONFIGURATION_TRANSFER.md) 
 
 See [centering, empty recycle bin and Windows status](docs/TEXT_TRASH_PRINTER_STATUS.md) for the latest usability options.
 
-## Current features — 0.18
+## Current features — 0.19
 
 - Asset type, brand, model, serial, part number and MAC address, with inline visibility controls.
 - Optional QR/Code128, text-only labels, preset/custom media and four layouts.
@@ -62,7 +62,7 @@ dotnet run --project src/TagPrinter
 
 The project emits an XML API documentation file alongside build output for editor/tooling use. Source comments explain every explicit class/record and method, saved properties, meaningful state and complex algorithms. Read the student guide before changing rendering or persistence.
 
-Publish builds and verifies the self-contained executable, then creates artifacts/TagPrinter-v0.18-PORTABLE-Windows-x64.zip. Generated outputs and personal databases are excluded from Git. Distribute the entire portable folder.
+Publish builds and verifies the self-contained executable, then creates artifacts/TagPrinter-v0.19-PORTABLE-Windows-x64.zip. Generated outputs and personal databases are excluded from Git. Distribute the entire portable folder.
 
 ## Data
 
@@ -91,3 +91,5 @@ Third-party libraries, bundled runtimes and GitHub artwork retain their own lice
 - Microsoft.Data.Sqlite 8.0.28 / SQLitePCLRaw: embedded provider/native engine distributed through NuGet.
 - .NET runtime: https://github.com/dotnet/runtime/blob/main/LICENSE.TXT — license and notices.
 - Official GitHub mark: https://brand.github.com/foundations/logo — used as the project link. GitHub marks belong to GitHub, Inc.; no affiliation or endorsement is implied.
+
+Flexible labels: wrapped headings, dedicated free text, code space reclamation and user-selected paper-feed reference. See [the guide](docs/FLEXIBLE_LABELS.md).

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.19.0 — 2026-11-04
+
+- Wrap asset headings and reserve their measured height before remaining fields.
+- Add independent multiline Free text only mode without required asset fields or serial/code.
+- Return unused code width/height to text while preserving whole modules, quiet zones and separation.
+- Add configurable physical feed arrows and top/bottom preview rails; exclude them from all output.
+- Persist new options in work, transfer and history; test pixels, recovery and guide exclusion without printing.
+
+
 ## 0.18.0 — 2026-11-04
 
 Centered text blocks with compatible persistence/transfer; permanent recycle-bin emptying with explicit all-record confirmation and transactional source-link cleanup; read-only asynchronous Windows queue-status indicator with refresh, timeout and cached-status limitations. Hardware orientation work remains separate.

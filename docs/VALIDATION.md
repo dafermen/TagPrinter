@@ -65,3 +65,9 @@ Result: existing source suite passed during development; final root-launcher/pub
 New isolated checks measure rendered dark-pixel centroids at 203/300 DPI, decode centered text/code output, restore centering from history/full transfer, purge related recycled parent/child rows while preserving active rows, prevent restoration, clear loaded provenance before a new output, map Windows status bits/virtual queues and exercise asynchronous selection changes/timeouts/disposal using injected tasks. No native printer status query or printer submission is required by these tests.
 
 Result: source suite and final root-launcher/application verification passed. All 11 package-integrity cases passed; XML documentation build had zero warnings/errors. Centered output, permanent deletion boundaries and simulated status/timeout/disposal scenarios passed without native hardware status queries or printer submissions. Final package payload hashes and documentation links were checked. Physical printer status remains a hardware/driver validation task.
+
+## Flexible labels — 0.19
+
+New isolated tests cover reclaimed space at both DPIs/layout axes/code types, actual text pixels in the released QR region, preservation of a wrapped heading final character, free-text isolation and blank rejection, output history, configuration transfer/restart and identical PNG bytes with feed rails on/off. Existing code-decode/rotation and package mutation checks remain required. No hardware printing is performed.
+
+Result: source suite and final root-launcher/published application suite passed, including the newline round trip. All 11 package-integrity scenarios passed. Compiler XML build completed with zero warnings/errors. The final ZIP payload hashes, absence of test databases and 71 local documentation links were checked. No printer jobs were submitted; physical printing remains unverified.

@@ -15,6 +15,13 @@ public partial class MainForm : Form
     // Read-only summary text exposed to integration assertions.
     internal string PrintSummaryText=>printSummary.Text;
     // Asset editors and visibility flags are separate. Hiding printed text never clears the editable value.
+    // Free text preserves the asset form when switching modes; output chooses exactly one source.
+    readonly CheckBox freeTextMode=new(){AutoSize=true,Text=Ui.T("Solo texto libre","Free text only")};
+    readonly TextBox freeText=new(){Multiline=true,AcceptsReturn=true,ScrollBars=ScrollBars.Vertical,Height=100,MaxLength=2000,Visible=false};
+    readonly CheckBox showFeedGuide=new(){AutoSize=true,Checked=true,Text=Ui.T("Mostrar avance del papel (no se imprime)","Show paper feed (not printed)")};
+    readonly ComboBox feedDirection=Combo();
+    // Outside-only rails keep feed arrows separate from the printable bitmap.
+    readonly Panel previewFrame=new(){Dock=DockStyle.Fill,Padding=new Padding(36,24,36,24),BackColor=Color.FromArgb(226,232,240)};
     readonly TextBox assetType=new(){Text="Monitor"};
     // showCode controls full-label symbol inclusion; visibilityFields pairs each checkbox with its
     // translated row caption.
@@ -120,7 +127,7 @@ public partial class MainForm : Form
         catalogPath=configPath is not null?Path.Combine(Path.GetDirectoryName(Path.GetFullPath(configPath))!,"catalog.json"):Path.Combine(StartupDiagnostics.InstallationRoot,"config.json");
         appConfig=configuration ?? AppConfig.Load(catalogPath);
         Ui.Language=appConfig.Defaults.Language;
-        Text="TagPrinter | v0.18";
+        Text="TagPrinter | v0.19";
         using var iconStream=typeof(MainForm).Assembly.GetManifestResourceStream("TagPrinter.TagPrinter.ico");
         if(iconStream is not null)Icon=new Icon(iconStream); Width=1160; Height=850; MinimumSize=new Size(980,720);
         Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;
@@ -138,7 +145,10 @@ public partial class MainForm : Form
         // Three columns share each asset row: fixed caption, flexible editor, fixed inclusion checkbox.
         var dataRows=new TableLayoutPanel{ColumnCount=3,AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,Dock=DockStyle.Top,Margin=Padding.Empty};
         dataRows.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,115));dataRows.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));dataRows.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,28));
+        target.Controls.Add(freeTextMode);freeText.Dock=DockStyle.Top;target.Controls.Add(freeText);
         target.Controls.Add(dataRows);
+        freeTextMode.CheckedChanged+=(_,_)=>{dataRows.Visible=!freeTextMode.Checked;freeText.Visible=freeTextMode.Checked;UpdatePreview();};
+        freeText.TextChanged+=(_,_)=>UpdatePreview();
         // Adds a compact caption/input/visibility row and registers its accessibility hint.
         void TextField(CheckBox check,string caption,Control input)
         {
@@ -173,6 +183,12 @@ public partial class MainForm : Form
         rotation.Items.AddRange(["0°","90°","180°","270°"]);rotation.SelectedIndex=0;
         Field(Ui.T("Rotación del contenido","Content rotation"),rotation);
         layout.Items.AddRange([Ui.T("Código abajo · centrado","Code below · centered"),Ui.T("Código abajo · izquierda","Code below · left"),Ui.T("Código abajo · derecha","Code below · right"),Ui.T("Código a la derecha del texto","Code to the right of text")]); Field(Ui.T("Distribución de la plantilla","Template layout"),layout);
+        target.Controls.Add(showFeedGuide);
+        feedDirection.Items.AddRange([Ui.T("Abajo ↓","Down ↓"),Ui.T("Arriba ↑","Up ↑"),Ui.T("Izquierda ←","Left ←"),Ui.T("Derecha →","Right →")]);feedDirection.SelectedIndex=0;
+        Field(Ui.T("Avance físico del papel · referencia visual","Physical paper feed · visual reference"),feedDirection);
+        showFeedGuide.CheckedChanged+=(_,_)=>{previewFrame.Invalidate();ScheduleSave();};
+        feedDirection.SelectedIndexChanged+=(_,_)=>{previewFrame.Invalidate();ScheduleSave();};
+        previewFrame.Paint+=PaintFeedGuide;previewFrame.Resize+=(_,_)=>previewFrame.Invalidate();
         codePercent.Increment=10;
         Field(Ui.T("Tamaño del código · %","Code size · %"),codePercent);
         var symbolButtons=new FlowLayoutPanel{AutoSize=true};
@@ -222,7 +238,7 @@ public partial class MainForm : Form
         var right=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=5,Padding=new Padding(16,0,0,0)};
         right.RowStyles.Add(new RowStyle(SizeType.Absolute,48));right.RowStyles.Add(new RowStyle(SizeType.Absolute,46));right.RowStyles.Add(new RowStyle(SizeType.Percent,100));right.RowStyles.Add(new RowStyle(SizeType.Absolute,74));right.RowStyles.Add(new RowStyle(SizeType.Absolute,158));
         right.Controls.Add(new Label{Text=Ui.T("Vista de la plantilla","Template preview"),Font=new Font("Segoe UI",20,FontStyle.Bold),AutoSize=true});
-        right.Controls.Add(previewDescription);var previewHost=new Panel{Dock=DockStyle.Fill};previewHost.Controls.Add(preview);previewHost.Controls.Add(previewError);right.Controls.Add(previewHost);
+        right.Controls.Add(previewDescription);previewFrame.Controls.Add(preview);previewFrame.Controls.Add(previewError);right.Controls.Add(previewFrame);
         right.Controls.Add(new Label{Text=Ui.T("RFID: esta versión imprime el contenido visible.\nLa grabación y verificación del chip todavía no están habilitadas.","RFID: this version prints the visible content.\nChip encoding and verification are not enabled yet."),Dock=DockStyle.Fill,Padding=new Padding(8),ForeColor=Color.FromArgb(120,70,10)});
         var actionArea=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=3,Margin=Padding.Empty};
         actionArea.RowStyles.Add(new RowStyle(SizeType.Absolute,42));actionArea.RowStyles.Add(new RowStyle(SizeType.Absolute,30));actionArea.RowStyles.Add(new RowStyle(SizeType.Percent,100));
@@ -271,7 +287,7 @@ public partial class MainForm : Form
     {
         sourceHistoryId=null;assetSection.Expanded=true;
         bool active=ready;ready=false;
-        foreach(var input in new[]{assetType,brand,model,serial,partNumber,macAddress})input.Clear();
+        foreach(var input in new[]{assetType,brand,model,serial,partNumber,macAddress,freeText})input.Clear();
         ready=active;UpdatePreview();SaveConfig();assetType.Focus();
     }
     /// <summary>Displays printer, copies and submission method without querying printer hardware.</summary>
@@ -291,7 +307,7 @@ public partial class MainForm : Form
     /// indexes to DPI and rotation.
     /// </summary>
     /// <returns>Rendering-only snapshot of current controls.</returns>
-    LabelData Data()=>new(brand.Text.Trim(),model.Text.Trim(),serial.Text.Trim(),width.Value,height.Value,int.Parse(dpi.Text),layout.SelectedIndex,code.SelectedIndex==1,autoFont.Checked,fontPercent,margin.Value,offsetX.Value,offsetY.Value,showBrand.Checked,showModel.Checked,showSerialText.Checked,partNumber.Text.Trim(),macAddress.Text.Trim(),showPartNumber.Checked,showMacAddress.Checked,assetType.Text.Trim(),showAssetType.Checked,showCode.Checked,fontFamily.Text,fontSize.Value,bold.Checked,headingBold.Checked,rotation.SelectedIndex*90,(int)codePercent.Value,centerText.Checked);
+    LabelData Data()=>new(brand.Text.Trim(),model.Text.Trim(),serial.Text.Trim(),width.Value,height.Value,int.Parse(dpi.Text),layout.SelectedIndex,code.SelectedIndex==1,autoFont.Checked,fontPercent,margin.Value,offsetX.Value,offsetY.Value,showBrand.Checked,showModel.Checked,showSerialText.Checked,partNumber.Text.Trim(),macAddress.Text.Trim(),showPartNumber.Checked,showMacAddress.Checked,assetType.Text.Trim(),showAssetType.Checked,showCode.Checked,fontFamily.Text,fontSize.Value,bold.Checked,headingBold.Checked,rotation.SelectedIndex*90,(int)codePercent.Value,centerText.Checked,freeTextMode.Checked,freeText.Text);
     /// <summary>
     /// Changes scale in percentage points, starting from the effective auto scale when appropriate, then
     /// selects manual fitting.
@@ -323,14 +339,14 @@ public partial class MainForm : Form
     {
         if(!ready)return;
         orientation.SelectedIndex=height.Value>width.Value?1:0;
-        ScheduleSave();UpdatePrintSummary();
-        previewDescription.Text=showCode.Checked?Ui.T("La vista previa se actualiza al cambiar datos, tamaño o distribución.\nEl código contiene el serial completo.","Preview updates when you change the data, size or layout.\nThe code contains the full serial number."):Ui.T("Vista previa de la etiqueta. El código está desactivado.\nEl texto utiliza toda el área disponible.","Label preview. The code is disabled.\nText uses the full available area.");
+        ScheduleSave();UpdatePrintSummary();previewFrame.Invalidate();
+        previewDescription.Text=freeTextMode.Checked?Ui.T("Texto libre: sin campos del activo ni código.\nLas flechas son una referencia del avance; no se imprimen.","Free text: no asset fields or code.\nArrows are a feed reference; they are not printed."):showCode.Checked?Ui.T("La vista previa se actualiza al cambiar datos, tamaño o distribución.\nEl código contiene el serial completo.","Preview updates when you change the data, size or layout.\nThe code contains the full serial number."):Ui.T("Vista previa de la etiqueta. El código está desactivado.\nEl texto utiliza toda el área disponible.","Label preview. The code is disabled.\nText uses the full available area.");
         try
         {
             var next=LabelRenderer.Render(Data(),showGuides.Checked,out effectiveFontPercent);var old=preview.Image;preview.Image=next;old?.Dispose();
             fontValue.Text=autoFont.Checked?$"Auto ({effectiveFontPercent} %)":$"{fontPercent} %";
             previewError.Visible=false;
-            status.Text=$"{width.Value} × {height.Value} mm · {dpi.Text} DPI · {next.Width} × {next.Height} px.\n"+(showCode.Checked?Ui.T("Escanea una prueba impresa. En etiquetas pequeñas las barras pueden medir un solo punto.","Scan a printed sample. Small labels may use one-dot barcode bars."):Ui.T("Etiqueta de solo texto.","Text-only label."));print.Enabled=true;
+            status.Text=$"{width.Value} × {height.Value} mm · {dpi.Text} DPI · {next.Width} × {next.Height} px.\n"+(!freeTextMode.Checked && showCode.Checked?Ui.T("Escanea una prueba impresa. En etiquetas pequeñas las barras pueden medir un solo punto.","Scan a printed sample. Small labels may use one-dot barcode bars."):Ui.T("Etiqueta de solo texto.","Text-only label."));print.Enabled=true;
         }
         catch(Exception ex) {previewError.ForeColor=string.IsNullOrWhiteSpace(serial.Text)?Color.DimGray:Color.Firebrick;fontValue.Text=autoFont.Checked?"Auto":$"{fontPercent} %";var old=preview.Image;preview.Image=null;old?.Dispose();status.Text=ex.Message;previewError.Text=ex.Message;previewError.Visible=true;previewError.BringToFront();print.Enabled=false;}
     }
@@ -443,7 +459,7 @@ public partial class MainForm : Form
     void ScheduleSave(){if(!ready)return;autosave.Stop();autosave.Start();}
     /// <summary>Copies all editor values/preferences to WorkState without trimming or writing files.</summary>
     /// <returns>Complete serializable editor snapshot.</returns>
-    internal WorkState CaptureWork()=>new(){Printer=printers.Text,Size=sizes.SelectedIndex,LabelPresetId=sizes.SelectedIndex<appConfig.LabelSizes.Count?appConfig.LabelSizes[sizes.SelectedIndex].Id:"custom",Width=width.Value,Height=height.Value,Layout=layout.SelectedIndex,Code=code.SelectedIndex,Mode=mode.SelectedIndex,Dpi=dpi.SelectedIndex,AssetType=assetType.Text,ShowAssetType=showAssetType.Checked,Brand=brand.Text,PartNumber=partNumber.Text,MacAddress=macAddress.Text,ShowPartNumber=showPartNumber.Checked,ShowMacAddress=showMacAddress.Checked,Model=model.Text,Serial=serial.Text,Language=Ui.Language,ShowBrand=showBrand.Checked,ShowModel=showModel.Checked,ShowSerialText=showSerialText.Checked,ShowCode=showCode.Checked,ShowGuides=showGuides.Checked,AutoFont=autoFont.Checked,FontPercent=fontPercent,MarginMm=margin.Value,OffsetXmm=offsetX.Value,OffsetYmm=offsetY.Value,Copies=(int)copies.Value,FontFamily=fontFamily.Text,FontSizePt=fontSize.Value,Bold=bold.Checked,HeadingBold=headingBold.Checked,ContentRotation=rotation.SelectedIndex*90,CodePercent=(int)codePercent.Value,CenterText=centerText.Checked};
+    internal WorkState CaptureWork()=>new(){Printer=printers.Text,Size=sizes.SelectedIndex,LabelPresetId=sizes.SelectedIndex<appConfig.LabelSizes.Count?appConfig.LabelSizes[sizes.SelectedIndex].Id:"custom",Width=width.Value,Height=height.Value,Layout=layout.SelectedIndex,Code=code.SelectedIndex,Mode=mode.SelectedIndex,Dpi=dpi.SelectedIndex,AssetType=assetType.Text,ShowAssetType=showAssetType.Checked,Brand=brand.Text,PartNumber=partNumber.Text,MacAddress=macAddress.Text,ShowPartNumber=showPartNumber.Checked,ShowMacAddress=showMacAddress.Checked,Model=model.Text,Serial=serial.Text,Language=Ui.Language,ShowBrand=showBrand.Checked,ShowModel=showModel.Checked,ShowSerialText=showSerialText.Checked,ShowCode=showCode.Checked,ShowGuides=showGuides.Checked,AutoFont=autoFont.Checked,FontPercent=fontPercent,MarginMm=margin.Value,OffsetXmm=offsetX.Value,OffsetYmm=offsetY.Value,Copies=(int)copies.Value,FontFamily=fontFamily.Text,FontSizePt=fontSize.Value,Bold=bold.Checked,HeadingBold=headingBold.Checked,ContentRotation=rotation.SelectedIndex*90,CodePercent=(int)codePercent.Value,CenterText=centerText.Checked,FreeTextMode=freeTextMode.Checked,FreeText=freeText.Text.ReplaceLineEndings("\n"),ShowFeedGuide=showFeedGuide.Checked,FeedDirection=feedDirection.SelectedIndex};
     /// <summary>
     /// Restores a snapshot with range checks and preset lookup while suppressing preview events; missing
     /// presets become custom media.
@@ -460,6 +476,7 @@ public partial class MainForm : Form
         if(presetIndex<0 && s.LabelPresetId!="custom")presetIndex=appConfig.LabelSizes.FindIndex(p=>p.WidthMm==s.Width && p.HeightMm==s.Height);
         sizes.SelectedIndex=presetIndex>=0?presetIndex:appConfig.LabelSizes.Count;width.Value=Math.Clamp(s.Width,width.Minimum,width.Maximum);height.Value=Math.Clamp(s.Height,height.Minimum,height.Maximum);
         layout.SelectedIndex=Math.Clamp(s.Layout,0,3);code.SelectedIndex=Math.Clamp(s.Code,0,1);mode.SelectedIndex=Math.Clamp(s.Mode,0,1);dpi.SelectedIndex=Math.Clamp(s.Dpi,0,1);
+        freeText.Text=(s.FreeText??"").ReplaceLineEndings(Environment.NewLine);freeTextMode.Checked=s.FreeTextMode;showFeedGuide.Checked=s.ShowFeedGuide;feedDirection.SelectedIndex=Math.Clamp(s.FeedDirection,0,3);
         assetType.Text=s.AssetType;showAssetType.Checked=s.ShowAssetType;
         partNumber.Text=s.PartNumber;macAddress.Text=s.MacAddress;showPartNumber.Checked=s.ShowPartNumber;showMacAddress.Checked=s.ShowMacAddress;
         showBrand.Checked=s.ShowBrand;showModel.Checked=s.ShowModel;showSerialText.Checked=s.ShowSerialText;
