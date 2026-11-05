@@ -71,3 +71,9 @@ Result: source suite and final root-launcher/application verification passed. Al
 New isolated tests cover reclaimed space at both DPIs/layout axes/code types, actual text pixels in the released QR region, preservation of a wrapped heading final character, free-text isolation and blank rejection, output history, configuration transfer/restart and identical PNG bytes with feed rails on/off. Existing code-decode/rotation and package mutation checks remain required. No hardware printing is performed.
 
 Result: source suite and final root-launcher/published application suite passed, including the newline round trip. All 11 package-integrity scenarios passed. Compiler XML build completed with zero warnings/errors. The final ZIP payload hashes, absence of test databases and 71 local documentation links were checked. No printer jobs were submitted; physical printing remains unverified.
+
+## Fixed paper-exit preview — 0.20
+
+Isolated PaperFeedTests checks 0/90/180/270 rotation on unchanged 100 × 50 media, fixed printer-header pixels and paper bounds, removal of the direction selector, exact preview/export raster equality, English/Spanish screenshots and old-direction restart compatibility. Existing tests also compare output with diagram enabled/disabled. No physical printer or native printer queries are used.
+
+Result: scripts/Test.ps1 and the final root-launcher/published application suite passed. All 11 package-integrity scenarios passed. The XML documentation build completed with zero warnings/errors. All 470 immutable payload hashes were checked from the final ZIP, synthetic databases were excluded and 77 local documentation links resolved. No printer jobs were submitted; physical-driver behavior remains unverified.

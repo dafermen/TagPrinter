@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.20.0 — 2026-11-05
+
+- Replace user-selected feed arrows with a fixed printer above the actual label bitmap, downward advance and first-edge-out indicator.
+- Display physical width/feed length; clarify that stock orientation swaps dimensions whereas content rotation leaves stock unchanged.
+- Remove the Physical paper feed selector while retaining legacy snapshot/transfer values without visual effect.
+- Keep every diagram decoration out of printing, PNG and ZPL; test all rotations, unchanged stock, fixed reference pixels and preview/export equality.
+
+
 ## 0.19.0 — 2026-11-04
 
 - Wrap asset headings and reserve their measured height before remaining fields.

@@ -18,10 +18,10 @@ public partial class MainForm : Form
     // Free text preserves the asset form when switching modes; output chooses exactly one source.
     readonly CheckBox freeTextMode=new(){AutoSize=true,Text=Ui.T("Solo texto libre","Free text only")};
     readonly TextBox freeText=new(){Multiline=true,AcceptsReturn=true,ScrollBars=ScrollBars.Vertical,Height=100,MaxLength=2000,Visible=false};
-    readonly CheckBox showFeedGuide=new(){AutoSize=true,Checked=true,Text=Ui.T("Mostrar avance del papel (no se imprime)","Show paper feed (not printed)")};
-    readonly ComboBox feedDirection=Combo();
-    // Outside-only rails keep feed arrows separate from the printable bitmap.
-    readonly Panel previewFrame=new(){Dock=DockStyle.Fill,Padding=new Padding(36,24,36,24),BackColor=Color.FromArgb(226,232,240)};
+    readonly CheckBox showFeedGuide=new(){AutoSize=true,Checked=true,Text=Ui.T("Mostrar impresora y salida del papel","Show printer and paper exit")};
+    int legacyFeedDirection; // Retained only to round-trip 0.19 snapshots; the diagram always feeds downward.
+    // The frame hosts an image-based printer scene; decorations never enter the output bitmap.
+    readonly Panel previewFrame=new(){Dock=DockStyle.Fill,Padding=Padding.Empty,BackColor=Color.FromArgb(226,232,240)};
     readonly TextBox assetType=new(){Text="Monitor"};
     // showCode controls full-label symbol inclusion; visibilityFields pairs each checkbox with its
     // translated row caption.
@@ -47,7 +47,7 @@ public partial class MainForm : Form
     readonly Label previewDescription=new(){AutoSize=true};
     // preview owns the current display bitmap. status reports fit errors or completed operations; print is
     // disabled when rendering fails.
-    readonly PictureBox preview=new(){Dock=DockStyle.Fill,SizeMode=PictureBoxSizeMode.Zoom,BackColor=Color.FromArgb(226,232,240)};
+    readonly PaperFeedPreview preview=new(){Dock=DockStyle.Fill,SizeMode=PictureBoxSizeMode.Zoom,BackColor=Color.FromArgb(226,232,240)};
     // Status/error area shared by fit validation, saving and output completion.
     readonly Label status=new(){AutoSize=false,Dock=DockStyle.Bottom,Height=66,Padding=new Padding(12),ForeColor=Color.FromArgb(30,64,110)};
     // Explicit submit action; rendering errors disable it to prevent invalid output.
@@ -127,7 +127,7 @@ public partial class MainForm : Form
         catalogPath=configPath is not null?Path.Combine(Path.GetDirectoryName(Path.GetFullPath(configPath))!,"catalog.json"):Path.Combine(StartupDiagnostics.InstallationRoot,"config.json");
         appConfig=configuration ?? AppConfig.Load(catalogPath);
         Ui.Language=appConfig.Defaults.Language;
-        Text="TagPrinter | v0.19";
+        Text="TagPrinter | v0.20";
         using var iconStream=typeof(MainForm).Assembly.GetManifestResourceStream("TagPrinter.TagPrinter.ico");
         if(iconStream is not null)Icon=new Icon(iconStream); Width=1160; Height=850; MinimumSize=new Size(980,720);
         Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;
@@ -179,16 +179,13 @@ public partial class MainForm : Form
         var dims=new FlowLayoutPanel{AutoSize=true}; dims.Controls.AddRange([new Label{Text=Ui.T("Ancho mm","Width mm"),AutoSize=true},width,new Label{Text=Ui.T("Alto mm","Height mm"),AutoSize=true},height]); width.Width=65;height.Width=65;
         target.Controls.Add(dims);
         orientation.Items.AddRange([Ui.T("Horizontal","Landscape"),Ui.T("Vertical","Portrait")]);orientation.SelectedIndex=0;
-        Field(Ui.T("Orientación de etiqueta","Label orientation"),orientation);
+        Field(Ui.T("Orientación del material · intercambia medidas","Stock orientation · swaps dimensions"),orientation);
         rotation.Items.AddRange(["0°","90°","180°","270°"]);rotation.SelectedIndex=0;
         Field(Ui.T("Rotación del contenido","Content rotation"),rotation);
         layout.Items.AddRange([Ui.T("Código abajo · centrado","Code below · centered"),Ui.T("Código abajo · izquierda","Code below · left"),Ui.T("Código abajo · derecha","Code below · right"),Ui.T("Código a la derecha del texto","Code to the right of text")]); Field(Ui.T("Distribución de la plantilla","Template layout"),layout);
         target.Controls.Add(showFeedGuide);
-        feedDirection.Items.AddRange([Ui.T("Abajo ↓","Down ↓"),Ui.T("Arriba ↑","Up ↑"),Ui.T("Izquierda ←","Left ←"),Ui.T("Derecha →","Right →")]);feedDirection.SelectedIndex=0;
-        Field(Ui.T("Avance físico del papel · referencia visual","Physical paper feed · visual reference"),feedDirection);
-        showFeedGuide.CheckedChanged+=(_,_)=>{previewFrame.Invalidate();ScheduleSave();};
-        feedDirection.SelectedIndexChanged+=(_,_)=>{previewFrame.Invalidate();ScheduleSave();};
-        previewFrame.Paint+=PaintFeedGuide;previewFrame.Resize+=(_,_)=>previewFrame.Invalidate();
+        target.Controls.Add(new Label{Text=Ui.T("Ancho = de lado a lado. Alto = avance del rollo. La rotación solo gira el contenido.","Width = across the printer. Height = roll advance. Rotation turns content only."),AutoSize=true,MaximumSize=new Size(330,0),ForeColor=Color.DimGray});
+        showFeedGuide.CheckedChanged+=(_,_)=>{UpdatePaperPreview();ScheduleSave();};
         codePercent.Increment=10;
         Field(Ui.T("Tamaño del código · %","Code size · %"),codePercent);
         var symbolButtons=new FlowLayoutPanel{AutoSize=true};
@@ -339,8 +336,8 @@ public partial class MainForm : Form
     {
         if(!ready)return;
         orientation.SelectedIndex=height.Value>width.Value?1:0;
-        ScheduleSave();UpdatePrintSummary();previewFrame.Invalidate();
-        previewDescription.Text=freeTextMode.Checked?Ui.T("Texto libre: sin campos del activo ni código.\nLas flechas son una referencia del avance; no se imprimen.","Free text: no asset fields or code.\nArrows are a feed reference; they are not printed."):showCode.Checked?Ui.T("La vista previa se actualiza al cambiar datos, tamaño o distribución.\nEl código contiene el serial completo.","Preview updates when you change the data, size or layout.\nThe code contains the full serial number."):Ui.T("Vista previa de la etiqueta. El código está desactivado.\nEl texto utiliza toda el área disponible.","Label preview. The code is disabled.\nText uses the full available area.");
+        ScheduleSave();UpdatePrintSummary();UpdatePaperPreview();
+        previewDescription.Text=freeTextMode.Checked?Ui.T("Texto libre: sin campos del activo ni código.\nEl dibujo muestra la salida del papel; no se imprime.","Free text: no asset fields or code.\nThe diagram shows the paper exit; it is not printed."):showCode.Checked?Ui.T("La vista previa se actualiza al cambiar datos, tamaño o distribución.\nEl código contiene el serial completo.","Preview updates when you change the data, size or layout.\nThe code contains the full serial number."):Ui.T("Vista previa de la etiqueta. El código está desactivado.\nEl texto utiliza toda el área disponible.","Label preview. The code is disabled.\nText uses the full available area.");
         try
         {
             var next=LabelRenderer.Render(Data(),showGuides.Checked,out effectiveFontPercent);var old=preview.Image;preview.Image=next;old?.Dispose();
@@ -459,7 +456,7 @@ public partial class MainForm : Form
     void ScheduleSave(){if(!ready)return;autosave.Stop();autosave.Start();}
     /// <summary>Copies all editor values/preferences to WorkState without trimming or writing files.</summary>
     /// <returns>Complete serializable editor snapshot.</returns>
-    internal WorkState CaptureWork()=>new(){Printer=printers.Text,Size=sizes.SelectedIndex,LabelPresetId=sizes.SelectedIndex<appConfig.LabelSizes.Count?appConfig.LabelSizes[sizes.SelectedIndex].Id:"custom",Width=width.Value,Height=height.Value,Layout=layout.SelectedIndex,Code=code.SelectedIndex,Mode=mode.SelectedIndex,Dpi=dpi.SelectedIndex,AssetType=assetType.Text,ShowAssetType=showAssetType.Checked,Brand=brand.Text,PartNumber=partNumber.Text,MacAddress=macAddress.Text,ShowPartNumber=showPartNumber.Checked,ShowMacAddress=showMacAddress.Checked,Model=model.Text,Serial=serial.Text,Language=Ui.Language,ShowBrand=showBrand.Checked,ShowModel=showModel.Checked,ShowSerialText=showSerialText.Checked,ShowCode=showCode.Checked,ShowGuides=showGuides.Checked,AutoFont=autoFont.Checked,FontPercent=fontPercent,MarginMm=margin.Value,OffsetXmm=offsetX.Value,OffsetYmm=offsetY.Value,Copies=(int)copies.Value,FontFamily=fontFamily.Text,FontSizePt=fontSize.Value,Bold=bold.Checked,HeadingBold=headingBold.Checked,ContentRotation=rotation.SelectedIndex*90,CodePercent=(int)codePercent.Value,CenterText=centerText.Checked,FreeTextMode=freeTextMode.Checked,FreeText=freeText.Text.ReplaceLineEndings("\n"),ShowFeedGuide=showFeedGuide.Checked,FeedDirection=feedDirection.SelectedIndex};
+    internal WorkState CaptureWork()=>new(){Printer=printers.Text,Size=sizes.SelectedIndex,LabelPresetId=sizes.SelectedIndex<appConfig.LabelSizes.Count?appConfig.LabelSizes[sizes.SelectedIndex].Id:"custom",Width=width.Value,Height=height.Value,Layout=layout.SelectedIndex,Code=code.SelectedIndex,Mode=mode.SelectedIndex,Dpi=dpi.SelectedIndex,AssetType=assetType.Text,ShowAssetType=showAssetType.Checked,Brand=brand.Text,PartNumber=partNumber.Text,MacAddress=macAddress.Text,ShowPartNumber=showPartNumber.Checked,ShowMacAddress=showMacAddress.Checked,Model=model.Text,Serial=serial.Text,Language=Ui.Language,ShowBrand=showBrand.Checked,ShowModel=showModel.Checked,ShowSerialText=showSerialText.Checked,ShowCode=showCode.Checked,ShowGuides=showGuides.Checked,AutoFont=autoFont.Checked,FontPercent=fontPercent,MarginMm=margin.Value,OffsetXmm=offsetX.Value,OffsetYmm=offsetY.Value,Copies=(int)copies.Value,FontFamily=fontFamily.Text,FontSizePt=fontSize.Value,Bold=bold.Checked,HeadingBold=headingBold.Checked,ContentRotation=rotation.SelectedIndex*90,CodePercent=(int)codePercent.Value,CenterText=centerText.Checked,FreeTextMode=freeTextMode.Checked,FreeText=freeText.Text.ReplaceLineEndings("\n"),ShowFeedGuide=showFeedGuide.Checked,FeedDirection=legacyFeedDirection};
     /// <summary>
     /// Restores a snapshot with range checks and preset lookup while suppressing preview events; missing
     /// presets become custom media.
@@ -476,7 +473,7 @@ public partial class MainForm : Form
         if(presetIndex<0 && s.LabelPresetId!="custom")presetIndex=appConfig.LabelSizes.FindIndex(p=>p.WidthMm==s.Width && p.HeightMm==s.Height);
         sizes.SelectedIndex=presetIndex>=0?presetIndex:appConfig.LabelSizes.Count;width.Value=Math.Clamp(s.Width,width.Minimum,width.Maximum);height.Value=Math.Clamp(s.Height,height.Minimum,height.Maximum);
         layout.SelectedIndex=Math.Clamp(s.Layout,0,3);code.SelectedIndex=Math.Clamp(s.Code,0,1);mode.SelectedIndex=Math.Clamp(s.Mode,0,1);dpi.SelectedIndex=Math.Clamp(s.Dpi,0,1);
-        freeText.Text=(s.FreeText??"").ReplaceLineEndings(Environment.NewLine);freeTextMode.Checked=s.FreeTextMode;showFeedGuide.Checked=s.ShowFeedGuide;feedDirection.SelectedIndex=Math.Clamp(s.FeedDirection,0,3);
+        freeText.Text=(s.FreeText??"").ReplaceLineEndings(Environment.NewLine);freeTextMode.Checked=s.FreeTextMode;showFeedGuide.Checked=s.ShowFeedGuide;legacyFeedDirection=Math.Clamp(s.FeedDirection,0,3);
         assetType.Text=s.AssetType;showAssetType.Checked=s.ShowAssetType;
         partNumber.Text=s.PartNumber;macAddress.Text=s.MacAddress;showPartNumber.Checked=s.ShowPartNumber;showMacAddress.Checked=s.ShowMacAddress;
         showBrand.Checked=s.ShowBrand;showModel.Checked=s.ShowModel;showSerialText.Checked=s.ShowSerialText;

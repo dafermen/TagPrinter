@@ -157,4 +157,8 @@ Read [the transfer/scale walkthrough](CONFIGURATION_TRANSFER.md) with Configurat
 
 A text field is not necessarily one printed line. MeasureString receives the available width and reports wrapped height; the renderer rounds up for device pixels and checks characters fitted before drawing. Reserve that measured height before placing the next field. The code matrix already includes its quiet zones, so actual matrix width × integer scale can be subtracted from available width to give text the remainder. For bottom layouts, subtract actual code height and a gap instead. The initial fitted area only chooses the scale baseline, not a permanent reservation.
 
-Free text is a separate input source selected by a Boolean. It keeps ordinary edits in the work snapshot, but output history describes the content actually generated. Preview feed arrows belong to the enclosing panel Paint event rather than the bitmap renderer; therefore exports and PrintDocument cannot accidentally include them. Tests compare PNG bytes with the guides on and off.
+Free text is a separate input source selected by a Boolean. It keeps ordinary edits in the work snapshot, but output history describes the content actually generated. The fixed printer/leading-edge diagram belongs to PaperFeedPreview.OnPaint rather than the bitmap renderer; therefore exports and PrintDocument cannot accidentally include it. Tests compare PNG bytes with the guides on and off.
+
+## Fixed printer reference — 0.20
+
+A rotation of content is different from a change to physical paper dimensions. PaperFeedPreview takes the final raster dimensions, which stay the same for quarter-turn content rotation. Its OnPaint draws a fixed printer and leading-edge marker around that raster. This separates output data from explanatory UI: printing/export can never accidentally draw a printer on the label. Pixel tests compare the same header across rotations and the live undecorated Image with exported PNG bytes.

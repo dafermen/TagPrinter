@@ -51,4 +51,6 @@ ConfigurationTests uses real forms, separate paths/catalogs, before-import round
 
 CenterText is included with the full WorkState/catalog defaults and restores the centered block setting. Earlier transfer files without it preserve legacy placement (false). Live Windows queue status and report/recycle-bin contents remain outside configuration transfer.
 
-Since 0.19, FreeTextMode/FreeText and paper-feed guide visibility/direction are included. Code percentage now releases unused space to text; code module sizing and quiet zones remain unchanged. Old snapshots use the new layout when rendered. See FLEXIBLE_LABELS.md.
+Since 0.19, FreeTextMode/FreeText and paper-exit diagram visibility and legacy direction are included. Code percentage now releases unused space to text; code module sizing and quiet zones remain unchanged. Old snapshots use the new layout when rendered. See FLEXIBLE_LABELS.md.
+
+In 0.20 the old direction value remains round-trippable but is ignored by the fixed downward paper-exit diagram. ShowFeedGuide still controls preview visibility. Physical dimensions and ContentRotation remain independent.

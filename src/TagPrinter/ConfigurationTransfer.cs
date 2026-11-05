@@ -9,7 +9,7 @@ public sealed record ConfigurationBundle
     /// <summary>Transfer schema version, independent of AppConfig and SQLite versions.</summary>
     public int SchemaVersion {get;init;}=1;
     /// <summary>Exporting application version, for diagnostics.</summary>
-    public string AppVersion {get;init;}="0.19.0";
+    public string AppVersion {get;init;}="0.20.0";
     /// <summary>UTC export timestamp; not a label history event.</summary>
     public DateTimeOffset ExportedUtc {get;init;}=DateTimeOffset.UtcNow;
     /// <summary>Complete preset catalog and installation startup defaults.</summary>

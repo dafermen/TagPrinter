@@ -16,18 +16,14 @@ The existing percentage still chooses whole-pixel modules relative to a fitted b
 
 This intentionally changes text placement even at 100 percent if the old reservation exceeded the actual code size. Existing history/configuration retains its settings, but re-rendering uses the new layout. Standalone code output is unchanged.
 
-## Paper-feed arrows
+## Printer and paper-exit preview
 
-In 02 Label and template, **Show paper feed (not printed)** controls arrows in rails outside the label. Select Down, Up, Left or Right under **Physical paper feed · visual reference** to match the way your roll exits. TOP/BOTTOM identify preview edges. The initial reference is Down; this is not a printer measurement.
+Version 0.20 replaces the user-selected arrows with a fixed printer, downward feed path and first-edge marker. Content rotates inside unchanged physical stock. See [Printer and paper-exit preview](PAPER_EXIT_PREVIEW.md).
 
-These are user-selected visual guides. They do not detect roll loading, change media dimensions, rotate content, configure Windows drivers or fix the pending physical-media/design-orientation issue. The direction stays attached to the physical preview when content rotates. PNG, ZPL and Windows print output contain no arrows or edge labels.
-
-All new work settings survive autosave/restart, full configuration transfer and output-history restoration. Older saved work defaults to asset mode, empty free text, enabled feed guides and Down. Installation config.json does not introduce new free-text defaults.
-
-![Free-text editor and paper-feed reference](images/free-text-feed-en.png)
+FreeTextMode/FreeText and preview visibility survive autosave/restart, full configuration transfer and output-history restoration. The old FeedDirection value is retained for compatibility but no longer affects the diagram.
 
 ## Implementation and verification
 
-LabelRenderer measures wrapped field heights and uses actual symbol dimensions to allocate remaining space. MainForm.FeedGuide paints outside the PictureBox so export/print use the same undecorated raster as before. WorkState carries new fields with compatible defaults; configuration transfer bounds free text to 2000 characters and feed direction to 0–3.
+LabelRenderer measures wrapped field heights and uses actual symbol dimensions to allocate remaining space. PaperFeedPreview draws the printer scene around the existing image, outside exported/printed pixels. WorkState carries new fields with compatible defaults; configuration transfer bounds free text to 2000 characters and the preserved legacy direction to 0–3.
 
-LayoutImprovementsTests checks real pixels, the final character of a wrapped heading, text inside the reclaimed QR region, free-text field isolation, blank rejection, history/transfer/restart and byte-identical PNG output with guides on/off. Existing decode and rotation tests remain in the full suite. Physical printer/scanner confirmation is deferred until hardware is available.
+LayoutImprovementsTests checks real pixels, the final character of a wrapped heading, text inside the reclaimed QR region, free-text field isolation, blank rejection, history/transfer/restart and byte-identical PNG output with the printer scene on/off. Existing decode and rotation tests remain in the full suite. Physical printer/scanner confirmation is deferred until hardware is available.

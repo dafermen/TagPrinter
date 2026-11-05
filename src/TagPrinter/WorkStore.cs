@@ -10,9 +10,9 @@ public record WorkState
     public bool FreeTextMode {get;init;}
     /// <summary>Free-form multiline content, at most 2000 characters.</summary>
     public string FreeText {get;init;}="";
-    /// <summary>Shows paper-feed arrows outside the label; excluded from every output bitmap.</summary>
+    /// <summary>Shows the fixed printer/paper-exit diagram; excluded from every output bitmap.</summary>
     public bool ShowFeedGuide {get;init;}=true;
-    /// <summary>User-selected physical feed direction: 0 down, 1 up, 2 left, 3 right.</summary>
+    /// <summary>Legacy 0.19 direction (0–3), retained for transfer compatibility; ignored by the fixed diagram.</summary>
     public int FeedDirection {get;init;}
 
     /// <summary>Installed printer name; history recovery requires availability before printing.</summary>

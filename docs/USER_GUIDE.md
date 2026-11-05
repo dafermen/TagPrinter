@@ -1,4 +1,4 @@
-# User guide — TagPrinter 0.19
+# User guide — TagPrinter 0.20
 
 ## Start and update
 
@@ -18,9 +18,9 @@ Enable **Free text only** to write a label without asset fields or codes. Long a
 
 ## Media and orientation — section 02
 
-Choose a catalog preset or Custom dimensions in millimeters. Horizontal/vertical swaps width and height and selects Custom. Supported custom dimensions in the editor are 20–200 mm for each side; catalog validation has its own bounds documented in CONFIGURATION.md. A printer must physically support the chosen media.
+Choose a catalog preset or Custom dimensions in millimeters. Stock orientation swaps physical width and height and selects Custom; use Content rotation to turn text on unchanged stock. Supported custom dimensions in the editor are 20–200 mm for each side; catalog validation has its own bounds documented in CONFIGURATION.md. A printer must physically support the chosen media.
 
-Choose one of four layouts: code below centered, below left, below right or to the right of text. When the code is hidden, this selection does not constrain text space. Shrinking the code returns its unused width/height to text. Feed arrows are an adjustable visual reference outside the label, never printed.
+Choose one of four layouts: code below centered, below left, below right or to the right of text. When the code is hidden, this selection does not constrain text space. Shrinking the code returns its unused width/height to text. Show printer and paper exit places the label below a fixed printer. Paper advances downward; the bottom edge is marked FIRST EDGE OUT. Content rotation leaves this physical reference unchanged. See [the paper-exit guide](PAPER_EXIT_PREVIEW.md).
 
 Content rotation is 0, 90, 180 or 270 degrees clockwise. It rotates text and symbol together inside the selected physical media. It does not rotate text independently. The preview shows the resulting output.
 
