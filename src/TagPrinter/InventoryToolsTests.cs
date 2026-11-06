@@ -9,7 +9,7 @@ internal static class InventoryToolsTests
     {
         string root=Path.Combine(folder,"inventory-tools-"+Guid.NewGuid());Directory.CreateDirectory(root);
         var store=new HistoryStore(Path.Combine(root,"events.db"));string csv=Path.Combine(root,"inventory.csv");
-        
+
         // Use the application exporter to exercise real quotes/newlines and preserve the leading-zero serial.
         long seed=store.Add("ExportTag",new WorkState{Serial="000001",Model="Model; \"quoted\"\nsecond line"});
         HistoryStore.ExportCsv(csv,store.Query());var rows=InventoryCsv.Read(csv,new WorkState());
