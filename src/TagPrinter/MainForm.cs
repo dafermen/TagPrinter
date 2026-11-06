@@ -128,7 +128,7 @@ public partial class MainForm : Form
         catalogPath=configPath is not null?Path.Combine(Path.GetDirectoryName(Path.GetFullPath(configPath))!,"catalog.json"):Path.Combine(StartupDiagnostics.InstallationRoot,"config.json");
         appConfig=configuration ?? AppConfig.Load(catalogPath);
         Ui.Language=appConfig.Defaults.Language;
-        Text="TagPrinter | v0.21";
+        Text="TagPrinter | v0.22";
         using var iconStream=typeof(MainForm).Assembly.GetManifestResourceStream("TagPrinter.TagPrinter.ico");
         if(iconStream is not null)Icon=new Icon(iconStream); Width=1160; Height=850; MinimumSize=new Size(980,720);
         Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;
@@ -231,7 +231,7 @@ public partial class MainForm : Form
         var exportSettings=new Button{Text=Ui.T("Exportar configuración","Export configuration"),AutoSize=true};
         var importSettings=new Button{Text=Ui.T("Importar configuración…","Import configuration…"),AutoSize=true};
         exportSettings.Click+=(_,_)=>Guard(ExportConfiguration);importSettings.Click+=(_,_)=>Guard(ImportConfiguration);
-        transferButtons.Controls.AddRange([exportSettings,importSettings]);target.Controls.Add(transferButtons);
+        transferButtons.Controls.AddRange([exportSettings,importSettings]);target.Controls.Add(transferButtons);InitializeInventoryTools();
         // Fixed rows reserve title/help/actions; the remaining percentage row expands the preview.
         var right=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=5,Padding=new Padding(16,0,0,0)};
         right.RowStyles.Add(new RowStyle(SizeType.Absolute,48));right.RowStyles.Add(new RowStyle(SizeType.Absolute,46));right.RowStyles.Add(new RowStyle(SizeType.Percent,100));right.RowStyles.Add(new RowStyle(SizeType.Absolute,74));right.RowStyles.Add(new RowStyle(SizeType.Absolute,158));
@@ -469,5 +469,5 @@ public partial class MainForm : Form
     }
     /// <summary>Releases owned timer, tooltip and bitmaps, then lets the base form dispose controls.</summary>
     /// <param name="disposing">True for explicit managed disposal; passed to the base class.</param>
-    protected override void Dispose(bool disposing) {if(disposing){DisposePrinting();DisposePrinterStatus();autosave.Dispose();aboutTip.Dispose();aboutButton.Image?.Dispose();preview.Image?.Dispose();}base.Dispose(disposing);}
+    protected override void Dispose(bool disposing) {if(disposing){DisposeInventoryTools();DisposePrinting();DisposePrinterStatus();autosave.Dispose();aboutTip.Dispose();aboutButton.Image?.Dispose();preview.Image?.Dispose();}base.Dispose(disposing);}
 }

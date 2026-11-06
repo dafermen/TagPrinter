@@ -14,7 +14,10 @@ namespace TagPrinter;
 /// <param name="FromUtc">Inclusive UTC start; null removes the lower bound.</param>
 /// <param name="ToUtcExclusive">Exclusive UTC end; null removes the upper bound.</param>
 /// <param name="Deleted">True selects recycled events; false selects active events.</param>
-public record HistoryQuery(string Search="",string Field="all",string Action="",DateTimeOffset? FromUtc=null,DateTimeOffset? ToUtcExclusive=null,bool Deleted=false);
+/// <param name="GroupType">Optional exact trimmed Dashboard group type.</param>
+/// <param name="GroupBrand">Optional exact group brand.</param>
+/// <param name="GroupModel">Optional exact group model.</param>
+public record HistoryQuery(string Search="",string Field="all",string Action="",DateTimeOffset? FromUtc=null,DateTimeOffset? ToUtcExclusive=null,bool Deleted=false,string? GroupType=null,string? GroupBrand=null,string? GroupModel=null);
 /// <summary>
 /// One completed output action, not one unique asset. State preserves its design and SourceEventId
 /// identifies a reloaded source.
@@ -29,12 +32,12 @@ public record HistoryEvent(long Id,DateTimeOffset CreatedUtc,string Action,WorkS
 /// <summary>
 /// Owns SQLite connections, event inserts, reversible deletion, parameterized searches, CSV and backups.
 /// </summary>
-public sealed class HistoryStore
+public sealed partial class HistoryStore
 {
     /// <summary>Absolute database path outside the portable installation.</summary>
     public string DatabasePath {get;}
     /// <summary>Stable operation codes; order also populates action selectors.</summary>
-    public static readonly string[] Actions=["ExportTag","ExportCode","ExportZpl","PrintSubmitted"];
+    public static readonly string[] Actions=["ExportTag","ExportCode","ExportZpl","PrintSubmitted","Imported"];
     /// <summary>
     /// Initializes compatible tables/indexes and rejects databases declaring a newer schema version.
     /// </summary>
@@ -75,6 +78,7 @@ public sealed class HistoryStore
               source_event_id INTEGER REFERENCES events(id)
             );
             CREATE INDEX IF NOT EXISTS ix_events_serial ON events(serial COLLATE NOCASE);
+            CREATE INDEX IF NOT EXISTS ix_events_serial_trim ON events(trim(serial) COLLATE NOCASE);
             CREATE INDEX IF NOT EXISTS ix_events_created ON events(created_utc);
             CREATE TABLE IF NOT EXISTS trash(event_id INTEGER PRIMARY KEY REFERENCES events(id), deleted_utc TEXT NOT NULL);
             PRAGMA user_version=1;
@@ -104,7 +108,12 @@ public sealed class HistoryStore
         if(state.FreeTextMode)return 0; // Free text is a draft/output, not an inventory event.
         if(!Actions.Contains(action))throw new ArgumentException("Unknown history action.");
         if(string.IsNullOrWhiteSpace(state.Serial) && (state.ShowCode || action=="ExportCode"))throw new ArgumentException("A generated code requires a serial.");
-        using var connection=Open();using var command=connection.CreateCommand();
+        using var connection=Open();return Insert(connection,null,action,state,outputPath,sourceEventId,timestamp);
+    }
+    /// <summary>Inserts within the caller's transaction, allowing an entire import to commit or roll back together.</summary>
+    private static long Insert(SqliteConnection connection,SqliteTransaction? transaction,string action,WorkState state,string outputPath="",long? sourceEventId=null,DateTimeOffset? timestamp=null)
+    {
+        using var command=connection.CreateCommand();command.Transaction=transaction;
         command.CommandText="""
             INSERT INTO events(created_utc,action,serial,asset_type,brand,model,part_number,mac_address,state_json,output_path,source_event_id)
             VALUES($date,$action,$serial,$type,$brand,$model,$part,$mac,$state,$output,$source);
@@ -139,11 +148,28 @@ public sealed class HistoryStore
     /// </summary>
     /// <param name="query">Combined filters; null selects all active events.</param>
     /// <returns>Matching events ordered by descending ID.</returns>
-    public List<HistoryEvent> Query(HistoryQuery? query=null)
+    /// <param name="limit">Null for full export; otherwise a bounded SQL page.</param>
+    /// <param name="offset">Zero-based SQL offset.</param>
+    /// <param name="sort">Whitelisted column key.</param>
+    /// <param name="descending">Global SQL direction, with stable ID tie breaking.</param>
+    public List<HistoryEvent> Query(HistoryQuery? query=null,int? limit=null,int offset=0,string sort="Id",bool descending=true)
     {
-        query??=new();using var connection=Open();using var command=connection.CreateCommand();
-        // Always apply the active/recycled scope even when no other filters are selected.
-        var where=new List<string>{query.Deleted?"id IN (SELECT event_id FROM trash)":"id NOT IN (SELECT event_id FROM trash)"};
+        if(limit is <1 or >10000 || offset<0)throw new ArgumentOutOfRangeException(nameof(limit));
+        using var connection=Open();using var command=connection.CreateCommand();string where=Where(command,query??new());
+        string column=sort switch {"Date"=>"created_utc","Serial"=>"serial COLLATE NOCASE","AssetType"=>"asset_type","Brand"=>"brand","Model"=>"model","PartNumber"=>"part_number","MacAddress"=>"mac_address","Printer"=>"json_extract(state_json,'$.Printer')","Copies"=>"CAST(json_extract(state_json,'$.Copies') AS INTEGER)","Action"=>"action","SourceEventId"=>"source_event_id","CodeType"=>"CASE WHEN action!='ExportCode' AND COALESCE(json_extract(state_json,'$.ShowCode'),1)=0 THEN 'TextOnly' WHEN json_extract(state_json,'$.Code')=1 THEN 'QR' ELSE 'Code128' END",_=>"id"};
+        command.CommandText="SELECT id,created_utc,action,state_json,output_path,source_event_id FROM events WHERE "+where+" ORDER BY "+column+(descending?" DESC":" ASC")+",id DESC";
+        if(limit is {} size){command.CommandText+=" LIMIT $limit OFFSET $offset";command.Parameters.AddWithValue("$limit",size);command.Parameters.AddWithValue("$offset",offset);}
+        using var reader=command.ExecuteReader();var rows=new List<HistoryEvent>();while(reader.Read())rows.Add(Read(reader));return rows;
+    }
+    /// <summary>Counts matching inventory events in SQL without loading snapshots.</summary>
+    public long Count(HistoryQuery? query=null)
+    {
+        using var connection=Open();using var command=connection.CreateCommand();command.CommandText="SELECT COUNT(*) FROM events WHERE "+Where(command,query??new());return Convert.ToInt64(command.ExecuteScalar());
+    }
+    /// <summary>Builds only fixed SQL predicates; all input values are bound parameters.</summary>
+    private static string Where(SqliteCommand command,HistoryQuery query)
+    {
+        var where=new List<string>{"COALESCE(json_extract(state_json,'$.FreeTextMode'),0)=0",query.Deleted?"id IN (SELECT event_id FROM trash)":"id NOT IN (SELECT event_id FROM trash)"};
         if(query.Search.Length>0)
         {
             // Whitelist SQL expressions rather than accepting arbitrary column names. Search input becomes a
@@ -155,8 +181,8 @@ public sealed class HistoryStore
         if(query.Action.Length>0){where.Add("action=$action");command.Parameters.AddWithValue("$action",query.Action);}
         if(query.FromUtc is { } from){where.Add("created_utc >= $from");command.Parameters.AddWithValue("$from",from.ToUniversalTime().ToString("O",CultureInfo.InvariantCulture));}
         if(query.ToUtcExclusive is { } to){where.Add("created_utc < $to");command.Parameters.AddWithValue("$to",to.ToUniversalTime().ToString("O",CultureInfo.InvariantCulture));}
-        command.CommandText="SELECT id,created_utc,action,state_json,output_path,source_event_id FROM events"+(where.Count>0?" WHERE "+string.Join(" AND ",where):"")+" ORDER BY id DESC";
-        using var reader=command.ExecuteReader();var rows=new List<HistoryEvent>();while(reader.Read()){var row=Read(reader);if(!row.State.FreeTextMode)rows.Add(row);}return rows;
+        if(query.GroupType is not null){where.Add("trim(asset_type)=$gt AND trim(brand)=$gb AND trim(model)=$gm");command.Parameters.AddWithValue("$gt",query.GroupType);command.Parameters.AddWithValue("$gb",query.GroupBrand??"");command.Parameters.AddWithValue("$gm",query.GroupModel??"");}
+        return string.Join(" AND ",where);
     }
     /// <summary>
     /// Moves/restores selected IDs in one transaction; events remain unchanged and only trash membership

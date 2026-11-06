@@ -5,7 +5,7 @@ namespace TagPrinter;
 /// Displays sortable events, filters, CSV, backup and reversible deletion. Row loading delegates to the
 /// form without printing.
 /// </summary>
-public sealed class ReportsView : UserControl
+public sealed partial class ReportsView : UserControl
 {
     // current keeps original snapshots; table contains translated display values. The load callback
     // navigates to the editor.
@@ -52,20 +52,20 @@ public sealed class ReportsView : UserControl
     {
         store=history;load=onLoad;this.onTrashEmptied=onTrashEmptied;BackColor=Color.White;Dock=DockStyle.Fill;Padding=new Padding(16);
         var layout=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=4};
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute,88));layout.RowStyles.Add(new RowStyle(SizeType.Percent,100));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,46));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,76));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute,88));layout.RowStyles.Add(new RowStyle(SizeType.Percent,100));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,46));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,116));
         var filters=new FlowLayoutPanel{Dock=DockStyle.Fill,WrapContents=true};
         filters.Controls.AddRange([searchLabel,search,field,action,fromLabel,from,toLabel,to,apply,reset]);
         layout.Controls.Add(filters,0,0);layout.Controls.Add(Grid,0,1);layout.Controls.Add(count,0,2);
-        var buttons=new FlowLayoutPanel{Dock=DockStyle.Fill};buttons.Controls.AddRange([open,export,exportAll,backup,trash,remove,emptyTrash]);layout.Controls.Add(buttons,0,3);Controls.Add(layout);
+        var buttons=new FlowLayoutPanel{Dock=DockStyle.Fill};buttons.Controls.AddRange([previousPage,pageLabel,nextPage,pageSize,open,export,exportAll,backup,trash,remove,emptyTrash]);layout.Controls.Add(buttons,0,3);Controls.Add(layout);
         // Adds an explicitly bound sortable column; serial cells use links.
         void Column(string name,int width,bool link=false)
         {
             DataGridViewColumn column=link?new DataGridViewLinkColumn{TrackVisitedState=false}:new DataGridViewTextBoxColumn();
-            column.Name=name;column.DataPropertyName=name;column.Width=width;column.SortMode=DataGridViewColumnSortMode.Automatic;Grid.Columns.Add(column);
+            column.Name=name;column.DataPropertyName=name;column.Width=width;column.SortMode=DataGridViewColumnSortMode.Programmatic;Grid.Columns.Add(column);
         }
         Column("Id",55);Column("Date",150);Column("Action",150);Column("Serial",145,true);Column("AssetType",105);Column("Brand",90);Column("Model",120);Column("PartNumber",120);Column("MacAddress",155);Column("Printer",190);Column("Copies",65);Column("CodeType",80);Column("SourceEventId",90);
         Grid.Columns["Date"].DefaultCellStyle.Format="yyyy-MM-dd HH:mm:ss";
-        apply.Click+=(_,_)=>Run(RefreshData);reset.Click+=(_,_)=>{search.Clear();field.SelectedIndex=0;action.SelectedIndex=0;from.Checked=false;to.Checked=false;Run(RefreshData);};
+        apply.Click+=(_,_)=>Run(RefreshData);reset.Click+=(_,_)=>{groupType=groupBrand=groupModel=null;search.Clear();field.SelectedIndex=0;action.SelectedIndex=0;from.Checked=false;to.Checked=false;Run(RefreshData);};
         search.KeyDown+=(_,e)=>{if(e.KeyCode==Keys.Enter){e.SuppressKeyPress=true;Run(RefreshData);}};
         Grid.CellContentClick+=(_,e)=>{if(e.RowIndex>=0 && e.ColumnIndex>=0 && Grid.Columns[e.ColumnIndex].Name=="Serial")Run(()=>OpenRow(e.RowIndex));};
         open.Click+=(_,_)=>Run(()=>OpenRow(Grid.CurrentRow?.Index??-1));
@@ -85,6 +85,12 @@ public sealed class ReportsView : UserControl
             string warning=string.Format(Ui.T("¿Eliminar definitivamente TODOS los {0} registros de la papelera? Incluye los ocultos por filtros. Esta acción no se puede deshacer.","Permanently delete ALL {0} recycled records, including those hidden by filters? This cannot be undone."),total);
             if(MessageBox.Show(FindForm(),warning,"TagPrinter",MessageBoxButtons.YesNo,MessageBoxIcon.Warning,MessageBoxDefaultButton.Button2)==DialogResult.Yes)PurgeRecycleBin();
         });
+        pageSize.Items.AddRange(["50","100","250"]);pageSize.SelectedIndex=0;
+        previousPage.Click+=(_,_)=>{if(pageIndex>0){pageIndex--;RefreshData();}};
+        nextPage.Click+=(_,_)=>{if((pageIndex+1)*(int.Parse(pageSize.Text))<totalRows){pageIndex++;RefreshData();}};
+        pageSize.SelectedIndexChanged+=(_,_)=>{pageIndex=0;RefreshData();};
+        Grid.Sorted+=(_,_)=>{if(binding || Grid.SortedColumn is null)return;sortKey=Grid.SortedColumn.Name;sortDescending=Grid.SortOrder==SortOrder.Descending;pageIndex=0;RefreshData();};
+        Grid.ColumnHeaderMouseClick+=(_,e)=>{if(e.ColumnIndex<0)return;string key=Grid.Columns[e.ColumnIndex].Name;sortDescending=key==sortKey?!sortDescending:false;sortKey=key;pageIndex=0;RefreshData();};
         field.Items.AddRange(new object[Fields.Length].Select(_=>(object)"").ToArray());field.SelectedIndex=0;
         action.Items.AddRange(new object[HistoryStore.Actions.Length+1].Select(_=>(object)"").ToArray());action.SelectedIndex=0;
         from.Checked=false;to.Checked=false;RefreshLanguage();
@@ -94,13 +100,14 @@ public sealed class ReportsView : UserControl
     /// <returns>Localized action caption.</returns>
     static string ActionText(string value)=>value switch
     {
-        "ExportTag"=>Ui.T("Etiqueta exportada","Tag exported"),"ExportCode"=>Ui.T("Código exportado","Code exported"),"ExportZpl"=>Ui.T("ZPL exportado","ZPL exported"),"PrintSubmitted"=>Ui.T("Enviado a impresión","Sent to printer"),_=>value
+        "ExportTag"=>Ui.T("Etiqueta exportada","Tag exported"),"ExportCode"=>Ui.T("Código exportado","Code exported"),"ExportZpl"=>Ui.T("ZPL exportado","ZPL exported"),"Imported"=>Ui.T("Inventario importado","Inventory imported"),"PrintSubmitted"=>Ui.T("Enviado a impresión","Sent to printer"),_=>value
     };
     /// <summary>
     /// Translates captions/choices while retaining indexes, then reloads rows with existing date filters.
     /// </summary>
     public void RefreshLanguage()
     {
+        previousPage.Text="◀";nextPage.Text="▶";
         emptyTrash.Text=Ui.T("Vaciar papelera…","Empty recycle bin…");
         trash.Text=Ui.T("Papelera","Recycle bin");remove.Text=trash.Checked?Ui.T("Restaurar","Restore"):Ui.T("Eliminar","Delete");
         searchLabel.Text=Ui.T("Buscar","Search");fromLabel.Text=Ui.T("Desde","From");toLabel.Text=Ui.T("Hasta","To");
@@ -126,19 +133,24 @@ public sealed class ReportsView : UserControl
         // uses its local UTC offset.
         DateTimeOffset? start=from.Checked?new DateTimeOffset(DateTime.SpecifyKind(from.Value.Date,DateTimeKind.Local)).ToUniversalTime():null;
         DateTimeOffset? end=to.Checked?new DateTimeOffset(DateTime.SpecifyKind(to.Value.Date.AddDays(1),DateTimeKind.Local)).ToUniversalTime():null;
-        return new(search.Text.Trim(),Fields[Math.Max(0,field.SelectedIndex)],action.SelectedIndex>0?HistoryStore.Actions[action.SelectedIndex-1]:"",start,end,trash.Checked);
+        return new(search.Text.Trim(),Fields[Math.Max(0,field.SelectedIndex)],action.SelectedIndex>0?HistoryStore.Actions[action.SelectedIndex-1]:"",start,end,trash.Checked,groupType,groupBrand,groupModel);
     }
     /// <summary>Builds typed display rows from history, retains sorting and disposes the old table.</summary>
     public void RefreshData()
     {
         // Save sort before replacing typed data. Dates/numbers sort by value rather than their text representation.
         emptyTrash.Visible=trash.Checked;emptyTrash.Enabled=trash.Checked && store.RecycleBinCount()>0;
-        current=store.Query(Filter());string sort=table?.DefaultView.Sort??"";
+        var filter=Filter();if(lastFilter!=filter){pageIndex=0;lastFilter=filter;}
+        totalRows=store.Count(filter);int size=int.TryParse(pageSize.Text,out int selected)?selected:50;
+        pageIndex=(int)Math.Min(pageIndex,Math.Max(0,(totalRows-1)/size));
+        current=store.Query(filter,size,pageIndex*size,sortKey,sortDescending);string sort="";
         var next=new DataTable();
         next.Columns.Add("Id",typeof(long));next.Columns.Add("Date",typeof(DateTime));foreach(var name in new[]{"Action","Serial","AssetType","Brand","Model","PartNumber","MacAddress","Printer"})next.Columns.Add(name,typeof(string));next.Columns.Add("Copies",typeof(int));next.Columns.Add("CodeType",typeof(string));next.Columns.Add("SourceEventId",typeof(long));
         foreach(var row in current){var state=row.State;next.Rows.Add(row.Id,row.CreatedUtc.LocalDateTime,ActionText(row.Action),string.IsNullOrWhiteSpace(state.Serial)?Ui.T("(Sin serial)","(No serial)"):state.Serial,state.AssetType,state.Brand,state.Model,state.PartNumber,state.MacAddress,state.Printer,state.Copies,!state.ShowCode && row.Action!="ExportCode"?Ui.T("Solo texto","Text only"):state.Code==1?"QR":"Code 128",(object?)row.SourceEventId??DBNull.Value);}
         if(sort.Length>0)next.DefaultView.Sort=sort;
-        var old=table;table=next;Grid.DataSource=next;old?.Dispose();
+        binding=true;var old=table;table=next;Grid.DataSource=next;old?.Dispose();binding=false;
+        foreach(DataGridViewColumn c in Grid.Columns)c.HeaderCell.SortGlyphDirection=c.Name==sortKey?(sortDescending?SortOrder.Descending:SortOrder.Ascending):SortOrder.None;
+        pageLabel.Text=$"{pageIndex+1} / {Math.Max(1,(totalRows+size-1)/size)} · {totalRows}";previousPage.Enabled=pageIndex>0;nextPage.Enabled=(pageIndex+1)*size<totalRows;
         count.Text=string.Format(Ui.T("{0} registros. Pulsa un serial para cargar la etiqueta; no se imprime automáticamente.","{0} records. Click a serial to load its label; it will not print automatically."),current.Count);
     }
     /// <summary>
@@ -150,9 +162,7 @@ public sealed class ReportsView : UserControl
     public void ShowGroup(string type,string brand,string model)
     {
         trash.Checked=false;search.Text="";field.SelectedIndex=0;action.SelectedIndex=0;from.Checked=false;to.Checked=false;
-        // Escape quotes for the DataView expression. This exact group filter is separate from SQLite
-        // substring search.
-        RefreshData();table!.DefaultView.RowFilter=$"AssetType = '{type.Replace("'","''")}' AND Brand = '{brand.Replace("'","''")}' AND Model = '{model.Replace("'","''")}'";
+        groupType=type;groupBrand=brand;groupModel=model;pageIndex=0;RefreshData();
     }
     /// <summary>Resolves displayed row to stable event ID and invokes the loader, independent of sorting.</summary>
     /// <param name="index">Display row index, resolved to stable ID before loading.</param>
@@ -187,7 +197,7 @@ public sealed class ReportsView : UserControl
     }
     /// <summary>Displays report-action failures as warnings in the owning form.</summary>
     /// <param name="action">Stable event code or UI callback as specified by the containing method.</param>
-    void Run(Action action){try{action();}catch(Exception ex){MessageBox.Show(FindForm(),ex.Message,"TagPrinter",MessageBoxButtons.OK,MessageBoxIcon.Warning);}}
+    void Run(Action action){try{action();}catch(Exception ex){if(Environment.GetCommandLineArgs().Contains("--self-test"))throw;MessageBox.Show(FindForm(),ex.Message,"TagPrinter",MessageBoxButtons.OK,MessageBoxIcon.Warning);}}
     /// <summary>Purges all recycled rows after UI confirmation; tests call this with isolated data only.</summary>
     internal int PurgeRecycleBin()
     {

@@ -56,3 +56,5 @@ Since 0.19, FreeTextMode/FreeText and paper-exit diagram visibility and legacy d
 In 0.20 the old direction value remains round-trippable but is ignored by the fixed downward paper-exit diagram. ShowFeedGuide still controls preview visibility. Physical dimensions and ContentRotation remain independent.
 
 Transient print-job notices, live job IDs and current queue observations are not transferred. Free-text drafts remain included even though they produce no inventory DB events in 0.21.
+
+Since 0.22, Catalog includes reusable label Profiles and AutomaticBackups. Validation checks each profile using an isolated catalog without profiles to avoid recursive validation. Import refreshes profile choices and backup checkbox. CSV inventory import and SQLite restoration are separate operations.

@@ -1,6 +1,6 @@
 # Documentation index
 
-These English manuals describe application version 0.21. Source XML comments explain individual members; algorithm comments explain meaningful intermediate variables and decisions. The UI still supports English and Spanish.
+These English manuals describe application version 0.22. Source XML comments explain individual members; algorithm comments explain meaningful intermediate variables and decisions. The UI still supports English and Spanish.
 
 ## For users
 
@@ -36,3 +36,5 @@ These English manuals describe application version 0.21. Source XML comments exp
 - [Printer and paper-exit preview](PAPER_EXIT_PREVIEW.md): fixed physical reference, first edge out and content rotation on unchanged stock.
 
 - [Inventory-only history and print-job progress](PRINT_JOB_PROGRESS.md): Free text exclusion, Ctrl+P, correlated queue observations and temporary notices.
+
+- [Inventory tools](INVENTORY_TOOLS.md): CSV import, pagination, restore/backups, profiles, duplication, serial warnings and local-only scope.

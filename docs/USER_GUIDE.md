@@ -1,4 +1,4 @@
-# User guide — TagPrinter 0.21
+# User guide — TagPrinter 0.22
 
 ## Start and update
 
@@ -91,3 +91,7 @@ Use 05 Settings > Export configuration / Import configuration to transfer catalo
 ## Centering, recycle-bin purge and printer status — 0.18
 
 03 Text and margins adds Center text for the whole text block. Reports > Recycle bin adds irreversible Empty recycle bin with all-filter scope confirmation. The visible printer summary now includes an automatically refreshed Windows status indicator. CenterText persists in work/history/full transfer; live status does not. See [centering, recycle-bin purge and Windows status](TEXT_TRASH_PRINTER_STATUS.md).
+
+## Inventory tools — 0.22
+
+05 Settings adds CSV template/import, Restore database and daily automatic backups. 02 adds reusable profile save/apply/delete. 01 adds Duplicate asset and nonblocking serial warnings. Reports adds SQL-backed page sizes and previous/next navigation; Export view means the current page. See [Inventory tools](INVENTORY_TOOLS.md) before importing or restoring. Synchronization is pending; this version is local-only.

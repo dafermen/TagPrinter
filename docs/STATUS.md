@@ -1,6 +1,6 @@
 # Current status
 
-Application version: 0.21.0. Project: https://github.com/dafermen/TagPrinter. Local checkout: C:/Projects/TagPrinter.
+Application version: 0.22.0. Project: https://github.com/dafermen/TagPrinter. Local checkout: C:/Projects/TagPrinter.
 
 The application supports six asset fields, independent visibility, optional QR/Code 128, text-only labels, media presets/custom dimensions, fonts/bold/fitting, margins/offsets, media orientation and content rotation. It restores last work, prints through Windows or RAW ZPL, exports label/code PNG and raster ZPL, and records successful actions in SQLite.
 
@@ -12,7 +12,7 @@ Source documentation covers classes/records, member functions, saved properties,
 
 Tests use synthetic data in isolated files/databases; no real user records or printer jobs are used. The live database is outside the portable and is not replaced by application updates. No historical output import occurs automatically.
 
-Pending: physical hardware validation, RFID, bulk import, pagination and optional backup-restoration UI. No physical-print confirmation, event editing, synchronization or database encryption is implemented. See ROADMAP and VALIDATION.
+Pending: physical hardware validation, RFID and multi-device synchronization (deferred by the user). No physical-print confirmation, event editing, synchronization or database encryption is implemented. See ROADMAP and VALIDATION.
 
 License: MIT for TagPrinter source and project documentation, Copyright (c) 2026 Dario Meneses. The repository root LICENSE is copied into portable packages. Third-party licensing remains separate. Application version is unchanged.
 
@@ -27,3 +27,5 @@ License: MIT for TagPrinter source and project documentation, Copyright (c) 2026
 0.20 replaces configurable paper arrows with a fixed front-view printer/paper-exit diagram, physical roll dimensions and a first-edge marker. Content rotation keeps physical size unchanged. Legacy direction values remain round-trippable but have no visual effect. See PAPER_EXIT_PREVIEW.md; hardware driver/media validation is still pending.
 
 0.21 excludes Free text from all new inventory events, hides marked legacy Free text from reports without deletion, adds Ctrl+P on Labels and displays a transient correlated Windows job notice. Driver/RAW submission runs off-thread; queue status is not physical-print confirmation. See PRINT_JOB_PROGRESS.md.
+
+0.22 adds transactional previewed CSV registration (no printing), bounded SQL report pages, validated backup restore with safety copy, daily/retained SQLite backups, configuration-transferable label profiles, identity-clearing duplication and serial warnings. See INVENTORY_TOOLS.md. Usage remains local-only.

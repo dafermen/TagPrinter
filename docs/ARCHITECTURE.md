@@ -1,4 +1,4 @@
-# Architecture — TagPrinter 0.21
+# Architecture — TagPrinter 0.22
 
 TagPrinter is a Windows Forms application targeting .NET 8. It uses ZXing.Net 0.16.11 for symbols and Microsoft.Data.Sqlite 8.0.28 for embedded local storage. The Windows x64 portable bundles its runtime; printer drivers remain external.
 
@@ -91,3 +91,7 @@ PaperFeedPreview owns only paint logic around its inherited Image, not another r
 ## Inventory-only history and asynchronous print jobs — 0.21
 
 MainForm.Printing routes Ctrl+P/button into one busy-gated command, captures state/provenance before any await, transfers bitmap/document ownership to a submission worker and correlates the result with a unique title plus optional RAW ID. WindowsPrintJobs bounds native reads; PrintJobTracker maps observations to transient UI states. Lifetime cancellation stops monitoring, never the submitted spooler job. RecordSnapshot skips Free text and HistoryStore.Add independently rejects those events; Query hides marked legacy rows. See PRINT_JOB_PROGRESS.md.
+
+## Inventory tools — 0.22
+
+InventoryServices defines strict CSV parsing, design-only LabelProfile helpers, transactional batch insertion, serial lookup, retained backups and staged restore. HistoryStore.Where binds shared search/group/trash criteria; Query optionally applies whitelisted global order and SQL LIMIT/OFFSET; Count avoids snapshot materialization. ReportsView.Paging holds transient navigation only. MainForm.Inventory owns explicit preview/confirm dialogs, profile/catalog atomic writes, backup timer and duplicate warning debounce. Profiles are settings; imported events are inventory; neither operation prints. Synchronization remains unimplemented by explicit local-only scope.

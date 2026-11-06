@@ -11,6 +11,7 @@ public static class Ui
     public static string T(string es,string en)=>Language=="es"?es:en;
     // Known captions map in both directions. Asset values never belong in the translation catalog.
     static readonly (string Es,string En)[] Catalog=[
+        ("Perfil","Profile"),
         ("Mostrar impresora y salida del papel","Show printer and paper exit"),
         ("Orientación del material · intercambia medidas","Stock orientation · swaps dimensions"),
         ("Ancho = de lado a lado. Alto = avance del rollo. La rotación solo gira el contenido.","Width = across the printer. Height = roll advance. Rotation turns content only."),

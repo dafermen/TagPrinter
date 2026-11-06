@@ -12,7 +12,7 @@ using System.Windows.Forms;
 using System.Xml;
 
 [assembly: AssemblyTitle("TagPrinter Startup Validator")]
-[assembly: AssemblyVersion("0.21.0.0")]
+[assembly: AssemblyVersion("0.22.0.0")]
 
 namespace TagPrinter.Launcher
 {

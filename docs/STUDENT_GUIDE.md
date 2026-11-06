@@ -168,3 +168,9 @@ A rotation of content is different from a change to physical paper dimensions. P
 Capture immutable WorkState and source ID before awaiting Windows. The user can edit the form while an await yields, so reading controls later would record the wrong asset. A worker owns/disposes the rendered bitmap and PrintDocument; UI continuations only update live controls. A busy gate handles repeated Ctrl+P through the same command as the button. Cancellation stops observation, not printing.
 
 PrintJobTracker is a small state machine: missing before first observation is uncertain; missing after observation means only that the job left the queue. Exact unique document titles prevent confusing another application's job with ours. A timeout is not success. FreeTextMode is a business rule enforced both at the output coordinator and at HistoryStore.Add; no new event is inserted, while ordinary JSON autosave remains separate. Tests count SQL rows directly to avoid a filtered report hiding an accidental insert.
+
+## Inventory tools — 0.22
+
+Validate every CSV row before opening a write transaction. Inside that transaction, reuse parameterized Insert and duplicate lookup; a later exception disposes the uncommitted transaction and rolls back earlier rows. Imported is a registration action, not evidence of a physical label.
+
+Pagination must happen after WHERE/ORDER BY in SQL; slicing a fully loaded C# list would not reduce database-to-UI memory. Count and Query reuse the same criteria and bind all input values. The sort column is selected from a fixed map, never interpolated from arbitrary text. Profiles copy design, then explicitly restore the current asset identity/destination so applying a template cannot accidentally label a different device. Restore stages/validates a snapshot and saves recovery data before replacing live pages. See INVENTORY_TOOLS.md for concrete UI steps and tests.

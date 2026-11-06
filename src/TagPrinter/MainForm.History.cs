@@ -68,7 +68,7 @@ public partial class MainForm
         aboutTip.SetToolTip(print,Ui.T("Imprimir etiqueta · Ctrl + P","Print label · Ctrl + P"));
         aboutTip.SetToolTip(freeTextMode,Ui.T("Solo texto libre: no se guarda en el historial de inventario. El trabajo se guarda automáticamente.","Free text is excluded from inventory history. Last work is still saved automatically."));
         ShowPrinterStatus(lastPrinterState);RefreshJobNotice();
-        reports?.RefreshLanguage();dashboardTab.Text="Dashboard";dashboard?.RefreshLanguage();
+        RefreshInventoryTools();reports?.RefreshLanguage();dashboardTab.Text="Dashboard";dashboard?.RefreshLanguage();
     }
     /// <summary>Captures the generated content without assigning hidden asset identifiers to free-text output.</summary>
     /// <param name="codeOnly">Standalone code always uses the asset serial, independently of free-text label mode.</param>
@@ -109,7 +109,7 @@ public partial class MainForm
         if(snapshot.FreeTextMode || skipHistory)return;
         // Output and SQLite are separate systems. A failed history insert must not automatically repeat a
         // print already submitted.
-        try{if(source is {} id && history.Get(id) is null)source=null;history.Add(action,snapshot,path,source);}
+        try{if(source is {} id && history.Get(id) is null)source=null;history.Add(action,snapshot,path,source);RefreshDuplicateWarning();}
         catch(Exception ex)
         {
             MessageBox.Show(this,Ui.T("La operación terminó, pero no se pudo guardar el historial. No repitas una impresión automáticamente.\n","The operation completed, but its history could not be saved. Do not automatically repeat a print job.\n")+ex.Message,"TagPrinter",MessageBoxButtons.OK,MessageBoxIcon.Warning);

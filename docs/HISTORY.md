@@ -1,4 +1,4 @@
-# SQLite history, Reports and Dashboard — 0.21
+# SQLite history, Reports and Dashboard — 0.22
 
 ## Event contract
 
@@ -76,3 +76,7 @@ Empty recycle bin deletes all recycled events after confirmation, independent of
 ## Inventory-only events — 0.21
 
 FreeTextMode=true work does not add new events for printing or any export. Last-work autosave/configuration transfer still preserves its draft. Query filters explicitly marked legacy Free text rows out of Reports, CSV selections and Dashboard without deleting them; backups can still contain those older rows. Ordinary asset-field labels without a symbol remain inventory. PrintSubmitted means accepted by the spooler, not paper output; transient job monitoring does not rewrite the stored event. See PRINT_JOB_PROGRESS.md.
+
+## Inventory tools — 0.22
+
+Imported actions register inventory without printing/exporting. SQL pages and exact Dashboard groups precede row materialization; page export and whole-scope export remain distinct. Restoring replaces events/trash after staging/validation and safety backup. Automatic backups are daily with ten-copy automatic retention; pre-restore copies are protected. See INVENTORY_TOOLS.md.

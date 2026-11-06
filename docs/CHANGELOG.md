@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.22.0 — 2026-11-05
+
+- Add previewed UTF-8/semicolon CSV import, full-batch validation, transactional Imported events and optional duplicate skipping.
+- Page history in SQL (50/100/250), with global stored-value sorting, counts and Dashboard group criteria before LIMIT/OFFSET.
+- Restore validated SQLite snapshots after explicit replacement confirmation and preserved safety backup.
+- Add daily automatic backup policy/ten-file retention and forced pre-import copies.
+- Persist reusable design-only profiles in configuration transfer, duplicate assets with cleared identifiers and warn about active duplicate serials without blocking reprints.
+- Keep synchronization pending after explicit user confirmation of local-only use.
+
+
 ## 0.21.0 — 2026-11-05
 
 - Exclude Free text from printing/export inventory events while retaining autosave and configuration transfer; hide explicitly marked older Free text rows in Reports/Dashboard without erasing them.

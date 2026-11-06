@@ -50,6 +50,10 @@ public record AppConfig
     };
     /// <summary>Startup preferences applied before restoring saved work.</summary>
     public ConfigDefaults Defaults {get;init;}=new();
+    /// <summary>Reusable design settings, without asset identifiers or printer selection.</summary>
+    public List<LabelProfile> Profiles {get;init;}=[];
+    /// <summary>Enables daily automatic SQLite copies; pre-restore safety copies are always made.</summary>
+    public bool AutomaticBackups {get;init;}=true;
     /// <summary>Creates independent built-in catalog and startup preferences.</summary>
     /// <returns>Independent built-in configuration.</returns>
     public static AppConfig CreateDefault()=>new();
@@ -73,6 +77,8 @@ public record AppConfig
     /// <exception cref="InvalidDataException">Configuration schema, catalog or defaults violate supported ranges.</exception>
     public void Validate()
     {
+        if(Profiles is null || Profiles.Count>100 || Profiles.Any(p=>p is null || p.Design is null || string.IsNullOrWhiteSpace(p.Name) || p.Name.Length>60) || Profiles.Select(p=>p.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count()!=Profiles.Count)throw new InvalidDataException("Invalid label profiles.");
+        foreach(var p in Profiles)ConfigurationTransfer.Validate(new ConfigurationBundle{Catalog=this with {Profiles=[]},Work=p.Design with {LabelPresetId="custom"}});
         if(SchemaVersion!=1)throw new InvalidDataException("config.json: SchemaVersion must be 1.");
         if(LabelSizes is null || LabelSizes.Count==0 || LabelSizes.Count>100)throw new InvalidDataException("config.json: provide between 1 and 100 label sizes.");
         // Case-sensitive stable IDs are independent of visible preset names; rejecting duplicates avoids ambiguous restoration.

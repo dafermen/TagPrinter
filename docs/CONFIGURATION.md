@@ -78,3 +78,7 @@ Open the root TagPrinter.exe to validate the immutable app/ payload before loadi
 Work snapshots also persist FreeTextMode, FreeText (up to 2000 characters), ShowFeedGuide and legacy FeedDirection (0–3, retained but ignored). These are included in full configuration transfer; the fixed printer diagram affects only the preview. See FLEXIBLE_LABELS.md.
 
 Since 0.20, ShowFeedGuide controls the fixed printer/paper-exit diagram. FeedDirection is a retained legacy field with no effect; no feed-direction selector is shown.
+
+## Inventory tools — 0.22
+
+AppConfig.Profiles stores up to 100 unique named design-only WorkState snapshots; Apply preserves current identity/language/printer/copies. AppConfig.AutomaticBackups defaults to true and controls the daily policy. Both are included in full configuration transfer and persisted to editable root config.json by the UI; they are not stored/restored with the inventory SQLite file. See INVENTORY_TOOLS.md.
