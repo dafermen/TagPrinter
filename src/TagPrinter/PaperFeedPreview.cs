@@ -47,7 +47,8 @@ internal sealed class PaperFeedPreview : PictureBox
         // Dashed tracks connect the output slot to the trailing edge. Leading edge is furthest from the printer.
         using var track=new Pen(Color.FromArgb(120,145,170),1){DashStyle=DashStyle.Dash};
         g.DrawLine(track,paper.Left,50,paper.Left,paper.Top);g.DrawLine(track,paper.Right,50,paper.Right,paper.Top);
-        g.InterpolationMode=InterpolationMode.NearestNeighbor;g.PixelOffsetMode=PixelOffsetMode.Half;
+        // Preview downsampling preserves thin text strokes; the source/export bitmap is never resampled.
+        g.InterpolationMode=paper.Width<Image.Width?InterpolationMode.HighQualityBicubic:InterpolationMode.NearestNeighbor;g.PixelOffsetMode=PixelOffsetMode.Half;
         g.DrawImage(Image,paper);g.PixelOffsetMode=PixelOffsetMode.Default;
         g.DrawRectangle(line,paper.X,paper.Y,paper.Width,paper.Height);
         using var leading=new Pen(Color.FromArgb(0,118,150),4);

@@ -97,10 +97,11 @@ public sealed class HistoryStore
     /// <param name="outputPath">Exported file path; empty for printer submissions.</param>
     /// <param name="sourceEventId">Optional ID of the event loaded before this generation.</param>
     /// <param name="timestamp">Optional deterministic event instant; null uses current UTC.</param>
-    /// <returns>Generated numeric event ID.</returns>
+    /// <returns>Generated numeric event ID, or zero for excluded free-text work.</returns>
     /// <exception cref="ArgumentException">Action is unknown or a required code serial is empty.</exception>
     public long Add(string action,WorkState state,string outputPath="",long? sourceEventId=null,DateTimeOffset? timestamp=null)
     {
+        if(state.FreeTextMode)return 0; // Free text is a draft/output, not an inventory event.
         if(!Actions.Contains(action))throw new ArgumentException("Unknown history action.");
         if(string.IsNullOrWhiteSpace(state.Serial) && (state.ShowCode || action=="ExportCode"))throw new ArgumentException("A generated code requires a serial.");
         using var connection=Open();using var command=connection.CreateCommand();
@@ -155,7 +156,7 @@ public sealed class HistoryStore
         if(query.FromUtc is { } from){where.Add("created_utc >= $from");command.Parameters.AddWithValue("$from",from.ToUniversalTime().ToString("O",CultureInfo.InvariantCulture));}
         if(query.ToUtcExclusive is { } to){where.Add("created_utc < $to");command.Parameters.AddWithValue("$to",to.ToUniversalTime().ToString("O",CultureInfo.InvariantCulture));}
         command.CommandText="SELECT id,created_utc,action,state_json,output_path,source_event_id FROM events"+(where.Count>0?" WHERE "+string.Join(" AND ",where):"")+" ORDER BY id DESC";
-        using var reader=command.ExecuteReader();var rows=new List<HistoryEvent>();while(reader.Read())rows.Add(Read(reader));return rows;
+        using var reader=command.ExecuteReader();var rows=new List<HistoryEvent>();while(reader.Read()){var row=Read(reader);if(!row.State.FreeTextMode)rows.Add(row);}return rows;
     }
     /// <summary>
     /// Moves/restores selected IDs in one transaction; events remain unchanged and only trash membership

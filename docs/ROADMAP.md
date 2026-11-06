@@ -2,6 +2,8 @@
 
 ## Completed
 
+- 0.21: inventory-only history, Ctrl+P on Labels and correlated asynchronous Windows job progress with temporary notices.
+
 - 0.20: fixed printer/paper-exit preview, first-edge marker and explicit distinction between physical stock dimensions and content rotation.
 
 - 0.19: wrapped asset headings, dedicated free-text mode, paper-feed preview rails and automatic text-space reclamation when codes shrink.

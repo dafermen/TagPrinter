@@ -36,27 +36,32 @@ public static class RawPrinter
     [DllImport("winspool.drv",SetLastError=true)] static extern bool WritePrinter(IntPtr handle,byte[] bytes,int count,out int written);
     /// <summary>
     /// Opens a printer and RAW document/page, verifies every ASCII byte was accepted and closes native
-    /// scopes with nested finally blocks.
+    /// scopes with ownership flags and a finally block.
     /// </summary>
     /// <param name="printer">Installed Windows printer name for RAW submission.</param>
     /// <param name="zpl">ASCII ZPL commands sent directly as RAW spooler bytes.</param>
-    public static void Send(string printer,string zpl)
+    /// <param name="documentName">Unique title used to correlate only this submitted job.</param>
+    /// <returns>Windows spooler job identifier, not a physical-output confirmation.</returns>
+    public static int Send(string printer,string zpl,string documentName="TagPrinter label")
     {
-        // Opening a handle does not print. Each successful handle/document/page scope has a matching finally
-        // cleanup below.
-        if(!OpenPrinter(printer,out var handle,IntPtr.Zero)) throw new Win32Exception();
+        if(!OpenPrinter(printer,out var handle,IntPtr.Zero))throw new Win32Exception();
+        bool documentOpen=false,pageOpen=false;
         try
         {
-            var info=new DocInfo { Name="Etiqueta de inventario",Type="RAW" };
-            if(StartDocPrinter(handle,1,ref info)==0) throw new Win32Exception();
-            try
-            {
-                if(!StartPagePrinter(handle)) throw new Win32Exception();
-                try { var data=Encoding.ASCII.GetBytes(zpl); if(!WritePrinter(handle,data,data.Length,out int written)||written!=data.Length) throw new Win32Exception(); }
-                finally { EndPagePrinter(handle); }
-            }
-            finally { EndDocPrinter(handle); }
+            var info=new DocInfo{Name=documentName,Type="RAW"};
+            int id=StartDocPrinter(handle,1,ref info);if(id==0)throw new Win32Exception();documentOpen=true;
+            if(!StartPagePrinter(handle))throw new Win32Exception();pageOpen=true;
+            var data=Encoding.ASCII.GetBytes(zpl);
+            if(!WritePrinter(handle,data,data.Length,out int written)||written!=data.Length)throw new Win32Exception();
+            if(!EndPagePrinter(handle))throw new Win32Exception();pageOpen=false;
+            if(!EndDocPrinter(handle))throw new Win32Exception();documentOpen=false;
+            return id;
         }
-        finally { ClosePrinter(handle); }
+        finally
+        {
+            if(pageOpen)EndPagePrinter(handle);
+            if(documentOpen)EndDocPrinter(handle);
+            ClosePrinter(handle);
+        }
     }
 }

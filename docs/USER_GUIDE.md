@@ -1,4 +1,4 @@
-# User guide — TagPrinter 0.20
+# User guide — TagPrinter 0.21
 
 ## Start and update
 
@@ -14,7 +14,7 @@ The Code row chooses QR or Code 128 and whether the complete label includes a sy
 
 Turn off Code for text-only output. Text then uses the entire content area and serial becomes optional. At least one nonempty visible text field is required. New asset clears the six text fields and loaded-record reference, retaining design/printer preferences.
 
-Enable **Free text only** to write a label without asset fields or codes. Long asset headings wrap; subsequent fields keep their space. See [Flexible labels](FLEXIBLE_LABELS.md) for examples, history behavior and paper-feed references.
+Enable **Free text only** to write a label without asset fields or codes. Printing/exporting in this mode creates no inventory history; autosave still keeps the draft. Long asset headings wrap; subsequent fields keep their space. See [Flexible labels](FLEXIBLE_LABELS.md) for examples, history behavior and paper-feed references.
 
 ## Media and orientation — section 02
 
@@ -39,6 +39,8 @@ Inner margin is 1–5 mm. The optional guide is preview-only. Print offsets shif
 Select an installed printer, resolution (203/300 DPI), copies and method. Windows driver works through PrintDocument; direct ZPL is for printers that understand ZPL. Selecting a printer model alone does not establish ZPL compatibility.
 
 The visible summary repeats destination, copies and method. Check it before Print labels. Also configure material, calibration and scaling in the driver. Print a sample and scan it before a batch. A successful submission does not confirm physical output or RFID encoding.
+
+On Labels, **Ctrl + P** runs Print labels. A temporary notice follows the submitted Windows job through the observable queue states and hides after a terminal message. Queue completion/removal is not physical-output confirmation. See [Print-job progress](PRINT_JOB_PROGRESS.md).
 
 ## Export
 

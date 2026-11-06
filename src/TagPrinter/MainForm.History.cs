@@ -65,7 +65,9 @@ public partial class MainForm
             string hint=string.Format(Ui.T("Incluir {0} en la etiqueta","Include {0} on the label"),item.Caption.Text);
             item.Check.AccessibleName=hint;aboutTip.SetToolTip(item.Check,hint);
         }
-        ShowPrinterStatus(lastPrinterState);
+        aboutTip.SetToolTip(print,Ui.T("Imprimir etiqueta · Ctrl + P","Print label · Ctrl + P"));
+        aboutTip.SetToolTip(freeTextMode,Ui.T("Solo texto libre: no se guarda en el historial de inventario. El trabajo se guarda automáticamente.","Free text is excluded from inventory history. Last work is still saved automatically."));
+        ShowPrinterStatus(lastPrinterState);RefreshJobNotice();
         reports?.RefreshLanguage();dashboardTab.Text="Dashboard";dashboard?.RefreshLanguage();
     }
     /// <summary>Captures the generated content without assigning hidden asset identifiers to free-text output.</summary>
@@ -93,11 +95,21 @@ public partial class MainForm
     /// <param name="action">Stable code describing the completed external output.</param>
     /// <param name="path">File path to read or write; test callers use their isolated verification directory.</param>
     /// <param name="snapshot">Trimmed saved-work state associated with completed output.</param>
-    void RecordGeneration(string action,string path,WorkState snapshot)
+    /// <param name="skipHistory">Excludes standalone code output invoked while the editor is in Free text mode.</param>
+    void RecordGeneration(string action,string path,WorkState snapshot,bool skipHistory=false)=>RecordSnapshot(action,path,snapshot,sourceHistoryId,skipHistory);
+
+    /// <summary>Records immutable captured provenance, even if the editor changes while an asynchronous print is submitted.</summary>
+    /// <param name="action">Completed output action.</param>
+    /// <param name="path">Output path, empty for spooler submissions.</param>
+    /// <param name="snapshot">Original submitted work, independent of later edits.</param>
+    /// <param name="source">History source captured with that work.</param>
+    /// <param name="skipHistory">Excludes standalone code requested from Free text mode.</param>
+    private void RecordSnapshot(string action,string path,WorkState snapshot,long? source,bool skipHistory=false)
     {
+        if(snapshot.FreeTextMode || skipHistory)return;
         // Output and SQLite are separate systems. A failed history insert must not automatically repeat a
         // print already submitted.
-        try{history.Add(action,snapshot,path,sourceHistoryId);}
+        try{if(source is {} id && history.Get(id) is null)source=null;history.Add(action,snapshot,path,source);}
         catch(Exception ex)
         {
             MessageBox.Show(this,Ui.T("La operación terminó, pero no se pudo guardar el historial. No repitas una impresión automáticamente.\n","The operation completed, but its history could not be saved. Do not automatically repeat a print job.\n")+ex.Message,"TagPrinter",MessageBoxButtons.OK,MessageBoxIcon.Warning);
@@ -124,7 +136,7 @@ public partial class MainForm
     internal void ExportCodeFile(string path)
     {
         var snapshot=GenerationState(true);using var image=CodeRenderer.Render(snapshot.Serial,snapshot.Code==1,int.Parse(dpi.Text),snapshot.CodePercent);
-        image.Save(path,System.Drawing.Imaging.ImageFormat.Png);RecordGeneration("ExportCode",path,snapshot);SaveConfig();
+        image.Save(path,System.Drawing.Imaging.ImageFormat.Png);RecordGeneration("ExportCode",path,snapshot,freeTextMode.Checked);SaveConfig();
     }
     /// <summary>
     /// Loads exact historical size as custom, retains current language and clears an unavailable printer;

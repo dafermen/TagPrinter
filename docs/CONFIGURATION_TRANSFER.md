@@ -54,3 +54,5 @@ CenterText is included with the full WorkState/catalog defaults and restores the
 Since 0.19, FreeTextMode/FreeText and paper-exit diagram visibility and legacy direction are included. Code percentage now releases unused space to text; code module sizing and quiet zones remain unchanged. Old snapshots use the new layout when rendered. See FLEXIBLE_LABELS.md.
 
 In 0.20 the old direction value remains round-trippable but is ignored by the fixed downward paper-exit diagram. ShowFeedGuide still controls preview visibility. Physical dimensions and ContentRotation remain independent.
+
+Transient print-job notices, live job IDs and current queue observations are not transferred. Free-text drafts remain included even though they produce no inventory DB events in 0.21.

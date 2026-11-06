@@ -1,4 +1,4 @@
-# Architecture — TagPrinter 0.20
+# Architecture — TagPrinter 0.21
 
 TagPrinter is a Windows Forms application targeting .NET 8. It uses ZXing.Net 0.16.11 for symbols and Microsoft.Data.Sqlite 8.0.28 for embedded local storage. The Windows x64 portable bundles its runtime; printer drivers remain external.
 
@@ -82,8 +82,12 @@ ConfigurationTransfer.cs defines the versioned bundle, strict validation and sta
 
 ## Flexible layout — 0.19
 
-LabelData includes a dedicated free-text source. LabelRenderer disables code for that mode, measures complete wrapped field heights, verifies that all characters fit, then assigns contiguous or spaced rectangles. Actual symbol dimensions determine text space after integral module scaling. MainForm.FeedGuide synchronizes physical size/visibility with PaperFeedPreview, which paints a fixed printer and leading-edge reference around the raster; the shared renderer never receives diagram state. WorkState stores free-text and physical-reference options; the output snapshot clears hidden asset identifiers for free-text history. See FLEXIBLE_LABELS.md.
+LabelData includes a dedicated free-text source. LabelRenderer disables code for that mode, measures complete wrapped field heights, verifies that all characters fit, then assigns contiguous or spaced rectangles. Actual symbol dimensions determine text space after integral module scaling. MainForm.FeedGuide synchronizes physical size/visibility with PaperFeedPreview, which paints a fixed printer and leading-edge reference around the raster; the shared renderer never receives diagram state. WorkState stores free-text and physical-reference options; free-text output is excluded from new inventory history while its draft remains in autosave/configuration. See FLEXIBLE_LABELS.md.
 
 ## Fixed paper-exit preview — 0.20
 
 PaperFeedPreview owns only paint logic around its inherited Image, not another render pipeline. It lays out physical media below a fixed printer and marks the bottom leading edge. MainForm.UpdatePaperPreview synchronizes size/visibility; the obsolete feed-direction control is removed, while legacy state is retained for file compatibility. Export and printing still use LabelRenderer directly. See PAPER_EXIT_PREVIEW.md.
+
+## Inventory-only history and asynchronous print jobs — 0.21
+
+MainForm.Printing routes Ctrl+P/button into one busy-gated command, captures state/provenance before any await, transfers bitmap/document ownership to a submission worker and correlates the result with a unique title plus optional RAW ID. WindowsPrintJobs bounds native reads; PrintJobTracker maps observations to transient UI states. Lifetime cancellation stops monitoring, never the submitted spooler job. RecordSnapshot skips Free text and HistoryStore.Add independently rejects those events; Query hides marked legacy rows. See PRINT_JOB_PROGRESS.md.

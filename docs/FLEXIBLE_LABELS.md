@@ -8,7 +8,7 @@ Asset type wraps onto additional lines at the available text width. Its measured
 
 In 01 Asset details, enable **Free text only** and write up to 2000 characters, including explicit line breaks. Only this text is rendered: no asset fields, serial or symbol is required. Fonts, bold, centering, margins and content rotation still apply. Blank content is rejected. Switching modes keeps the asset editors' values in current work/autosave/configuration; **New asset** clears both sets of text.
 
-A full-label output history snapshot stores the free text, a blank serial and no code, so Dashboard does not count the hidden asset identifier. The first 80 free-text characters appear as the report's Asset type description; the full text remains in StateJson and is restored for reprinting. Hidden asset values are not carried into that free-text output snapshot. Standalone Export Code remains independent and uses the asset serial; it requires a valid serial even in free-text mode.
+Free text produces no new inventory database events, so it does not appear in Reports or Dashboard. Last-work autosave and full configuration transfer still preserve the draft. Old snapshots explicitly marked FreeTextMode are hidden without deletion. Standalone Export Code remains independent and uses the asset serial; it requires a valid serial even in free-text mode.
 
 ## Space returned by smaller codes
 
@@ -20,10 +20,10 @@ This intentionally changes text placement even at 100 percent if the old reserva
 
 Version 0.20 replaces the user-selected arrows with a fixed printer, downward feed path and first-edge marker. Content rotates inside unchanged physical stock. See [Printer and paper-exit preview](PAPER_EXIT_PREVIEW.md).
 
-FreeTextMode/FreeText and preview visibility survive autosave/restart, full configuration transfer and output-history restoration. The old FeedDirection value is retained for compatibility but no longer affects the diagram.
+FreeTextMode/FreeText and preview visibility survive autosave/restart, full configuration transfer and older output-history snapshot compatibility. The old FeedDirection value is retained for compatibility but no longer affects the diagram.
 
 ## Implementation and verification
 
 LabelRenderer measures wrapped field heights and uses actual symbol dimensions to allocate remaining space. PaperFeedPreview draws the printer scene around the existing image, outside exported/printed pixels. WorkState carries new fields with compatible defaults; configuration transfer bounds free text to 2000 characters and the preserved legacy direction to 0–3.
 
-LayoutImprovementsTests checks real pixels, the final character of a wrapped heading, text inside the reclaimed QR region, free-text field isolation, blank rejection, history/transfer/restart and byte-identical PNG output with the printer scene on/off. Existing decode and rotation tests remain in the full suite. Physical printer/scanner confirmation is deferred until hardware is available.
+LayoutImprovementsTests checks real pixels, the final character of a wrapped heading, text inside the reclaimed QR region, free-text field isolation, blank rejection, inventory exclusion/transfer/restart and byte-identical PNG output with the printer scene on/off. Existing decode and rotation tests remain in the full suite. Physical printer/scanner confirmation is deferred until hardware is available.

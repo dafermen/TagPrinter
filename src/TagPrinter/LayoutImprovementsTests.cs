@@ -38,10 +38,10 @@ internal static class LayoutImprovementsTests
         {
             form.Show();form.Restore(state);Application.DoEvents();
             form.ExportTagFile(Path.Combine(root,"guide-on.png"));
-            var row=form.History.Query().Single();if(row.State.Serial!="" || row.State.ShowCode || !row.State.FreeTextMode || row.State.FreeText!=state.FreeText)throw new Exception("Free-text event indexed a hidden serial");
+            if(form.History.Query().Count!=0)throw new Exception("Free text entered inventory history");
             form.Restore(form.CaptureWork() with {ShowFeedGuide=false});form.ExportTagFile(Path.Combine(root,"guide-off.png"));
             if(!File.ReadAllBytes(Path.Combine(root,"guide-on.png")).SequenceEqual(File.ReadAllBytes(Path.Combine(root,"guide-off.png"))))throw new Exception("Feed guide leaked into output");
-            form.LoadHistoryEvent(row);if(!form.CaptureWork().FreeTextMode || form.CaptureWork().FreeText!=state.FreeText)throw new Exception("Free-text history restoration failed");
+            if(form.History.Query().Count!=0)throw new Exception("Free-text guide export entered inventory history");
             form.Restore(state);string transfer=Path.Combine(Path.GetTempPath(),"TagPrinter-layout-"+Guid.NewGuid()+".json");
             form.ExportConfigurationFile(transfer);var imported=ConfigurationTransfer.Load(transfer);File.Delete(transfer);
             if(imported.Work.FreeText!=state.FreeText || imported.Work.FeedDirection!=1 || !imported.Work.FreeTextMode)throw new Exception("Transfer lost layout options");

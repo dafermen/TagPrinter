@@ -14,7 +14,7 @@ See [full configuration transfer and code size](docs/CONFIGURATION_TRANSFER.md) 
 
 See [centering, empty recycle bin and Windows status](docs/TEXT_TRASH_PRINTER_STATUS.md) for the latest usability options.
 
-## Current features — 0.20
+## Current features — 0.21
 
 - Asset type, brand, model, serial, part number and MAC address, with inline visibility controls.
 - Optional QR/Code128, text-only labels, preset/custom media and four layouts.
@@ -62,7 +62,7 @@ dotnet run --project src/TagPrinter
 
 The project emits an XML API documentation file alongside build output for editor/tooling use. Source comments explain every explicit class/record and method, saved properties, meaningful state and complex algorithms. Read the student guide before changing rendering or persistence.
 
-Publish builds and verifies the self-contained executable, then creates artifacts/TagPrinter-v0.20-PORTABLE-Windows-x64.zip. Generated outputs and personal databases are excluded from Git. Distribute the entire portable folder.
+Publish builds and verifies the self-contained executable, then creates artifacts/TagPrinter-v0.21-PORTABLE-Windows-x64.zip. Generated outputs and personal databases are excluded from Git. Distribute the entire portable folder.
 
 ## Data
 
@@ -95,3 +95,5 @@ Third-party libraries, bundled runtimes and GitHub artwork retain their own lice
 Flexible labels: wrapped headings, dedicated free text, code space reclamation and fixed printer/paper-exit reference. See [the guide](docs/FLEXIBLE_LABELS.md).
 
 The [paper-exit preview](docs/PAPER_EXIT_PREVIEW.md) keeps a fixed printer and leading-edge reference while label content rotates.
+
+Free text stays out of inventory history. Ctrl+P on Labels shares the print command, with a temporary [Windows job-progress notice](docs/PRINT_JOB_PROGRESS.md).

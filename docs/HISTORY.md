@@ -1,8 +1,8 @@
-# SQLite history, Reports and Dashboard — 0.15
+# SQLite history, Reports and Dashboard — 0.21
 
 ## Event contract
 
-Each completed output creates one independent event, even when its serial repeats.
+Each completed inventory output creates one independent event, even when its serial repeats. Free text output is excluded.
 
 | Stable action | Meaning |
 |---|---|
@@ -72,3 +72,7 @@ Settings transfer does not import/export/change history or create output events.
 ## Permanent recycle-bin emptying — 0.18
 
 Empty recycle bin deletes all recycled events after confirmation, independent of filters. Active records survive; source_event_id links to removed records become null within the same transaction. The editor drops a purged loaded-source reference. Exported files/queued jobs are untouched. CenterText is included in WorkState; older rows use false. See TEXT_TRASH_PRINTER_STATUS.md.
+
+## Inventory-only events — 0.21
+
+FreeTextMode=true work does not add new events for printing or any export. Last-work autosave/configuration transfer still preserves its draft. Query filters explicitly marked legacy Free text rows out of Reports, CSV selections and Dashboard without deleting them; backups can still contain those older rows. Ordinary asset-field labels without a symbol remain inventory. PrintSubmitted means accepted by the spooler, not paper output; transient job monitoring does not rewrite the stored event. See PRINT_JOB_PROGRESS.md.

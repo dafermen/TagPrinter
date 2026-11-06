@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.21.0 — 2026-11-05
+
+- Exclude Free text from printing/export inventory events while retaining autosave and configuration transfer; hide explicitly marked older Free text rows in Reports/Dashboard without erasing them.
+- Share Ctrl+P on Labels and the print button, with validation, immutable work/provenance capture and duplicate-submission suppression.
+- Submit driver/RAW jobs off-thread and show a temporary per-job notice, exact title/ID correlation, queue/error/removal states, bounded polling/read timeout and automatic dismissal.
+- Retain RAW spooler job IDs and check page/document completion; never claim queue completion proves physical printing or RFID.
+
+
 ## 0.20.0 — 2026-11-05
 
 - Replace user-selected feed arrows with a fixed printer above the actual label bitmap, downward advance and first-edge-out indicator.

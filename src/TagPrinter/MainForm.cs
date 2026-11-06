@@ -119,6 +119,7 @@ public partial class MainForm : Form
     /// <param name="printerStatusReader">Optional asynchronous status provider; isolated tests otherwise avoid native printer queries.</param>
     internal MainForm(string? configPath,AppConfig? configuration,string? historyPath,Func<string,Task<PrinterStatusSnapshot>>? printerStatusReader)
     {
+        isolatedPrinting=configPath is not null;
         statusReader=printerStatusReader ?? (configPath is null
             ? name=>Task.Run(()=>WindowsPrinterStatus.Read(name))
             : name=>Task.FromResult(new PrinterStatusSnapshot("unknown",Detail:"Isolated tests do not query printer hardware.")));
@@ -127,7 +128,7 @@ public partial class MainForm : Form
         catalogPath=configPath is not null?Path.Combine(Path.GetDirectoryName(Path.GetFullPath(configPath))!,"catalog.json"):Path.Combine(StartupDiagnostics.InstallationRoot,"config.json");
         appConfig=configuration ?? AppConfig.Load(catalogPath);
         Ui.Language=appConfig.Defaults.Language;
-        Text="TagPrinter | v0.20";
+        Text="TagPrinter | v0.21";
         using var iconStream=typeof(MainForm).Assembly.GetManifestResourceStream("TagPrinter.TagPrinter.ico");
         if(iconStream is not null)Icon=new Icon(iconStream); Width=1160; Height=850; MinimumSize=new Size(980,720);
         Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;
@@ -237,15 +238,16 @@ public partial class MainForm : Form
         right.Controls.Add(new Label{Text=Ui.T("Vista de la plantilla","Template preview"),Font=new Font("Segoe UI",20,FontStyle.Bold),AutoSize=true});
         right.Controls.Add(previewDescription);previewFrame.Controls.Add(preview);previewFrame.Controls.Add(previewError);right.Controls.Add(previewFrame);
         right.Controls.Add(new Label{Text=Ui.T("RFID: esta versión imprime el contenido visible.\nLa grabación y verificación del chip todavía no están habilitadas.","RFID: this version prints the visible content.\nChip encoding and verification are not enabled yet."),Dock=DockStyle.Fill,Padding=new Padding(8),ForeColor=Color.FromArgb(120,70,10)});
-        var actionArea=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=3,Margin=Padding.Empty};
-        actionArea.RowStyles.Add(new RowStyle(SizeType.Absolute,42));actionArea.RowStyles.Add(new RowStyle(SizeType.Absolute,30));actionArea.RowStyles.Add(new RowStyle(SizeType.Percent,100));
+        var actionArea=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=4,Margin=Padding.Empty};
+        actionArea.RowStyles.Add(new RowStyle(SizeType.Absolute,42));actionArea.RowStyles.Add(new RowStyle(SizeType.Absolute,30));actionArea.RowStyles.Add(jobNoticeRow);actionArea.RowStyles.Add(new RowStyle(SizeType.Percent,100));
+        actionArea.Controls.Add(jobNotice,0,2);printActionsRow=right.RowStyles[4];
         actionArea.Controls.Add(printSummary,0,0);actionArea.Controls.Add(CreatePrinterStatusRow(),0,1);
         var buttons=new FlowLayoutPanel{Dock=DockStyle.Fill,Margin=Padding.Empty};
         var newAsset=new Button{Text=Ui.T("Nuevo activo","New asset"),AutoSize=true};
         newAsset.Click+=(_,_)=>StartNewAsset();buttons.Controls.Add(newAsset); var export=new Button{Text=Ui.T("Exportar etiqueta","Export Tag"),AutoSize=true};var zpl=new Button{Text=Ui.T("Guardar ZPL…","Save ZPL…"),AutoSize=true};
         var codeExport=new Button{Text=Ui.T("Exportar código","Export Code"),AutoSize=true};
         codeExport.Click+=(_,_)=>Guard(ExportCode);
-        export.Click+=(_,_)=>Guard(()=>Export(false));zpl.Click+=(_,_)=>Guard(()=>Export(true));print.Click+=(_,_)=>Guard(Print);buttons.Controls.AddRange([export,codeExport,zpl,print]);actionArea.Controls.Add(buttons,0,2);right.Controls.Add(actionArea);
+        export.Click+=(_,_)=>Guard(()=>Export(false));zpl.Click+=(_,_)=>Guard(()=>Export(true));print.Click+=(_,_)=>_ = RequestPrintAsync();buttons.Controls.AddRange([export,codeExport,zpl,print]);actionArea.Controls.Add(buttons,0,3);right.Controls.Add(actionArea);
         root.Controls.Add(fields,0,0);root.Controls.Add(right,1,0);InitializeWorkspace(root);
         sizes.SelectedIndex=appConfig.LabelSizes.FindIndex(p=>p.Id==appConfig.Defaults.LabelPresetId);
         layout.SelectedIndex=appConfig.Defaults.Layout;code.SelectedIndex=appConfig.Defaults.Qr?1:0;mode.SelectedIndex=0;dpi.SelectedIndex=appConfig.Defaults.Dpi==300?1:0;
@@ -343,7 +345,7 @@ public partial class MainForm : Form
             var next=LabelRenderer.Render(Data(),showGuides.Checked,out effectiveFontPercent);var old=preview.Image;preview.Image=next;old?.Dispose();
             fontValue.Text=autoFont.Checked?$"Auto ({effectiveFontPercent} %)":$"{fontPercent} %";
             previewError.Visible=false;
-            status.Text=$"{width.Value} × {height.Value} mm · {dpi.Text} DPI · {next.Width} × {next.Height} px.\n"+(!freeTextMode.Checked && showCode.Checked?Ui.T("Escanea una prueba impresa. En etiquetas pequeñas las barras pueden medir un solo punto.","Scan a printed sample. Small labels may use one-dot barcode bars."):Ui.T("Etiqueta de solo texto.","Text-only label."));print.Enabled=true;
+            status.Text=$"{width.Value} × {height.Value} mm · {dpi.Text} DPI · {next.Width} × {next.Height} px.\n"+(!freeTextMode.Checked && showCode.Checked?Ui.T("Escanea una prueba impresa. En etiquetas pequeñas las barras pueden medir un solo punto.","Scan a printed sample. Small labels may use one-dot barcode bars."):Ui.T("Etiqueta de solo texto.","Text-only label."));print.Enabled=!printBusy;
         }
         catch(Exception ex) {previewError.ForeColor=string.IsNullOrWhiteSpace(serial.Text)?Color.DimGray:Color.Firebrick;fontValue.Text=autoFont.Checked?"Auto":$"{fontPercent} %";var old=preview.Image;preview.Image=null;old?.Dispose();status.Text=ex.Message;previewError.Text=ex.Message;previewError.Visible=true;previewError.BringToFront();print.Enabled=false;}
     }
@@ -366,12 +368,7 @@ public partial class MainForm : Form
     PrintDocument Document()
     {
         if(printers.SelectedIndex<0)throw new InvalidOperationException(Ui.T("Selecciona una impresora instalada en Windows.","Select a Windows printer."));
-        var doc=new PrintDocument();doc.PrinterSettings.PrinterName=printers.Text;
-        if(!doc.PrinterSettings.IsValid){doc.Dispose();throw new InvalidOperationException(Ui.T("La impresora seleccionada no está disponible.","The selected printer is unavailable."));}
-        doc.DocumentName=Ui.T("Etiqueta de inventario","Inventory label");
-        doc.DefaultPageSettings.PaperSize=new PaperSize(Ui.T("Etiqueta personalizada","Custom label"),(int)Math.Round(width.Value/25.4m*100),(int)Math.Round(height.Value/25.4m*100));
-        doc.DefaultPageSettings.Margins=new Margins(0,0,0,0);doc.DefaultPageSettings.Landscape=false;
-        return doc;
+        return CreatePrintDocument(CaptureWork());
     }
     /// <summary>
     /// Opens the Windows printer dialog and retains its printer selection. Calibration remains a driver
@@ -381,33 +378,6 @@ public partial class MainForm : Form
     {
         using var doc=Document();using var dialog=new PrintDialog{Document=doc,UseEXDialog=true};
         if(dialog.ShowDialog(this)==DialogResult.OK){printers.SelectedItem=doc.PrinterSettings.PrinterName;MessageBox.Show(this,Ui.T("La aplicación usa el tamaño seleccionado en Etiqueta y plantilla. Ajusta también el tamaño del material y la calibración en el controlador de Windows.","The app uses the size selected in Label and template. Also configure media size and calibration in the Windows driver."));}
-    }
-    /// <summary>
-    /// Renders once and submits RAW ZPL or one Windows-driver page per copy, then records submission
-    /// without claiming physical output.
-    /// </summary>
-    void Print()
-    {
-        var snapshot=GenerationState();using var image=LabelRenderer.Render(Data());using var doc=Document();
-        if(mode.SelectedIndex==1) RawPrinter.Send(printers.Text,LabelRenderer.ToZpl(image,(int)copies.Value));
-        else
-        {
-            // Reuse one raster across pages. remaining counts requested copies and determines HasMorePages.
-            int remaining=(int)copies.Value;
-            doc.PrintPage+=(_,e)=>
-            {
-                // This print surface uses hundredths of an inch. Remove the hardware-margin origin before
-                // placing the full-label raster.
-                var g=e.Graphics!;g.TranslateTransform(-e.PageSettings.HardMarginX,-e.PageSettings.HardMarginY);
-                g.InterpolationMode=System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
-                g.PixelOffsetMode=System.Drawing.Drawing2D.PixelOffsetMode.Half;
-                g.DrawImage(image,new RectangleF(0,0,(float)(width.Value/25.4m*100),(float)(height.Value/25.4m*100)));
-                e.HasMorePages=--remaining>0;
-            };
-            doc.Print();
-        }
-        RecordGeneration("PrintSubmitted","",snapshot);
-        SaveConfig();status.Text=string.Format(Ui.T("Enviado a {0}: {1} etiqueta(s). No confirma impresión física ni RFID.","Sent to {0}: {1} label(s). This does not confirm physical printing or RFID."),printers.Text,copies.Value);
     }
     /// <summary>Requests a full-label PNG/ZPL destination; cancellation creates neither file nor event.</summary>
     /// <param name="zpl">True selects ZPL file output; false selects PNG. In RawPrinter.Send this is the ASCII command stream.</param>
@@ -499,5 +469,5 @@ public partial class MainForm : Form
     }
     /// <summary>Releases owned timer, tooltip and bitmaps, then lets the base form dispose controls.</summary>
     /// <param name="disposing">True for explicit managed disposal; passed to the base class.</param>
-    protected override void Dispose(bool disposing) {if(disposing){DisposePrinterStatus();autosave.Dispose();aboutTip.Dispose();aboutButton.Image?.Dispose();preview.Image?.Dispose();}base.Dispose(disposing);}
+    protected override void Dispose(bool disposing) {if(disposing){DisposePrinting();DisposePrinterStatus();autosave.Dispose();aboutTip.Dispose();aboutButton.Image?.Dispose();preview.Image?.Dispose();}base.Dispose(disposing);}
 }

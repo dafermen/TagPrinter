@@ -162,3 +162,9 @@ Free text is a separate input source selected by a Boolean. It keeps ordinary ed
 ## Fixed printer reference — 0.20
 
 A rotation of content is different from a change to physical paper dimensions. PaperFeedPreview takes the final raster dimensions, which stay the same for quarter-turn content rotation. Its OnPaint draws a fixed printer and leading-edge marker around that raster. This separates output data from explanatory UI: printing/export can never accidentally draw a printer on the label. Pixel tests compare the same header across rotations and the live undecorated Image with exported PNG bytes.
+
+## Async submission and reliable observations — 0.21
+
+Capture immutable WorkState and source ID before awaiting Windows. The user can edit the form while an await yields, so reading controls later would record the wrong asset. A worker owns/disposes the rendered bitmap and PrintDocument; UI continuations only update live controls. A busy gate handles repeated Ctrl+P through the same command as the button. Cancellation stops observation, not printing.
+
+PrintJobTracker is a small state machine: missing before first observation is uncertain; missing after observation means only that the job left the queue. Exact unique document titles prevent confusing another application's job with ours. A timeout is not success. FreeTextMode is a business rule enforced both at the output coordinator and at HistoryStore.Add; no new event is inserted, while ordinary JSON autosave remains separate. Tests count SQL rows directly to avoid a filtered report hiding an accidental insert.
