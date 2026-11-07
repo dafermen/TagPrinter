@@ -1,6 +1,6 @@
 # Documentation index
 
-These English manuals describe application version 0.24. Source XML comments explain individual members; algorithm comments explain meaningful intermediate variables and decisions. The UI still supports English and Spanish.
+These English manuals describe application version 0.25. Source XML comments explain individual members; algorithm comments explain meaningful intermediate variables and decisions. The UI still supports English and Spanish.
 
 ## For users
 
@@ -43,3 +43,5 @@ These English manuals describe application version 0.24. Source XML comments exp
 - [Daily asset operations](ASSET_OPERATIONS.md): recognition, catalogs, workflows, administrative CSV, scoped Dashboard links and backup feedback.
 - [Asset administration](ASSETS.md): canonical records, movements, label links, Dashboard and protected schema migration.
 - [Third-party notices](THIRD_PARTY_NOTICES.md): pinned Fluent assets and their upstream terms.
+
+- [Large histories and inventories](PERFORMANCE.md): query plans, background/paged reads, streaming exports, cancellation and measured scale.

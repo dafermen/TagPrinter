@@ -13,6 +13,7 @@ internal static class Program
         ApplicationConfiguration.Initialize();
         if(args.Contains("--self-test"))
         {
+            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException);
             // Keep a real UI message loop alive for async continuations across many synthetic windows.
             // The off-screen host prevents closing a test dialog from disposing its synchronization context.
             using var host=new AppWindow();
@@ -20,7 +21,8 @@ internal static class Program
             {
                 try
                 {
-                    if(args.Contains("--asset-operations-only")){string folder=Path.Combine(AppContext.BaseDirectory,"verification");Directory.CreateDirectory(folder);AssetOperationsTests.Run(folder);}
+                    if(args.Contains("--performance-only")){string folder=Path.Combine(AppContext.BaseDirectory,"verification");Directory.CreateDirectory(folder);PerformanceTests.Run(folder);}
+                    else if(args.Contains("--asset-operations-only")){string folder=Path.Combine(AppContext.BaseDirectory,"verification");Directory.CreateDirectory(folder);AssetOperationsTests.Run(folder);}
                     else SelfTest.Run();
                 }
                 catch(Exception error)
@@ -30,7 +32,11 @@ internal static class Program
                 }
                 finally{host.Close();}
             };
-            Application.Run(host);
+            try{Application.Run(host);}
+            catch(Exception error)
+            {
+                string folder=Path.Combine(AppContext.BaseDirectory,"verification");Directory.CreateDirectory(folder);File.WriteAllText(Path.Combine(folder,"self-test-error.txt"),error.ToString());Environment.ExitCode=1;
+            }
             return;
         }
         Application.ThreadException+=(_,e)=>Report(e.Exception);

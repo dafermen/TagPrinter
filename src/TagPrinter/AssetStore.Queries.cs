@@ -2,7 +2,7 @@ using System.Text.Json;
 namespace TagPrinter;
 
 /// <summary>Exact Dashboard/list navigation scope; null differs from an empty (unassigned) location or custodian.</summary>
-internal sealed record AssetFilter(string Search="",string Status="",string? Type=null,string? Brand=null,string? Model=null,string? Location=null,string? Custodian=null,DateTimeOffset? FromUtc=null,DateTimeOffset? ToUtc=null,bool ExcludeRetired=false);
+internal sealed record AssetFilter(string Search="",string Status="",string? Type=null,string? Brand=null,string? Model=null,string? Location=null,string? Custodian=null,DateTimeOffset? FromUtc=null,DateTimeOffset? ToUtc=null,bool ExcludeRetired=false,bool ExactSerial=false);
 /// <summary>One canonical grouping with raw values retained for exact drill-down.</summary>
 internal sealed record AssetGroup(string Type,string Brand,string Model,string Location,string Custodian,long Count);
 internal sealed partial class AssetStore
@@ -12,14 +12,18 @@ internal sealed partial class AssetStore
     /// <summary>Reads a bounded page under an exact navigation scope.</summary>
     internal List<AssetRecord> Query(AssetFilter filter,int offset=0,int limit=50,string sort="Updated",bool descending=true)=>Query(filter.Search,filter.Status,offset,limit,filter.Type,filter.Brand,filter.Model,sort,descending,filter);
     /// <summary>Streams a filtered master export without loading all rows into the UI.</summary>
-    internal void ExportCsv(string path,AssetFilter filter)
+    internal long ExportCsv(string path,AssetFilter filter,CancellationToken token=default,IProgress<long>? progress=null)
     {
-        IEnumerable<AssetRecord> Rows()
+        if(Path.GetFullPath(path).Equals(history.DatabasePath,StringComparison.OrdinalIgnoreCase))throw new ArgumentException("Choose a CSV output path.");
+        return DatabaseRead.Run(history,token,scope=>
         {
-            using var c=history.Open();using var cmd=c.CreateCommand();cmd.CommandText="SELECT record_json FROM assets WHERE "+Where(cmd,filter.Search,filter.Status,filter.Type,filter.Brand,filter.Model,filter)+" ORDER BY id";
-            using var reader=cmd.ExecuteReader();while(reader.Read())yield return JsonSerializer.Deserialize<AssetRecord>(reader.GetString(0))!;
-        }
-        string absolute=Path.GetFullPath(path);if(absolute.Equals(history.DatabasePath,StringComparison.OrdinalIgnoreCase))throw new ArgumentException("Choose a CSV output path.");AssetCsv.Export(absolute,Rows());
+            IEnumerable<IEnumerable<string>> Rows()
+            {
+                using var cmd=scope.Command();string fields=string.Join(',',AssetCsv.Fields.Select(field=>"json_extract(record_json,'$."+field+"')"));cmd.CommandText="SELECT uid,printf('TP-%08d',id),revision,"+fields+" FROM assets WHERE "+Where(cmd,filter.Search,filter.Status,filter.Type,filter.Brand,filter.Model,filter)+" ORDER BY id";
+                using var reader=cmd.ExecuteReader();while(reader.Read()){token.ThrowIfCancellationRequested();var cells=new string[13];for(int i=0;i<cells.Length;i++)cells[i]=reader.IsDBNull(i)?"":Convert.ToString(reader.GetValue(i),System.Globalization.CultureInfo.InvariantCulture)!;yield return cells;}
+            }
+            return CsvFile.Write(path,AssetCsv.Headers,Rows(),token,progress);
+        });
     }
     /// <summary>Aggregates counts in SQL by asset description, location or custodian with matching filtered state totals.</summary>
     internal (List<AssetGroup> Groups,Dictionary<string,long> States) Overview(AssetFilter filter,string group)

@@ -1,6 +1,6 @@
 # Learning TagPrinter from the source
 
-This guide describes TagPrinter 0.24. All technical documentation and source comments use English. The application still supports English and Spanish. Read this alongside the source; the XML comments explain function contracts in the editor.
+This guide describes TagPrinter 0.25. All technical documentation and source comments use English. The application still supports English and Spanish. Read this alongside the source; the XML comments explain function contracts in the editor.
 
 ## 1. What this application does
 
@@ -188,3 +188,7 @@ FluentIcons keeps one embedded private font/map alive for the process, turns gly
 A preview is a proposed change, not a write. AssetCsv parses every row and captures the current before snapshot; commit rechecks that snapshot inside a transaction. A new serial inserted concurrently therefore cannot be silently mistaken for the reviewed target. Catalog spelling is resolved inside the same transaction as the asset, so a later failure rolls back both data and newly learned options.
 
 AssetFilter carries exact navigation criteria. A hidden GroupIndex maps sorted display rows back to raw group values; an empty string means unassigned and differs from null (no filter). Workflow reasons belong to the movement, not the persistent Notes field. Backup operational feedback stays outside the restored database so restore cannot make an old backup appear newly completed.
+
+## Large data — 0.25
+
+An index helps only if the query can use it; inspect EXPLAIN QUERY PLAN rather than judging the index name. The partial serial index excludes blank serials, so lookup SQL explicitly states that predicate. Expression indexes match the actual JSON expressions. BackgroundRead separates worker-only SQLite from UI-only binding and coalesces rapid changes. DatabaseRead disposes its interrupt registration before closing the native handle. A page DTO holds counts plus bounded rows; it is not a full in-memory database. CsvFile writes and escapes cells incrementally, with a same-folder temporary file as the replacement boundary. Benchmarks check correctness/plans/memory bounds and report timing without treating one machine as a universal SLA.

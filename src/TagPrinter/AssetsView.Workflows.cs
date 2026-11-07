@@ -23,15 +23,16 @@ internal sealed partial class AssetsView
     internal Form CreateCatalogEditor()
     {
         var catalog=new AssetCatalog(history);var dialog=new AppWindow{Text=Ui.T("Catálogos de activos","Asset catalogs"),Width=620,Height=500,StartPosition=FormStartPosition.CenterParent};
-        var root=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,Padding=new Padding(16)};root.ColumnStyles.Add(new(SizeType.Percent,100));root.RowStyles.Add(new(SizeType.Absolute,36));root.RowStyles.Add(new(SizeType.Percent,100));root.RowStyles.Add(new(SizeType.Absolute,48));
-        var kind=new ComboBox{Name="CatalogKind",Dock=DockStyle.Top,DropDownStyle=ComboBoxStyle.DropDownList,Tag="UserData"};foreach(string key in AssetCatalog.Kinds)kind.Items.Add(new StatusChoice(key,AssetCsv.Caption(key)));var values=new ListBox{Dock=DockStyle.Fill};var footer=new FlowLayoutPanel{Dock=DockStyle.Fill};var input=new TextBox{Name="CatalogValue",Width=350,MaxLength=160};var add=new Button{Name="AddCatalogValue",Text=Ui.T("Agregar","Add value"),AutoSize=true};footer.Controls.AddRange([input,add]);root.Controls.Add(kind,0,0);root.Controls.Add(values,0,1);root.Controls.Add(footer,0,2);dialog.Controls.Add(root);
-        void Refresh(){values.Items.Clear();values.Items.AddRange(catalog.Values(((StatusChoice)kind.SelectedItem!).Key).Cast<object>().ToArray());}
+        var root=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,Padding=new Padding(16)};root.ColumnStyles.Add(new(SizeType.Percent,100));root.RowStyles.Add(new(SizeType.Absolute,36));root.RowStyles.Add(new(SizeType.Absolute,36));root.RowStyles.Add(new(SizeType.Percent,100));root.RowStyles.Add(new(SizeType.Absolute,48));
+        var kind=new ComboBox{Name="CatalogKind",Dock=DockStyle.Top,DropDownStyle=ComboBoxStyle.DropDownList,Tag="UserData"};foreach(string key in AssetCatalog.Kinds)kind.Items.Add(new StatusChoice(key,AssetCsv.Caption(key)));var values=new ListBox{Dock=DockStyle.Fill};var footer=new FlowLayoutPanel{Dock=DockStyle.Fill};var input=new TextBox{Name="CatalogValue",Width=350,MaxLength=160};var add=new Button{Name="AddCatalogValue",Text=Ui.T("Agregar","Add value"),AutoSize=true};footer.Controls.AddRange([input,add]);var prefix=new TextBox{Dock=DockStyle.Top,PlaceholderText=Ui.T("Buscar por comienzo del nombre (hasta 200 opciones)","Search name prefix (up to 200 options)"),Name="CatalogSearch"};root.Controls.Add(kind,0,0);root.Controls.Add(prefix,0,1);root.Controls.Add(values,0,2);root.Controls.Add(footer,0,3);dialog.Controls.Add(root);
+        void Refresh(){values.Items.Clear();values.Items.AddRange(catalog.Suggest(((StatusChoice)kind.SelectedItem!).Key,prefix.Text).Cast<object>().ToArray());}
+        var debounce=new System.Windows.Forms.Timer{Interval=300};prefix.TextChanged+=(_,_)=>{debounce.Stop();debounce.Start();};debounce.Tick+=(_,_)=>{debounce.Stop();Run(Refresh);};dialog.Disposed+=(_,_)=>debounce.Dispose();
         kind.SelectedIndexChanged+=(_,_)=>Refresh();kind.SelectedIndex=0;add.Click+=(_,_)=>Run(()=>{string name=catalog.Add(((StatusChoice)kind.SelectedItem!).Key,input.Text);Refresh();values.SelectedItem=name;input.Clear();});FluentIcons.ApplyTree(dialog);return dialog;
     }
     /// <summary>Exports all matching master records across pages, with identity and optimistic revision metadata.</summary>
     private void ExportAssets()
     {
-        using var dialog=new SaveFileDialog{Filter="CSV|*.csv",DefaultExt="csv",AddExtension=true,FileName="TagPrinter-assets.csv"};if(dialog.ShowDialog(FindForm())!=DialogResult.OK)return;store.ExportCsv(dialog.FileName,CurrentFilter);
+        using var dialog=new SaveFileDialog{Filter="CSV|*.csv",DefaultExt="csv",AddExtension=true,FileName="TagPrinter-assets.csv"};if(dialog.ShowDialog(FindForm())!=DialogResult.OK)return;var filter=CurrentFilter;string path=dialog.FileName;ExportProgressDialog.Run(FindForm(),(progress,token)=>store.ExportCsv(path,filter,token,progress));
     }
     /// <summary>Writes the full administrative schema; blank identity/revision cells designate a new asset.</summary>
     private void SaveAssetTemplate()

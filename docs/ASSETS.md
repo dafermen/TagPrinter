@@ -1,4 +1,4 @@
-# Asset administration — 0.24
+# Asset administration — 0.25
 
 ## Assets are independent records
 

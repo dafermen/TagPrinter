@@ -50,7 +50,7 @@ public sealed partial class HistoryStore
     private static bool HasSerial(SqliteConnection c,SqliteTransaction? transaction,string serial)
     {
         if(string.IsNullOrWhiteSpace(serial))return false;
-        using var cmd=c.CreateCommand();cmd.Transaction=transaction;cmd.CommandText="SELECT 1 FROM (SELECT id FROM events WHERE trim(serial)=$s COLLATE NOCASE AND id NOT IN(SELECT event_id FROM trash) AND COALESCE(json_extract(state_json,'$.FreeTextMode'),0)=0 UNION ALL SELECT id FROM assets WHERE serial_key=$key AND json_extract(record_json,'$.Status')!='Retired') LIMIT 1";cmd.Parameters.AddWithValue("$s",serial.Trim());cmd.Parameters.AddWithValue("$key",serial.Trim().ToUpperInvariant());return cmd.ExecuteScalar()!=null;
+        using var cmd=c.CreateCommand();cmd.Transaction=transaction;cmd.CommandText="SELECT 1 FROM (SELECT id FROM events WHERE trim(serial)=$s COLLATE NOCASE AND id NOT IN(SELECT event_id FROM trash) AND COALESCE(json_extract(state_json,'$.FreeTextMode'),0)=0 UNION ALL SELECT id FROM assets WHERE serial_key!='' AND serial_key=$key AND json_extract(record_json,'$.Status')!='Retired') LIMIT 1";cmd.Parameters.AddWithValue("$s",serial.Trim());cmd.Parameters.AddWithValue("$key",serial.Trim().ToUpperInvariant());return cmd.ExecuteScalar()!=null;
     }
     /// <summary>Atomically registers a validated batch as Imported actions, never as printed/exported labels.</summary>
     /// <returns>Inserted and skipped counts. Duplicate checks include earlier records in the same transaction.</returns>
@@ -91,7 +91,7 @@ public sealed partial class HistoryStore
             using(var source=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=sourcePath,Mode=SqliteOpenMode.ReadOnly,Pooling=false}.ToString()))
             using(var staged=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=stage,Pooling=false}.ToString())){source.Open();staged.Open();source.BackupDatabase(staged);}
             ValidateBackup(stage);
-            using(var upgrade=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=stage,Pooling=false}.ToString())){upgrade.Open();AssetStore.Initialize(upgrade);}
+            using(var upgrade=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=stage,Pooling=false}.ToString())){upgrade.Open();AssetStore.Initialize(upgrade);DatabasePerformance.Initialize(upgrade);}
             ValidateBackup(stage);
             Directory.CreateDirectory(safetyDirectory);string safety=Path.Combine(safetyDirectory,"TagPrinter-before-restore-"+DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff")+"-"+Guid.NewGuid()+".db");Backup(safety);
             using var candidate=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=stage,Mode=SqliteOpenMode.ReadOnly,Pooling=false}.ToString());candidate.Open();using var destination=Open();candidate.BackupDatabase(destination);return safety;

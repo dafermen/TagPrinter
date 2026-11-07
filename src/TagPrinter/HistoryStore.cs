@@ -17,7 +17,8 @@ namespace TagPrinter;
 /// <param name="GroupType">Optional exact trimmed Dashboard group type.</param>
 /// <param name="GroupBrand">Optional exact group brand.</param>
 /// <param name="GroupModel">Optional exact group model.</param>
-public record HistoryQuery(string Search="",string Field="all",string Action="",DateTimeOffset? FromUtc=null,DateTimeOffset? ToUtcExclusive=null,bool Deleted=false,string? GroupType=null,string? GroupBrand=null,string? GroupModel=null);
+/// <param name="ExactSerial">Uses an indexed trimmed serial lookup instead of substring search.</param>
+public record HistoryQuery(string Search="",string Field="all",string Action="",DateTimeOffset? FromUtc=null,DateTimeOffset? ToUtcExclusive=null,bool Deleted=false,string? GroupType=null,string? GroupBrand=null,string? GroupModel=null,bool ExactSerial=false);
 /// <summary>
 /// One completed output action, not one unique asset. State preserves its design and SourceEventId
 /// identifies a reloaded source.
@@ -95,7 +96,7 @@ public sealed partial class HistoryStore
             CREATE TABLE IF NOT EXISTS trash(event_id INTEGER PRIMARY KEY REFERENCES events(id), deleted_utc TEXT NOT NULL);
 
             """;
-        command.ExecuteNonQuery();AssetStore.Initialize(connection);
+        command.ExecuteNonQuery();AssetStore.Initialize(connection);DatabasePerformance.Initialize(connection);
     }
     /// <summary>Opens a caller-owned, unpooled connection with foreign keys and five-second busy timeout.</summary>
     /// <returns>Open caller-owned connection; dispose after use.</returns>
@@ -173,11 +174,13 @@ public sealed partial class HistoryStore
     {
         if(limit is <1 or >10000 || offset<0)throw new ArgumentOutOfRangeException(nameof(limit));
         using var connection=Open();using var command=connection.CreateCommand();string where=Where(command,query??new());
-        string column=sort switch {"Date"=>"created_utc","Serial"=>"serial COLLATE NOCASE","AssetType"=>"asset_type","Brand"=>"brand","Model"=>"model","PartNumber"=>"part_number","MacAddress"=>"mac_address","Printer"=>"json_extract(state_json,'$.Printer')","Copies"=>"CAST(json_extract(state_json,'$.Copies') AS INTEGER)","Action"=>"action","SourceEventId"=>"source_event_id","CodeType"=>"CASE WHEN action!='ExportCode' AND COALESCE(json_extract(state_json,'$.ShowCode'),1)=0 THEN 'TextOnly' WHEN json_extract(state_json,'$.Code')=1 THEN 'QR' ELSE 'Code128' END",_=>"id"};
+        string column=SortColumn(sort);
         command.CommandText="SELECT id,created_utc,action,state_json,output_path,source_event_id,asset_uid FROM events WHERE "+where+" ORDER BY "+column+(descending?" DESC":" ASC")+",id DESC";
         if(limit is {} size){command.CommandText+=" LIMIT $limit OFFSET $offset";command.Parameters.AddWithValue("$limit",size);command.Parameters.AddWithValue("$offset",offset);}
         using var reader=command.ExecuteReader();var rows=new List<HistoryEvent>();while(reader.Read())rows.Add(Read(reader));return rows;
     }
+    /// <summary>Whitelists stored-value ordering for both display projections and full snapshot queries.</summary>
+    internal static string SortColumn(string sort)=>sort switch {"Date"=>"created_utc","Serial"=>"serial COLLATE NOCASE","AssetType"=>"asset_type","Brand"=>"brand","Model"=>"model","PartNumber"=>"part_number","MacAddress"=>"mac_address","Printer"=>"json_extract(state_json,'$.Printer')","Copies"=>"CAST(json_extract(state_json,'$.Copies') AS INTEGER)","Action"=>"action","SourceEventId"=>"source_event_id","CodeType"=>"CASE WHEN action!='ExportCode' AND COALESCE(json_extract(state_json,'$.ShowCode'),1)=0 THEN 'TextOnly' WHEN json_extract(state_json,'$.Code')=1 THEN 'QR' ELSE 'Code128' END",_=>"id"};
     /// <summary>Counts matching inventory events in SQL without loading snapshots.</summary>
     public long Count(HistoryQuery? query=null)
     {
@@ -187,7 +190,8 @@ public sealed partial class HistoryStore
     private static string Where(SqliteCommand command,HistoryQuery query)
     {
         var where=new List<string>{"COALESCE(json_extract(state_json,'$.FreeTextMode'),0)=0",query.Deleted?"id IN (SELECT event_id FROM trash)":"id NOT IN (SELECT event_id FROM trash)"};
-        if(query.Search.Length>0)
+        if(query.ExactSerial && query.Search.Length>0){where.Add("trim(serial)=$exact COLLATE NOCASE");command.Parameters.AddWithValue("$exact",query.Search.Trim());}
+        else if(query.Search.Length>0)
         {
             // Whitelist SQL expressions rather than accepting arbitrary column names. Search input becomes a
             // parameter; escape LIKE wildcards for literal matching.
@@ -264,19 +268,15 @@ public sealed partial class HistoryStore
     /// <param name="rows">Events in the intended CSV output order.</param>
     public static void ExportCsv(string path,IEnumerable<HistoryEvent> rows)
     {
-        using var writer=new StreamWriter(path,false,new UTF8Encoding(true));
-        // Doubles embedded quotes and surrounds a CSV cell with quotes, preserving delimiters and newlines.
-        static string Quote(string text)=>"\""+text.Replace("\"","\"\"")+"\"";
-        // Quotes each cell and joins them with semicolons into one CSV row.
-        void Write(IEnumerable<string> fields)=>writer.WriteLine(string.Join(";",fields.Select(Quote)));
-        // Stable English CSV headers are an import contract. Display translations must not change exported
-        // field names.
-        Write(["Id","CreatedUtc","Action","Serial","AssetType","Brand","Model","PartNumber","MacAddress","Printer","Copies","CodeType","WidthMm","HeightMm","OutputPath","SourceEventId","StateJson"]);
-        foreach(var row in rows)
+        IEnumerable<IEnumerable<string>> Cells()
         {
-            var state=row.State;
-            Write([row.Id.ToString(CultureInfo.InvariantCulture),row.CreatedUtc.ToUniversalTime().ToString("O",CultureInfo.InvariantCulture),row.Action,state.Serial,state.AssetType,state.Brand,state.Model,state.PartNumber,state.MacAddress,state.Printer,state.Copies.ToString(CultureInfo.InvariantCulture),!state.ShowCode && row.Action!="ExportCode"?"TextOnly":state.Code==1?"QR":"Code128",state.Width.ToString(CultureInfo.InvariantCulture),state.Height.ToString(CultureInfo.InvariantCulture),row.OutputPath,row.SourceEventId?.ToString(CultureInfo.InvariantCulture)??"",JsonSerializer.Serialize(state)]);
+            foreach(var row in rows)
+            {
+                var state=row.State;
+                yield return new[]{row.Id.ToString(CultureInfo.InvariantCulture),row.CreatedUtc.ToUniversalTime().ToString("O",CultureInfo.InvariantCulture),row.Action,state.Serial,state.AssetType,state.Brand,state.Model,state.PartNumber,state.MacAddress,state.Printer,state.Copies.ToString(CultureInfo.InvariantCulture),!state.ShowCode && row.Action!="ExportCode"?"TextOnly":state.Code==1?"QR":"Code128",state.Width.ToString(CultureInfo.InvariantCulture),state.Height.ToString(CultureInfo.InvariantCulture),row.OutputPath,row.SourceEventId?.ToString(CultureInfo.InvariantCulture)??"",JsonSerializer.Serialize(state)};
+            }
         }
+        CsvFile.Write(path,CsvHeaders,Cells());
     }
     /// <summary>Totals active label actions in SQL without loading snapshots or treating submissions as physical output.</summary>
     internal (long Exports,long Jobs,long Copies) LabelTotals()

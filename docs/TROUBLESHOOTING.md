@@ -1,4 +1,4 @@
-# Troubleshooting — TagPrinter 0.24
+# Troubleshooting — TagPrinter 0.25
 
 ## Windows asks for .NET
 
@@ -57,3 +57,7 @@ Use the Assets CSV template with all business headers and stable English status 
 ## Last backup shows a failure or missing file
 
 Open 05 Settings for the full error/path and use Back up now. Check destination access/free space and preserve the last successful snapshot. A missing metadata record initially shows Not recorded yet. A successful local backup is not off-machine protection or a tested restore; keep an independent copy.
+
+## Large inventory search or export
+
+Use Exact serial for known serials and narrower date/state filters for broad queries. Substring searches and full aggregates can still take time; the UI shows loading and discards obsolete requests. Initial index creation/structural checking can lengthen first startup. CSV Cancel interrupts reading and cleans the staged file before closing; an open destination in another program can prevent final replacement while preserving the prior file. See PERFORMANCE.md.

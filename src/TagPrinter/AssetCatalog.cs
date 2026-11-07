@@ -34,6 +34,11 @@ internal sealed class AssetCatalog
     {
         Validate(kind,"");using var c=history.Open();using var cmd=c.CreateCommand();cmd.CommandText="SELECT name FROM asset_catalog WHERE kind=$kind ORDER BY name COLLATE NOCASE";cmd.Parameters.AddWithValue("$kind",kind);using var reader=cmd.ExecuteReader();var result=new List<string>();while(reader.Read())result.Add(reader.GetString(0));return result;
     }
+    /// <summary>Reads only a small indexed prefix result for dropdowns. Arbitrary substring scans are avoided.</summary>
+    internal List<string> Suggest(string kind,string prefix="",int limit=200)
+    {
+        Validate(kind,"");if(limit is <1 or >250)throw new ArgumentOutOfRangeException(nameof(limit));using var c=history.Open();using var cmd=c.CreateCommand();cmd.CommandText="SELECT name FROM asset_catalog WHERE kind=$kind AND value_key LIKE $prefix ESCAPE '~' ORDER BY value_key COLLATE NOCASE LIMIT $limit";cmd.Parameters.AddWithValue("$kind",kind);cmd.Parameters.AddWithValue("$prefix",Key(prefix).Replace("~","~~").Replace("%","~%").Replace("_","~_")+"%");cmd.Parameters.AddWithValue("$limit",limit);using var reader=cmd.ExecuteReader();var rows=new List<string>();while(reader.Read())rows.Add(reader.GetString(0));return rows;
+    }
     /// <summary>Adds one explicit catalog option atomically; case/edge-space duplicates reuse the original spelling.</summary>
     internal string Add(string kind,string value)
     {
@@ -57,6 +62,29 @@ internal sealed class AssetCatalog
     {
         AssetType=Resolve(c,tx,"AssetType",row.AssetType),Brand=Resolve(c,tx,"Brand",row.Brand),Model=Resolve(c,tx,"Model",row.Model),Location=Resolve(c,tx,"Location",row.Location),Custodian=Resolve(c,tx,"Custodian",row.Custodian)
     };
+    /// <summary>Creates a lazily resolved preview vocabulary, bounded by the imported rows rather than total inventory.</summary>
+    internal PreviewNames OpenPreview()=>new(history);
+    internal sealed class PreviewNames : IDisposable
+    {
+        private readonly SqliteConnection connection;
+        private readonly SqliteTransaction transaction;
+        private readonly SqliteCommand command,byUid,bySerial;
+        private readonly Dictionary<(string,string),string> cache=[];
+        internal PreviewNames(HistoryStore history)
+        {
+            connection=history.Open();transaction=connection.BeginTransaction(deferred:true);command=connection.CreateCommand();command.Transaction=transaction;command.CommandText="SELECT name FROM asset_catalog WHERE kind=$kind AND value_key=$key";command.Parameters.AddWithValue("$kind","");command.Parameters.AddWithValue("$key","");command.Prepare();
+            SqliteCommand Lookup(string column){var read=connection.CreateCommand();read.Transaction=transaction;read.CommandText="SELECT record_json FROM assets WHERE "+(column=="serial_key"?"serial_key!='' AND ":"")+column+"=$key";read.Parameters.AddWithValue("$key","");read.Prepare();return read;}
+            byUid=Lookup("uid");bySerial=Lookup("serial_key");
+        }
+        internal AssetRecord? Get(string uid){byUid.Parameters["$key"].Value=Guid.TryParse(uid,out var id)?id.ToString("N"):uid;return byUid.ExecuteScalar() is string json?JsonSerializer.Deserialize<AssetRecord>(json):null;}
+        internal AssetRecord? Find(string serial){if(string.IsNullOrWhiteSpace(serial))return null;bySerial.Parameters["$key"].Value=Key(serial);return bySerial.ExecuteScalar() is string json?JsonSerializer.Deserialize<AssetRecord>(json):null;}
+        private string Name(string kind,string value)
+        {
+            value=value.Trim();if(value.Length==0)return "";var key=(kind,Key(value));if(cache.TryGetValue(key,out var known))return known;command.Parameters["$kind"].Value=kind;command.Parameters["$key"].Value=key.Item2;string name=command.ExecuteScalar() as string??value;cache.Add(key,name);return name;
+        }
+        internal AssetRecord Normalize(AssetRecord row)=>row with {AssetType=Name("AssetType",row.AssetType),Brand=Name("Brand",row.Brand),Model=Name("Model",row.Model),Location=Name("Location",row.Location),Custodian=Name("Custodian",row.Custodian)};
+        public void Dispose(){byUid.Dispose();bySerial.Dispose();command.Dispose();transaction.Dispose();connection.Dispose();}
+    }
     /// <summary>Captures vocabulary once for an entire import preview without modifying SQLite.</summary>
     internal Dictionary<(string Kind,string Key),string> Snapshot()
     {

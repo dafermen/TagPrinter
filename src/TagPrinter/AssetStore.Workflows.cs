@@ -5,12 +5,12 @@ namespace TagPrinter;
 internal sealed partial class AssetStore
 {
     /// <summary>Provides a read-only vocabulary snapshot for deterministic import review.</summary>
-    internal Dictionary<(string Kind,string Key),string> CatalogSnapshot()=>new AssetCatalog(history).Snapshot();
+    internal AssetCatalog.PreviewNames OpenPreviewNames()=>new AssetCatalog(history).OpenPreview();
     /// <summary>Finds exactly one canonical serial, including retired records, without mutating the label draft.</summary>
     internal AssetRecord? FindBySerial(string serial)
     {
         if(string.IsNullOrWhiteSpace(serial))return null;
-        using var c=history.Open();using var cmd=c.CreateCommand();cmd.CommandText="SELECT record_json FROM assets WHERE serial_key=$key";cmd.Parameters.AddWithValue("$key",SerialKey(serial));return cmd.ExecuteScalar() is string json?JsonSerializer.Deserialize<AssetRecord>(json):null;
+        using var c=history.Open();using var cmd=c.CreateCommand();cmd.CommandText="SELECT record_json FROM assets WHERE serial_key!='' AND serial_key=$key";cmd.Parameters.AddWithValue("$key",SerialKey(serial));return cmd.ExecuteScalar() is string json?JsonSerializer.Deserialize<AssetRecord>(json):null;
     }
     /// <summary>Performs an explicit business action with required assignment/destination data and an atomic movement reason.</summary>
     internal AssetRecord Transition(AssetRecord source,string action,string location,string custodian,string note)

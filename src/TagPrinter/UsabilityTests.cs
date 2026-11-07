@@ -60,7 +60,7 @@ internal static class UsabilityTests
         if(store.Query()[0].SourceEventId!=null)throw new Exception("Loaded deleted source was retained");
         long demo=store.Add("ExportTag",new WorkState{Serial="TO-RECYCLE"});store.SetDeleted([demo],true);
         form.Show();form.ShowReports();
-        var recycle=form.Reports.Controls.OfType<Control>().SelectMany(Children).OfType<CheckBox>().Single();recycle.Checked=true;Application.DoEvents();
+        var recycle=form.Reports.Controls.OfType<Control>().SelectMany(Children).OfType<CheckBox>().Single(c=>c.Name=="RecycleBin");recycle.Checked=true;Application.DoEvents();
         using var image=new Bitmap(form.Width,form.Height);form.DrawToBitmap(image,form.ClientRectangle);image.Save(Path.Combine(folder,"recycle-bin-en.png"));
         form.Close();
     }

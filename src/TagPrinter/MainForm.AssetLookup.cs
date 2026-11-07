@@ -42,7 +42,10 @@ public partial class MainForm
         var catalog=new AssetCatalog(history);
         foreach(var pair in new[]{(assetType,"AssetType"),(brand,"Brand"),(model,"Model")})
         {
-            var options=new AutoCompleteStringCollection();options.AddRange(catalog.Values(pair.Item2).ToArray());pair.Item1.AutoCompleteMode=AutoCompleteMode.SuggestAppend;pair.Item1.AutoCompleteSource=AutoCompleteSource.CustomSource;pair.Item1.AutoCompleteCustomSource=options;
+            var names=catalog.Suggest(pair.Item2).ToArray();
+            // Reinstalling the same native autocomplete source repeatedly can churn COM/native windows during restoration.
+            if(pair.Item1.AutoCompleteCustomSource.Cast<string>().SequenceEqual(names))continue;
+            var options=new AutoCompleteStringCollection();options.AddRange(names);pair.Item1.AutoCompleteMode=names.Length==0?AutoCompleteMode.None:AutoCompleteMode.SuggestAppend;pair.Item1.AutoCompleteSource=AutoCompleteSource.CustomSource;pair.Item1.AutoCompleteCustomSource=options;
         }
     }
     /// <summary>Shows the last durable backup and most recent failure; missing backup files are called out explicitly.</summary>

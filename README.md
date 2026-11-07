@@ -14,7 +14,7 @@ See [full configuration transfer and code size](docs/CONFIGURATION_TRANSFER.md) 
 
 See [centering, empty recycle bin and Windows status](docs/TEXT_TRASH_PRINTER_STATUS.md) for the latest usability options.
 
-## Current features — 0.24
+## Current features — 0.25
 
 - Asset type, brand, model, serial, part number and MAC address, with inline visibility controls.
 - Optional QR/Code128, text-only labels, preset/custom media and four layouts.
@@ -25,6 +25,7 @@ See [centering, empty recycle bin and Windows status](docs/TEXT_TRASH_PRINTER_ST
 - Assets: stable internal codes, editable records, location, custodian, state, notes and movement history.
 - Dashboard groups current master assets by type/brand/model and state, separately from global label-log counts.
 - Previewed CSV inventory import, SQL pages, validated restore, automatic backups and reusable label profiles.
+- Background/coalesced page reads, indexed exact-serial search, bounded Dashboard/audit/catalog views and cancellable streaming CSV.
 - Fluent icon/text actions and a visible Print · Ctrl + P shortcut.
 - Serial recognition with explicit loading, inventory catalogs, guided assignment/return/repair, reviewed administrative CSV and visible backup status.
 - Collapsible sections and remembered English/Spanish interface language; lower-left GitHub About link.
@@ -46,6 +47,7 @@ All source comments and project documentation are in English. The interface rema
 | [Documentation index](docs/README.md) | Suggested paths for users, students and maintainers. |
 | [User guide](docs/USER_GUIDE.md) | Creating, formatting, exporting and printing labels. |
 | [Student guide](docs/STUDENT_GUIDE.md) | C# concepts, function contracts, variables/units and complete data flow. |
+| [Large inventories](docs/PERFORMANCE.md) | Indexed reads, bounded memory, background loading, CSV cancellation and scale evidence. |
 | [Daily operations](docs/ASSET_OPERATIONS.md) | Catalogs, assignment/return/repair, administrative CSV, Dashboard links and backup feedback. |
 | [Assets](docs/ASSETS.md) | Local master records, assignment/location, movement history and upgrade safety. |
 | [Interface refresh](docs/UI_REFRESH.md) | Shortcut presentation, offline Fluent buttons and attribution. |
@@ -71,7 +73,7 @@ dotnet run --project src/TagPrinter
 
 The project emits an XML API documentation file alongside build output for editor/tooling use. Source comments explain every explicit class/record and method, saved properties, meaningful state and complex algorithms. Read the student guide before changing rendering or persistence.
 
-Publish builds and verifies the self-contained executable, then creates artifacts/TagPrinter-v0.24-PORTABLE-Windows-x64.zip. Generated outputs and personal databases are excluded from Git. Distribute the entire portable folder.
+Publish builds and verifies the self-contained executable, then creates artifacts/TagPrinter-v0.25-PORTABLE-Windows-x64.zip. Generated outputs and personal databases are excluded from Git. Distribute the entire portable folder.
 
 ## Data
 

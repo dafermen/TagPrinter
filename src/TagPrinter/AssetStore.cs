@@ -102,7 +102,7 @@ internal sealed partial class AssetStore
         if(string.IsNullOrWhiteSpace(state.Serial))return null;
         using(var find=c.CreateCommand())
         {
-            find.Transaction=tx;find.CommandText="SELECT uid FROM assets WHERE serial_key=$key";find.Parameters.AddWithValue("$key",SerialKey(state.Serial));if(find.ExecuteScalar() is string uid)return uid;
+            find.Transaction=tx;find.CommandText="SELECT uid FROM assets WHERE serial_key!='' AND serial_key=$key";find.Parameters.AddWithValue("$key",SerialKey(state.Serial));if(find.ExecuteScalar() is string uid)return uid;
         }
         return Save(c,tx,new AssetRecord{Status="Unspecified",AssetType=state.AssetType,Brand=state.Brand,Model=state.Model,Serial=state.Serial,PartNumber=state.PartNumber,MacAddress=state.MacAddress},action).Uid;
     }
@@ -162,7 +162,8 @@ internal sealed partial class AssetStore
         string where="1=1";
         if(groupType is not null){where+=" AND trim(json_extract(record_json,'$.AssetType'))=$gt AND trim(json_extract(record_json,'$.Brand'))=$gb AND trim(json_extract(record_json,'$.Model'))=$gm";cmd.Parameters.AddWithValue("$gt",groupType);cmd.Parameters.AddWithValue("$gb",groupBrand??"");cmd.Parameters.AddWithValue("$gm",groupModel??"");}
         if(status.Length>0){where+=" AND json_extract(record_json,'$.Status')=$status";cmd.Parameters.AddWithValue("$status",status);}
-        if(search.Length>0)
+        if(scope?.ExactSerial==true && search.Length>0){where+=" AND serial_key!='' AND serial_key=$exact";cmd.Parameters.AddWithValue("$exact",SerialKey(search));}
+        else if(search.Length>0)
         {
             string[] fields=["AssetType","Brand","Model","Serial","PartNumber","MacAddress","Location","Custodian","Notes"];
             string values=string.Join("||char(10)||",fields.Select(n=>$"COALESCE(json_extract(record_json,'$.{n}'),'')"));
@@ -187,10 +188,11 @@ internal sealed partial class AssetStore
     internal List<AssetRecord> Query(string search="",string status="",int offset=0,int limit=50,string? groupType=null,string? groupBrand=null,string? groupModel=null,string sort="Updated",bool descending=true,AssetFilter? scope=null)
     {
         if(offset<0 || limit is <1 or >250)throw new ArgumentOutOfRangeException(nameof(limit));
-        string[] sortable=["AssetType","Brand","Model","Serial","Status","Location","Custodian","PartNumber","MacAddress"];
-        string column=sort=="Code"?"id":sortable.Contains(sort)?$"json_extract(record_json,'$.{sort}') COLLATE NOCASE":"json_extract(record_json,'$.UpdatedUtc')";
+        string column=SortColumn(sort);
         using var c=history.Open();using var cmd=c.CreateCommand();cmd.CommandText="SELECT record_json FROM assets WHERE "+Where(cmd,search,status,groupType,groupBrand,groupModel,scope)+" ORDER BY "+column+(descending?" DESC":" ASC")+",id DESC LIMIT $limit OFFSET $offset";cmd.Parameters.AddWithValue("$limit",limit);cmd.Parameters.AddWithValue("$offset",offset);using var reader=cmd.ExecuteReader();var rows=new List<AssetRecord>();while(reader.Read())rows.Add(JsonSerializer.Deserialize<AssetRecord>(reader.GetString(0))!);return rows;
     }
+    /// <summary>Whitelists SQL ordering for page reads; default ordering matches the update index.</summary>
+    internal static string SortColumn(string sort)=>sort=="Code"?"id":new[]{"AssetType","Brand","Model","Serial","Status","Location","Custodian","PartNumber","MacAddress"}.Contains(sort)?$"json_extract(record_json,'$.{sort}') COLLATE NOCASE":"json_extract(record_json,'$.UpdatedUtc')";
     /// <summary>Reads append-only administrative changes for one asset, newest first.</summary>
     internal List<AssetMovement> Movements(string uid)
     {

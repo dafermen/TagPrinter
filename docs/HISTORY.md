@@ -79,3 +79,7 @@ FreeTextMode=true work does not add new events for printing or any export. Last-
 Imported actions register inventory without printing/exporting. SQL pages and exact Dashboard groups precede row materialization; page export and whole-scope export remain distinct. Restoring replaces masters, movements, events and trash after staging/validation and safety backup. Automatic backups are daily with ten-copy automatic retention; pre-restore copies are protected. See INVENTORY_TOOLS.md.
 
 Schema 2 adds assets, asset_movements and events.asset_uid while preserving immutable label snapshots. Backups/restores include all tables; older schema-1/2 backups are normalized in staging. Administrative CSV updates masters/audit without creating label events; see ASSET_OPERATIONS.md. Config/profile transfer does not transfer master records or audit history.
+
+## Large history — 0.25
+
+Reports uses background lightweight summary pages rather than complete WorkState objects. Exact serial uses indexed matching; substring/date/action/trash semantics remain compatible. Full CSV streams the original StateJson directly and stages the destination, so cancellation/failure preserves an existing file before replacement. Recovered labels still load the full snapshot by stable ID. Administrative audit is also paged. Derived indexes keep SQLite schema version 3; older snapshot restores create missing indexes in staging. See PERFORMANCE.md.

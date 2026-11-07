@@ -7,8 +7,8 @@ namespace TagPrinter;
 /// </summary>
 public sealed partial class ReportsView : UserControl
 {
-    // current keeps original snapshots; table contains translated display values. The load callback
-    // navigates to the editor.
+    // current keeps lightweight page metadata; table contains translated display values. Complete
+    // snapshots are resolved by stable ID only when explicitly loaded or exported.
     readonly HistoryStore store;
     // load hands selected snapshots back to MainForm; this view never calls the printer.
     readonly Action<HistoryEvent> load;
@@ -28,15 +28,18 @@ public sealed partial class ReportsView : UserControl
     internal readonly DataGridView Grid=new(){Dock=DockStyle.Fill,ReadOnly=true,AllowUserToAddRows=false,AllowUserToDeleteRows=false,AutoGenerateColumns=false,SelectionMode=DataGridViewSelectionMode.FullRowSelect,MultiSelect=true,BackgroundColor=Color.White,RowHeadersVisible=false};
     // trash switches between active/recycled event scopes. remove means Delete in active scope and Restore
     // in trash scope.
-    readonly CheckBox trash=new(){AutoSize=true};
+    readonly CheckBox trash=new(){AutoSize=true,Name="RecycleBin"};
     // Deletes in active scope and restores in recycle-bin scope.
     readonly Button remove=new(){AutoSize=true};
-    // current is the original queried list; table is its typed/translatable projection and owns the current
-    // sort/filter.
+    // The SQL page is the full in-memory display scope; sort keys are sent back to the database.
     // Purge is explicit and irreversible; the callback invalidates any currently loaded source reference.
     readonly Button emptyTrash=new(){AutoSize=true};
     readonly Action? onTrashEmptied;
-    List<HistoryEvent> current=[];
+    List<HistorySummary> current=[];
+    readonly BackgroundRead<DatabasePage<HistorySummary>> reads=new();
+    bool refreshPending;
+    readonly CheckBox exactSerial=new(){AutoSize=true};
+    internal bool ForceAsyncReads {get=>reads.ForceAsync;set=>reads.ForceAsync=value;}
     // Owned typed projection; its DefaultView retains sorting and group filtering.
     DataTable? table;
     // Stable search keys in the same order as the field selector; these are SQL-whitelisted downstream.
@@ -54,7 +57,7 @@ public sealed partial class ReportsView : UserControl
         var layout=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=4};
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute,88));layout.RowStyles.Add(new RowStyle(SizeType.Percent,100));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,46));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,116));
         var filters=new FlowLayoutPanel{Dock=DockStyle.Fill,WrapContents=true};
-        filters.Controls.AddRange([searchLabel,search,field,action,fromLabel,from,toLabel,to,apply,reset]);
+        filters.Controls.AddRange([searchLabel,search,field,action,fromLabel,from,toLabel,to,exactSerial,apply,reset]);
         layout.Controls.Add(filters,0,0);layout.Controls.Add(Grid,0,1);layout.Controls.Add(count,0,2);
         var buttons=new FlowLayoutPanel{Dock=DockStyle.Fill};buttons.Controls.AddRange([previousPage,pageLabel,nextPage,pageSize,open,export,exportAll,backup,trash,remove,emptyTrash]);layout.Controls.Add(buttons,0,3);Controls.Add(layout);
         // Adds an explicitly bound sortable column; serial cells use links.
@@ -65,7 +68,9 @@ public sealed partial class ReportsView : UserControl
         }
         Column("Id",55);Column("Date",150);Column("Action",150);Column("Serial",145,true);Column("AssetType",105);Column("Brand",90);Column("Model",120);Column("PartNumber",120);Column("MacAddress",155);Column("Printer",190);Column("Copies",65);Column("CodeType",80);Column("SourceEventId",90);
         Grid.Columns["Date"].DefaultCellStyle.Format="yyyy-MM-dd HH:mm:ss";
-        apply.Click+=(_,_)=>Run(RefreshData);reset.Click+=(_,_)=>{groupType=groupBrand=groupModel=null;search.Clear();field.SelectedIndex=0;action.SelectedIndex=0;from.Checked=false;to.Checked=false;Run(RefreshData);};
+        apply.Click+=(_,_)=>Run(RefreshData);reset.Click+=(_,_)=>{groupType=groupBrand=groupModel=null;exactSerial.Checked=false;search.Clear();field.SelectedIndex=0;action.SelectedIndex=0;from.Checked=false;to.Checked=false;Run(RefreshData);};
+        exactSerial.CheckedChanged+=(_,_)=>{field.Enabled=!exactSerial.Checked;Run(RefreshData);};
+        HandleCreated+=(_,_)=>{if(refreshPending && Visible)RefreshData();};VisibleChanged+=(_,_)=>{if(Visible && refreshPending)RefreshData();};
         search.KeyDown+=(_,e)=>{if(e.KeyCode==Keys.Enter){e.SuppressKeyPress=true;Run(RefreshData);}};
         Grid.CellContentClick+=(_,e)=>{if(e.RowIndex>=0 && e.ColumnIndex>=0 && Grid.Columns[e.ColumnIndex].Name=="Serial")Run(()=>OpenRow(e.RowIndex));};
         open.Click+=(_,_)=>Run(()=>OpenRow(Grid.CurrentRow?.Index??-1));
@@ -107,7 +112,7 @@ public sealed partial class ReportsView : UserControl
     /// </summary>
     public void RefreshLanguage()
     {
-        previousPage.Text="◀";nextPage.Text="▶";
+        previousPage.Text="◀";nextPage.Text="▶";exactSerial.Text=Ui.T("Serial exacto","Exact serial");
         emptyTrash.Text=Ui.T("Vaciar papelera…","Empty recycle bin…");
         trash.Text=Ui.T("Papelera","Recycle bin");remove.Text=trash.Checked?Ui.T("Restaurar","Restore"):Ui.T("Eliminar","Delete");
         searchLabel.Text=Ui.T("Buscar","Search");fromLabel.Text=Ui.T("Desde","From");toLabel.Text=Ui.T("Hasta","To");
@@ -133,28 +138,31 @@ public sealed partial class ReportsView : UserControl
         // uses its local UTC offset.
         DateTimeOffset? start=from.Checked?new DateTimeOffset(DateTime.SpecifyKind(from.Value.Date,DateTimeKind.Local)).ToUniversalTime():null;
         DateTimeOffset? end=to.Checked?new DateTimeOffset(DateTime.SpecifyKind(to.Value.Date.AddDays(1),DateTimeKind.Local)).ToUniversalTime():null;
-        return new(search.Text.Trim(),Fields[Math.Max(0,field.SelectedIndex)],action.SelectedIndex>0?HistoryStore.Actions[action.SelectedIndex-1]:"",start,end,trash.Checked,groupType,groupBrand,groupModel);
+        return new(search.Text.Trim(),Fields[Math.Max(0,field.SelectedIndex)],action.SelectedIndex>0?HistoryStore.Actions[action.SelectedIndex-1]:"",start,end,trash.Checked,groupType,groupBrand,groupModel,exactSerial.Checked);
     }
     /// <summary>Builds typed display rows from history, retains sorting and disposes the old table.</summary>
     public void RefreshData()
     {
-        // Save sort before replacing typed data. Dates/numbers sort by value rather than their text representation.
+        if(!reads.Synchronous && (!IsHandleCreated || !Visible)){refreshPending=true;return;}refreshPending=false;
         emptyTrash.Visible=trash.Checked;emptyTrash.Enabled=trash.Checked && store.RecycleBinCount()>0;
         var filter=Filter();if(lastFilter!=filter){pageIndex=0;lastFilter=filter;}
-        totalRows=store.Count(filter);int size=int.TryParse(pageSize.Text,out int selected)?selected:50;
-        pageIndex=(int)Math.Min(pageIndex,Math.Max(0,(totalRows-1)/size));
-        current=store.Query(filter,size,pageIndex*size,sortKey,sortDescending);string sort="";
+        int size=int.TryParse(pageSize.Text,out int selected)?selected:50,page=pageIndex;string order=sortKey;bool reverse=sortDescending;
+        reads.Submit(token=>store.ReadPage(filter,page,size,order,reverse,token),result=>BindPage(result,size),error=>{Grid.DataSource=null;count.Text=error.Message;},busy=>{Grid.Enabled=!busy;if(busy){previousPage.Enabled=nextPage.Enabled=false;count.Text=Ui.T("Cargando historial…","Loading history…");}});
+    }
+    /// <summary>Applies a completed current-generation projection on the UI thread.</summary>
+    void BindPage(DatabasePage<HistorySummary> result,int size)
+    {
+        totalRows=result.Total;pageIndex=result.Page;current=result.Rows;
         var next=new DataTable();
         next.Columns.Add("Id",typeof(long));next.Columns.Add("Date",typeof(DateTime));foreach(var name in new[]{"Action","Serial","AssetType","Brand","Model","PartNumber","MacAddress","Printer"})next.Columns.Add(name,typeof(string));next.Columns.Add("Copies",typeof(int));next.Columns.Add("CodeType",typeof(string));next.Columns.Add("SourceEventId",typeof(long));
-        foreach(var row in current){var state=row.State;next.Rows.Add(row.Id,row.CreatedUtc.LocalDateTime,ActionText(row.Action),string.IsNullOrWhiteSpace(state.Serial)?Ui.T("(Sin serial)","(No serial)"):state.Serial,state.AssetType,state.Brand,state.Model,state.PartNumber,state.MacAddress,state.Printer,state.Copies,!state.ShowCode && row.Action!="ExportCode"?Ui.T("Solo texto","Text only"):state.Code==1?"QR":"Code 128",(object?)row.SourceEventId??DBNull.Value);}
-        if(sort.Length>0)next.DefaultView.Sort=sort;
+        foreach(var row in current)next.Rows.Add(row.Id,row.CreatedUtc.LocalDateTime,ActionText(row.Action),string.IsNullOrWhiteSpace(row.Serial)?Ui.T("(Sin serial)","(No serial)"):row.Serial,row.AssetType,row.Brand,row.Model,row.PartNumber,row.MacAddress,row.Printer,row.Copies,row.CodeType=="TextOnly"?Ui.T("Solo texto","Text only"):row.CodeType=="QR"?"QR":"Code 128",(object?)row.SourceEventId??DBNull.Value);
         binding=true;var old=table;table=next;Grid.DataSource=next;old?.Dispose();binding=false;
         foreach(DataGridViewColumn c in Grid.Columns)c.HeaderCell.SortGlyphDirection=c.Name==sortKey?(sortDescending?SortOrder.Descending:SortOrder.Ascending):SortOrder.None;
         pageLabel.Text=$"{pageIndex+1} / {Math.Max(1,(totalRows+size-1)/size)} · {totalRows}";previousPage.Enabled=pageIndex>0;nextPage.Enabled=(pageIndex+1)*size<totalRows;
         count.Text=string.Format(Ui.T("{0} registros. Pulsa un serial para cargar la etiqueta; no se imprime automáticamente.","{0} records. Click a serial to load its label; it will not print automatically."),current.Count);
     }
     /// <summary>
-    /// Clears ordinary filters and applies exact type/brand/model DataView filtering to active history.
+    /// Clears ordinary filters and applies exact type/brand/model SQL filtering to active history.
     /// </summary>
     /// <param name="type">Exact asset-type group value.</param>
     /// <param name="brand">Exact brand group value.</param>
@@ -168,6 +176,7 @@ public sealed partial class ReportsView : UserControl
     /// <param name="index">Display row index, resolved to stable ID before loading.</param>
     void OpenRow(int index)
     {
+        if(reads.IsBusy)throw new InvalidOperationException(Ui.T("Espera a que termine la búsqueda.","Wait for the search to finish."));
         if(index<0 || index>=Grid.Rows.Count)throw new InvalidOperationException(Ui.T("Selecciona un registro.","Select a record."));
         long id=Convert.ToInt64(Grid.Rows[index].Cells["Id"].Value);load(store.Get(id)??throw new InvalidDataException("Record not found."));
     }
@@ -175,8 +184,7 @@ public sealed partial class ReportsView : UserControl
     /// <returns>Original events in visible order.</returns>
     internal List<HistoryEvent> VisibleRows()
     {
-        var lookup=current.ToDictionary(row=>row.Id);
-        return table is null?[]:table.DefaultView.Cast<DataRowView>().Select(row=>lookup[Convert.ToInt64(row["Id"])]).ToList();
+        return table is null?[]:store.ReadSnapshots(table.DefaultView.Cast<DataRowView>().Select(row=>Convert.ToInt64(row["Id"])).ToArray());
     }
     /// <summary>
     /// Writes visible ordered rows or all events in the current active/trash scope after choosing a
@@ -187,7 +195,15 @@ public sealed partial class ReportsView : UserControl
     {
         using var dialog=new SaveFileDialog{Filter="CSV|*.csv",FileName=all?"TagPrinter-all.csv":"TagPrinter-report.csv"};
         if(dialog.ShowDialog(FindForm())!=DialogResult.OK)return;
-        HistoryStore.ExportCsv(dialog.FileName,all?store.Query(new HistoryQuery(Deleted:trash.Checked)):VisibleRows());
+        string path=dialog.FileName;var query=new HistoryQuery(Deleted:trash.Checked);var ids=table is null?[]:table.DefaultView.Cast<DataRowView>().Select(row=>Convert.ToInt64(row["Id"])).ToArray();
+        ExportProgressDialog.Run(FindForm(),(progress,token)=>all?store.ExportAllCsv(path,query,token,progress):CsvFile.Write(path,HistoryStore.CsvHeaders,PageCells(),token,progress));
+        IEnumerable<IEnumerable<string>> PageCells()
+        {
+            foreach(var row in store.ReadSnapshots(ids))
+            {
+                var state=row.State;yield return new[]{row.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),row.CreatedUtc.ToString("O"),row.Action,state.Serial,state.AssetType,state.Brand,state.Model,state.PartNumber,state.MacAddress,state.Printer,state.Copies.ToString(System.Globalization.CultureInfo.InvariantCulture),!state.ShowCode && row.Action!="ExportCode"?"TextOnly":state.Code==1?"QR":"Code128",state.Width.ToString(System.Globalization.CultureInfo.InvariantCulture),state.Height.ToString(System.Globalization.CultureInfo.InvariantCulture),row.OutputPath,row.SourceEventId?.ToString()??"",System.Text.Json.JsonSerializer.Serialize(state)};
+            }
+        }
     }
     /// <summary>Requests a timestamped backup filename and delegates consistent SQLite copying.</summary>
     void Backup()
@@ -208,5 +224,5 @@ public sealed partial class ReportsView : UserControl
     internal void OpenRecordForTest(long id){int index=Grid.Rows.Cast<DataGridViewRow>().First(row=>Convert.ToInt64(row.Cells["Id"].Value)==id).Index;OpenRow(index);}
     /// <summary>Disposes the owned table before base disposal of child controls.</summary>
     /// <param name="disposing">True for explicit managed disposal; passed to the base class.</param>
-    protected override void Dispose(bool disposing){if(disposing)table?.Dispose();base.Dispose(disposing);}
+    protected override void Dispose(bool disposing){if(disposing){reads.Dispose();table?.Dispose();}base.Dispose(disposing);}
 }

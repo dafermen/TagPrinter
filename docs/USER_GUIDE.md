@@ -1,4 +1,4 @@
-# User guide — TagPrinter 0.24
+# User guide — TagPrinter 0.25
 
 ## Start and update
 
@@ -93,3 +93,7 @@ Use 05 Settings > Export configuration / Import configuration to transfer catalo
 05 Settings adds CSV template/import, Restore database and daily automatic backups. 02 adds reusable profile save/apply/delete. 01 adds Duplicate asset and nonblocking serial warnings. Reports adds SQL-backed page sizes and previous/next navigation; Export view means the current page. See [Inventory tools](INVENTORY_TOOLS.md) before importing or restoring. Synchronization is pending; this version is local-only.
 
 Print visibly shows Ctrl + P and uses a Fluent icon with its translated text. Home no longer repeats Windows; technical origin/limits stay in tooltips. See [Interface refresh](UI_REFRESH.md).
+
+## Large local inventories
+
+Reports and Assets offer Exact serial for a known identifier. Loading indicators accompany background searches; changing a filter cancels obsolete work. Dashboard and Movements have previous/next pages while counts retain their full scope. Catalog lists show up to 200 choices; use the prefix search in Catalogs for additional options. CSV exports show progress/cancel and replace the destination only on success. See [Large histories and inventories](PERFORMANCE.md) for measured evidence and practical limits.

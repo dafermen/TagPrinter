@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.25.0 — 2026-11-07
+
+- Add compatible derived indexes and explicit partial-index predicates for fast canonical/legacy serial lookup.
+- Project lightweight Reports pages and lazy-load complete designs only for recovery/page export.
+- Run latest-only/coalesced SQL reads off the UI thread, with native cancellation and disposed-view protection.
+- Page Dashboard groups and movement snapshots; bound catalog suggestions/prefix browsing and prepare lazy import lookups.
+- Stream history/master CSV with raw state fidelity, invariant cells, progress/cancellation and same-directory atomic replacement.
+- Verify 100000 assets/events/movements/catalog options, real query plans, bounded memory, async controls and export failure/cancel semantics.
+
+
 ## 0.24.0 — 2026-11-06
 
 - Recognize canonical serials in Labels with an explicit load action and clarify New label / Duplicate label versus master creation.

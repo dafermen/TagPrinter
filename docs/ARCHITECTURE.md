@@ -1,4 +1,4 @@
-# Architecture — TagPrinter 0.24
+# Architecture — TagPrinter 0.25
 
 TagPrinter is a Windows Forms application targeting .NET 8. It uses ZXing.Net 0.16.11 for symbols and Microsoft.Data.Sqlite 8.0.28 for embedded local storage. The Windows x64 portable bundles its runtime; printer drivers remain external.
 
@@ -23,6 +23,10 @@ TagPrinter is a Windows Forms application targeting .NET 8. It uses ZXing.Net 0.
 | AssetStore.Workflows.cs / AssetsView.Workflows.cs | Guided actions, reasons, catalog maintenance and transactional import. |
 | AssetStore.Queries.cs | Shared exact scopes, SQL grouping and streaming master export. |
 | BackupStatus.cs / MainForm.AssetLookup.cs | Durable backup feedback, manual backup and explicit serial lookup/loading. |
+| DatabasePerformance.cs / BackgroundRead.cs | Derived expression/partial indexes, safe native interruption and latest-only worker delivery. |
+| HistoryStore.Pages.cs / AssetStore.Pages.cs / AssetStore.DashboardPage.cs | Snapshot-consistent bounded report/master/audit/aggregate pages. |
+| CsvFile.cs / HistoryStore.Export.cs / ExportProgressDialog.cs | Streaming scalar/raw JSON export, staged replacement and responsive cancellation. |
+| MovementHistoryView.cs | Paged administrative differences/reasons. |
 | AssetStore.cs / AssetsView.cs | Transactional master/audit storage and paged administrative editor. |
 | MainForm.Assets.cs | Stable selected identity and loading core fields into Labels. |
 | FluentIcons.cs | Embedded private font/map and disposable per-button Fluent images. |
@@ -115,3 +119,7 @@ AssetStore owns master/audit transactions, optimistic revisions, normalized seri
 ## Daily operations — 0.24
 
 AssetCatalog participates in the same transaction as master/audit writes; normalization cannot leak from a failed import. AssetCsv keeps before/after plans and AssetStore rechecks optimistic metadata at commit time. Dashboard and Assets share AssetFilter and SQL predicates, including empty-value groups and date bounds. Asset list toolbars measure wrapped content explicitly to reserve usable grid space. BackupStatus is a best-effort sidecar outside restore; a successful backup remains valid even if status persistence fails. See ASSET_OPERATIONS.md.
+
+## Large inventories — 0.25
+
+Read delegates capture immutable UI criteria before leaving the UI thread. BackgroundRead owns one running request and one replaceable pending request. DatabaseRead owns the unpooled connection, deferred transaction and native interrupt registration in lifetime-safe disposal order. Reports binds summary DTOs; full designs are loaded by stable ID only when needed. CsvFile owns a staged destination and commits it after flush/cancellation checks. Dashboard totals and page groups share one read snapshot. Derived indexes do not raise user_version or rewrite user snapshots. See PERFORMANCE.md.

@@ -1,6 +1,6 @@
 # Current status
 
-Application version: 0.24.0. Project: https://github.com/dafermen/TagPrinter. Local checkout: C:/Projects/TagPrinter.
+Application version: 0.25.0. Project: https://github.com/dafermen/TagPrinter. Local checkout: C:/Projects/TagPrinter.
 
 The application supports six asset fields, independent visibility, optional QR/Code 128, text-only labels, media presets/custom dimensions, fonts/bold/fitting, margins/offsets, media orientation and content rotation. It restores last work, prints through Windows or RAW ZPL, exports label/code PNG and raster ZPL, and records successful actions in SQLite.
 
@@ -33,3 +33,5 @@ License: MIT for TagPrinter source and project documentation, Copyright (c) 2026
 0.23 adds visible Print · Ctrl+P, clean home text and embedded Fluent icon/text actions. Assets supports explicit records, stable identity, state/location/custodian/notes, movements, label loading and canonical Dashboard aggregation. Schema 2 and backup compatibility are covered in ASSETS.md. Migrated/automatically registered records need administrative review; no physical state is inferred.
 
 0.24 adds explicit serial recognition, New label captions, inventory vocabulary, guided assignment/return/repair with movement reasons, full administrative CSV review/import/export, exact Dashboard state/group navigation and persisted backup feedback with a manual command. Schema 3 and legacy backups are covered in ASSET_OPERATIONS.md. Synchronization stays deferred.
+
+0.25 optimizes large local registries: derived indexes and exact serial matching, projected report pages, one cancellable background reader per view, bounded Dashboard/audit/catalog displays, prepared lazy import lookup and atomic streaming CSV with progress. Schema remains 3. Scale tests use 100000 records in each major collection; see PERFORMANCE.md for evidence and limits. User accounts/permissions remain explicitly deferred.

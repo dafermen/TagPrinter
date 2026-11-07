@@ -21,6 +21,10 @@ internal sealed partial class AssetsView : UserControl
     // Dashboard scope carries exact raw values and dates. Ordinary controls may further narrow this scope.
     private AssetFilter scope=new();
     private DataTable? table;
+    private readonly BackgroundRead<DatabasePage<AssetRecord>> reads=new();
+    private readonly CheckBox exactSerial=new(){AutoSize=true};
+    private bool refreshPending;
+    internal bool ForceAsyncReads {get=>reads.ForceAsync;set=>reads.ForceAsync=value;}
     private Action? resizeToolbar;
     private sealed record StatusChoice(string Key,string Caption){public override string ToString()=>Caption;}
     /// <summary>Builds wrapped toolbars above the grid; commands never print automatically.</summary>
@@ -31,7 +35,7 @@ internal sealed partial class AssetsView : UserControl
         var toolbar=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=3};toolbar.ColumnStyles.Add(new(SizeType.Percent,100));
         var bars=new List<FlowLayoutPanel>();
         FlowLayoutPanel Row(){var row=new FlowLayoutPanel{Dock=DockStyle.Fill,WrapContents=true,Margin=Padding.Empty};toolbar.RowStyles.Add(new(SizeType.Absolute,40));toolbar.Controls.Add(row,0,bars.Count);bars.Add(row);return row;}
-        var filters=Row();filters.Controls.AddRange([search,status]);
+        var filters=Row();filters.Controls.AddRange([search,status,exactSerial]);
         Button Add(FlowLayoutPanel row,string es,string en,Action action){var button=new Button{AutoSize=true};captions.Add((button,es,en));button.Click+=(_,_)=>Run(action);row.Controls.Add(button);return button;}
         Add(filters,"Buscar / actualizar","Search / refresh",()=>{page=0;RefreshData();});Add(filters,"Limpiar filtros","Clear filters",()=>ShowFilter(new()));
         var actions=Row();Add(actions,"Nuevo activo","New asset",()=>Edit(new()));Add(actions,"Editar","Edit",()=>Edit(Selected()));
@@ -41,6 +45,7 @@ internal sealed partial class AssetsView : UserControl
         Add(actions,"Cargar etiqueta","Load label",()=>loadLabel(Selected()));Add(actions,"Movimientos","Movements",ShowMovements);Add(actions,"Catálogos…","Catalogs…",ShowCatalogs);
         var files=Row();Add(files,"Exportar activos CSV…","Export assets CSV…",ExportAssets);Add(files,"Importar activos CSV…","Import assets CSV…",ImportAssets);Add(files,"Plantilla de activos…","Asset CSV template…",SaveAssetTemplate);
         previous.Click+=(_,_)=>Run(()=>{if(page>0){page--;RefreshData();}});next.Click+=(_,_)=>Run(()=>{page++;RefreshData();});files.Controls.AddRange([previous,pageLabel,next]);
+        exactSerial.CheckedChanged+=(_,_)=>{if(!translating){page=0;Run(RefreshData);}};HandleCreated+=(_,_)=>{if(refreshPending && Visible)RefreshData();};VisibleChanged+=(_,_)=>{if(Visible && refreshPending)RefreshData();};
         search.KeyDown+=(_,e)=>{if(e.KeyCode==Keys.Enter){e.SuppressKeyPress=true;page=0;Run(RefreshData);}};status.SelectedIndexChanged+=(_,_)=>{if(!translating){page=0;Run(RefreshData);}};
         grid.ColumnHeaderMouseClick+=(_,e)=>{if(e.ColumnIndex<0)return;string key=grid.Columns[e.ColumnIndex].Name;sortDescending=key==sortKey?!sortDescending:false;sortKey=key;page=0;Run(RefreshData);};
         grid.CellDoubleClick+=(_,e)=>{if(e.RowIndex>=0)Run(()=>Edit(Selected()));};root.Controls.Add(toolbar,0,0);root.Controls.Add(grid,0,1);root.Controls.Add(summary,0,2);Controls.Add(root);
@@ -62,7 +67,7 @@ internal sealed partial class AssetsView : UserControl
         toolbar.SizeChanged+=(_,_)=>resizeToolbar();VisibleChanged+=(_,_)=>{if(Visible)resizeToolbar();};RefreshLanguage();
     }
     /// <summary>Returns the exact list/export criteria, combining Dashboard scope with current search/status controls.</summary>
-    internal AssetFilter CurrentFilter=>scope with {Search=search.Text.Trim(),Status=(status.SelectedItem as StatusChoice)?.Key??""};
+    internal AssetFilter CurrentFilter=>scope with {Search=search.Text.Trim(),Status=(status.SelectedItem as StatusChoice)?.Key??"",ExactSerial=exactSerial.Checked};
     /// <summary>Provides displayed row count without exposing mutable DataTable data to tests.</summary>
     internal int VisibleCount=>grid.Rows.Count;
     /// <summary>Checks real usable grid bounds, not merely the existence of bound rows.</summary>
@@ -72,14 +77,21 @@ internal sealed partial class AssetsView : UserControl
     /// <summary>Refreshes translated presentation while retaining stable state keys and navigation scope.</summary>
     internal void RefreshLanguage()
     {
-        search.PlaceholderText=Ui.T("Buscar código, serial o responsable…","Search code, serial or custodian…");translating=true;string key=(status.SelectedItem as StatusChoice)?.Key??"";
+        exactSerial.Text=Ui.T("Serial exacto","Exact serial");search.PlaceholderText=Ui.T("Buscar código, serial o responsable…","Search code, serial or custodian…");translating=true;string key=(status.SelectedItem as StatusChoice)?.Key??"";
         foreach(var item in captions)item.Button.Text=Ui.T(item.Es,item.En);
         status.Items.Clear();status.Items.Add(new StatusChoice("",Ui.T("Todos los estados","All statuses")));foreach(string state in AssetStore.Statuses)status.Items.Add(new StatusChoice(state,AssetStore.StatusCaption(state)));status.SelectedIndex=Math.Max(0,status.Items.Cast<StatusChoice>().ToList().FindIndex(s=>s.Key==key));translating=false;FluentIcons.ApplyTree(this);foreach(var item in captions)item.Button.Size=item.Button.GetPreferredSize(Size.Empty);resizeToolbar?.Invoke();RefreshData();
     }
     /// <summary>Reads only one SQL page using the same predicates as counts, Dashboard links and CSV export.</summary>
     internal void RefreshData()
     {
-        var filter=CurrentFilter;long total=store.Count(filter);page=(int)Math.Min(page,Math.Max(0,(total-1)/50));var rows=store.Query(filter,page*50,50,sortKey,sortDescending);
+        if(!reads.Synchronous && (!IsHandleCreated || !Visible)){refreshPending=true;return;}refreshPending=false;
+        var filter=CurrentFilter;int requestedPage=page;string order=sortKey;bool reverse=sortDescending;
+        reads.Submit(token=>store.ReadPage(filter,requestedPage,50,order,reverse,token),result=>BindPage(result,filter),error=>{grid.DataSource=null;summary.Text=error.Message;},busy=>{grid.Enabled=!busy;if(busy){previous.Enabled=next.Enabled=false;summary.Text=Ui.T("Cargando activos…","Loading assets…");}});
+    }
+    /// <summary>Builds only the latest completed page's display values on the UI thread.</summary>
+    private void BindPage(DatabasePage<AssetRecord> result,AssetFilter filter)
+    {
+        long total=result.Total;page=result.Page;var rows=result.Rows;
         var data=new DataTable();foreach(string name in new[]{"Uid","Code","AssetType","Brand","Model","Serial","Status","Location","Custodian","PartNumber","MacAddress"})data.Columns.Add(name);data.Columns.Add("Updated",typeof(DateTime));
         foreach(var row in rows)data.Rows.Add(row.Uid,row.Code,row.AssetType,row.Brand,row.Model,row.Serial,AssetStore.StatusCaption(row.Status),row.Location,row.Custodian,row.PartNumber,row.MacAddress,DateTimeOffset.Parse(row.UpdatedUtc,CultureInfo.InvariantCulture).LocalDateTime);
         var old=table;table=data;grid.DataSource=data;old?.Dispose();grid.Columns["Uid"].Visible=false;
@@ -100,18 +112,19 @@ internal sealed partial class AssetsView : UserControl
     /// <summary>Preserves exact Dashboard search/date/status/group values in the destination.</summary>
     internal void ShowFilter(AssetFilter filter)
     {
-        scope=filter;translating=true;search.Text=filter.Search;status.SelectedIndex=Math.Max(0,status.Items.Cast<StatusChoice>().ToList().FindIndex(s=>s.Key==filter.Status));translating=false;page=0;RefreshData();
+        scope=filter;translating=true;search.Text=filter.Search;exactSerial.Checked=filter.ExactSerial;status.SelectedIndex=Math.Max(0,status.Items.Cast<StatusChoice>().ToList().FindIndex(s=>s.Key==filter.Status));translating=false;page=0;RefreshData();
     }
     /// <summary>Compatibility entry point for an unbounded description group.</summary>
     internal void ShowGroup(string type,string brand,string model)=>ShowFilter(new(Type:type,Brand:brand,Model:model));
     /// <summary>Loads fresh concurrency metadata by stable UID rather than trusting displayed text or row order.</summary>
-    private AssetRecord Selected()=>grid.CurrentRow is null?throw new InvalidOperationException(Ui.T("Selecciona un activo.","Select an asset.")):store.Get(grid.CurrentRow.Cells["Uid"].Value.ToString()!)??throw new InvalidDataException("Asset not found.");
+    private AssetRecord Selected()=>reads.IsBusy?throw new InvalidOperationException(Ui.T("Espera a que termine la búsqueda.","Wait for the search to finish.")):grid.CurrentRow is null?throw new InvalidOperationException(Ui.T("Selecciona un activo.","Select an asset.")):store.Get(grid.CurrentRow.Cells["Uid"].Value.ToString()!)??throw new InvalidDataException("Asset not found.");
     /// <summary>Edits explicitly; failed validation leaves entered data in the open editor.</summary>
     private void Edit(AssetRecord source){using var dialog=CreateEditor(source);if(dialog.ShowDialog(FindForm())==DialogResult.OK)RefreshData();}
     /// <summary>Creates an editable dropdown of user vocabulary; new typed values are learned only on a successful save.</summary>
     private ComboBox CatalogInput(string kind,string value)
     {
-        var combo=new ComboBox{Dock=DockStyle.Top,DropDownStyle=ComboBoxStyle.DropDown,Tag="UserData",Name=kind,MaxLength=kind is "AssetType" or "Brand"?80:kind=="Model"?100:160,AutoCompleteMode=AutoCompleteMode.SuggestAppend,AutoCompleteSource=AutoCompleteSource.ListItems};combo.Items.AddRange(new AssetCatalog(history).Values(kind).Cast<object>().ToArray());combo.Text=value;return combo;
+        var combo=new ComboBox{Dock=DockStyle.Top,DropDownStyle=ComboBoxStyle.DropDown,Tag="UserData",Name=kind,MaxLength=kind is "AssetType" or "Brand"?80:kind=="Model"?100:160,AutoCompleteMode=AutoCompleteMode.SuggestAppend,AutoCompleteSource=AutoCompleteSource.ListItems};void LoadOptions(string prefix){string text=combo.Text;var names=new AssetCatalog(history).Suggest(kind,prefix);if(text.Length>0 && !names.Contains(text)){if(names.Count==200)names.RemoveAt(199);names.Insert(0,text);}combo.Items.Clear();combo.Items.AddRange(names.Cast<object>().ToArray());combo.Text=text;}
+        combo.Text=value;LoadOptions("");bool typed=false;combo.TextUpdate+=(_,_)=>typed=true;combo.DropDown+=(_,_)=>LoadOptions(typed?combo.Text:"");combo.DropDownClosed+=(_,_)=>typed=false;return combo;
     }
     /// <summary>Builds the real editor without showing it, enabling isolated tests of the actual save bindings.</summary>
     internal Form CreateEditor(AssetRecord source)
@@ -132,19 +145,10 @@ internal sealed partial class AssetsView : UserControl
     /// <summary>Shows field changes and optional workflow reasons, preserving local dates and account attribution.</summary>
     private void ShowMovements()
     {
-        var item=Selected();using var dialog=new AppWindow{Text=Ui.T("Movimientos · ","Movements · ")+item.Code,Width=1000,Height=560,StartPosition=FormStartPosition.CenterParent};
-        using var data=new DataTable();foreach(string label in new[]{Ui.T("Fecha","Date"),Ui.T("Acción","Action"),Ui.T("Campo","Field"),Ui.T("Antes","Before"),Ui.T("Después","After"),Ui.T("Usuario","User")})data.Columns.Add(label);
-        foreach(var movement in store.Movements(item.Uid))
-        {
-            string action=movement.Action switch{"Migrated"=>Ui.T("Desde historial","From history"),"Registered"=>Ui.T("Registrado al etiquetar","Registered from label"),"Created"=>Ui.T("Creado","Created"),"Imported"=>Ui.T("Importado","Imported"),"ImportUpdated"=>Ui.T("Actualizado por CSV","Updated from CSV"),"Assigned"=>Ui.T("Asignado","Assigned"),"Returned"=>Ui.T("Devuelto","Returned"),"RepairStarted"=>Ui.T("Enviado a reparación","Sent to repair"),_=>Ui.T("Modificado","Updated")};
-            void Row(string field,string before,string after)=>data.Rows.Add(DateTimeOffset.Parse(movement.AtUtc,CultureInfo.InvariantCulture).LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss"),action,field,before,after,movement.Actor);
-            foreach(var change in AssetCsv.Changes(new(0,movement.Before,movement.After)))Row(AssetCsv.Caption(change.Field),change.Field=="Status"&&change.Before.Length>0?AssetStore.StatusCaption(change.Before):change.Before,change.Field=="Status"?AssetStore.StatusCaption(change.After):change.After);
-            if(movement.Note.Length>0)Row(Ui.T("Motivo","Reason"),"",movement.Note);
-        }
-        var view=new DataGridView{Dock=DockStyle.Fill,ReadOnly=true,AllowUserToAddRows=false,AllowUserToDeleteRows=false,DataSource=data,AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.Fill,BackgroundColor=Color.White};dialog.Controls.Add(view);dialog.ShowDialog(FindForm());
+        var item=Selected();using var dialog=new AppWindow{Text=Ui.T("Movimientos · ","Movements · ")+item.Code,Width=1000,Height=600,StartPosition=FormStartPosition.CenterParent};dialog.Controls.Add(new MovementHistoryView(store,item.Uid));dialog.ShowDialog(FindForm());
     }
     /// <summary>Reports recoverable errors; verification rethrows instead of hanging on a modal warning.</summary>
     private void Run(Action action){try{action();}catch(Exception error){if(Environment.GetCommandLineArgs().Contains("--self-test"))throw;MessageBox.Show(FindForm(),error.Message,"TagPrinter",MessageBoxButtons.OK,MessageBoxIcon.Warning);}}
     /// <summary>Disposes only the owned projection before child controls.</summary>
-    protected override void Dispose(bool disposing){if(disposing)table?.Dispose();base.Dispose(disposing);}
+    protected override void Dispose(bool disposing){if(disposing){reads.Dispose();table?.Dispose();}base.Dispose(disposing);}
 }

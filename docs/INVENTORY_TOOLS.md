@@ -1,4 +1,4 @@
-# Inventory tools — TagPrinter 0.24
+# Inventory tools — TagPrinter 0.25
 
 ## Import inventory without printing
 
@@ -19,7 +19,7 @@ After confirmation, a consistent pre-import backup is made and all accepted rows
 
 Reports displays 50 rows initially; choose 50, 100 or 250 and use the previous/next arrows. The page indicator shows page number, number of pages and total matching events. Search/date/action/recycle filters apply before pagination. Sorting a header applies to the whole matching dataset, not just the current page, using whitelisted stored SQL values and an ID tie breaker. Action ordering uses stored action codes rather than translated captions.
 
-Filters reset to the first page; deleting records clamps an out-of-range page. Dashboard now opens Assets with its exact current search/date/retirement scope and description/location/custodian group; Reports retains its own history filters. Clear filters exits the group. **Export view CSV** exports the current page in displayed order; **Export all CSV** keeps its earlier meaning: every inventory event in the selected active/recycle scope, regardless of page/filter. Full history exports still load their result. Dashboard now aggregates in SQL and materializes groups rather than every event; cross-instance snapshot paging is not implemented.
+Filters reset to the first page; deleting records clamps an out-of-range page. Dashboard now opens Assets with its exact current search/date/retirement scope and description/location/custodian group; Reports retains its own history filters. Clear filters exits the group. **Export view CSV** exports the current page in displayed order; **Export all CSV** keeps its earlier meaning: every inventory event in the selected active/recycle scope, regardless of page/filter. Full history exports now stream scalar/raw snapshot rows with bounded memory, progress/cancel and staged destination replacement. Dashboard aggregates in SQL and materializes one group page rather than every group/event; cross-instance snapshot paging is not implemented.
 
 ![SQL-backed report pages](images/reports-paging-en.png)
 

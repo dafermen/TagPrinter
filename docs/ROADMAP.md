@@ -2,6 +2,8 @@
 
 ## Completed
 
+- 0.25: indexed/coalesced background reads, lightweight history projection, paged aggregate/audit views, bounded vocabulary/import lookup and atomic streaming/cancellable CSV; measured synthetic scale.
+
 - 0.24: explicit serial recognition, inventory catalogs, guided workflows/reasons, administrative CSV, exact Dashboard navigation and durable/manual backup feedback.
 
 - 0.23: discoverable print shortcut, offline Fluent actions and first canonical Assets module with movement audit, stable label links, current-asset Dashboard and protected schema-2 migration.
@@ -33,6 +35,8 @@
 2. Define RFID identifiers/memory and implement write/read-back verification.
 3. Synchronization is explicitly deferred: user confirmed local-only use for 0.22. Define server/API, access, offline/conflict rules when multiple devices are needed.
 
-Future proposals require their own scope/authorization. Very large group sets, indexed master-field queries and streaming history export remain possible performance follow-ups.
+Future proposals require their own scope/authorization. Those performance follow-ups are implemented in 0.25. Millions-scale measurement, keyset pagination and broader indexed text search remain possible later work.
 
 Potential later asset features: structured employee/site entities and hierarchy, procurement/attachments and permissions. These are proposals, not implemented or authorized automatically.
+
+User accounts and permissions are explicitly deferred; keep current operation local without a login module. New module proposals awaiting selection: maintenance/warranties, physical inventory reconciliation by scanner, asset photos/documents and batch label output.

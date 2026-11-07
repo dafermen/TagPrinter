@@ -1,4 +1,4 @@
-# Configuration and data contracts — 0.24
+# Configuration and data contracts — 0.25
 
 ## Three separate stores
 
