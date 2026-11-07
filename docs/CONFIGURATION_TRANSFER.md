@@ -18,7 +18,7 @@ The imported catalog replaces the active catalog rather than merging IDs. Data a
 
 | Included | Not included |
 |---|---|
-| Complete application media/defaults and current editor preferences/data | SQLite events, report data, recycle bin or exported image/ZPL files |
+| Complete application media/defaults and current editor preferences/data | SQLite assets/movements/events, report data, recycle bin or exported image/ZPL files |
 | App-level printer name, method, DPI and requested copies | Driver installation, printer ports, firmware/calibration or native driver preferences |
 | Font-family name and text settings | Font files or font installation |
 | Code scale and template geometry | Application/runtime binaries, integrity manifests or Windows settings |
@@ -58,3 +58,5 @@ In 0.20 the old direction value remains round-trippable but is ignored by the fi
 Transient print-job notices, live job IDs and current queue observations are not transferred. Free-text drafts remain included even though they produce no inventory DB events in 0.21.
 
 Since 0.22, Catalog includes reusable label Profiles and AutomaticBackups. Validation checks each profile using an isolated catalog without profiles to avoid recursive validation. Import refreshes profile choices and backup checkbox. CSV inventory import and SQLite restoration are separate operations.
+
+Since 0.23, WorkState may retain a selected local AssetUid. This is a selection reference, not the asset record or its movements. A different database without that UID resolves subsequent inventory output by serial; use a full SQLite backup for master-data recovery. Reusable profiles and CSV imports clear inherited master identity.

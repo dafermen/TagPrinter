@@ -6,7 +6,7 @@ namespace TagPrinter;
 /// Coordinates the editable label, preview, autosave and output. Its partial History file integrates tabs
 /// and event recording.
 /// </summary>
-public partial class MainForm : Form
+public partial class MainForm : AppWindow
 {
     /// <summary>Fixed destination opened only by the explicit About click.</summary>
     internal const string ProjectUrl="https://github.com/dafermen/TagPrinter";
@@ -128,7 +128,7 @@ public partial class MainForm : Form
         catalogPath=configPath is not null?Path.Combine(Path.GetDirectoryName(Path.GetFullPath(configPath))!,"catalog.json"):Path.Combine(StartupDiagnostics.InstallationRoot,"config.json");
         appConfig=configuration ?? AppConfig.Load(catalogPath);
         Ui.Language=appConfig.Defaults.Language;
-        Text="TagPrinter | v0.22";
+        Text="TagPrinter | v0.23";
         using var iconStream=typeof(MainForm).Assembly.GetManifestResourceStream("TagPrinter.TagPrinter.ico");
         if(iconStream is not null)Icon=new Icon(iconStream); Width=1160; Height=850; MinimumSize=new Size(980,720);
         Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;
@@ -219,9 +219,9 @@ public partial class MainForm : Form
         printingSection=new CollapsibleSection(Ui.T("04  Impresión","04  Printing"));
         fields.Controls.Add(printingSection);target=printingSection.Body;
         printers.Name="PrinterSelector";
-        Field(Ui.T("Impresora instalada en Windows","Windows printer"),printers);
+        Field(Ui.T("Impresora instalada","Installed printer"),printers);
         var refresh=new Button{Text=Ui.T("Actualizar impresoras","Refresh printers"),AutoSize=true};refresh.Click+=(_,_)=>LoadPrinters();target.Controls.Add(refresh);
-        mode.Items.AddRange([Ui.T("Controlador de Windows (general)","Windows driver (general)"),Ui.T("ZPL directo (solo equipos compatibles)","Direct ZPL (compatible printers only)")]); Field(Ui.T("Método de impresión","Print method"),mode);
+        mode.Items.AddRange([Ui.T("Controlador de impresora","Printer driver"),Ui.T("ZPL directo (solo equipos compatibles)","Direct ZPL (compatible printers only)")]); Field(Ui.T("Método de impresión","Print method"),mode);
         dpi.Items.AddRange(["203","300"]);Field(Ui.T("Resolución de la impresora · DPI","Printer resolution · DPI"),dpi); Field(Ui.T("Copias","Copies"),copies);
         var options=new Button{Text=Ui.T("Preferencias del controlador…","Driver preferences…"),AutoSize=true};options.Click+=(_,_)=>Guard(Preferences);target.Controls.Add(options);
         settingsSection=new CollapsibleSection(Ui.T("05  Configuración","05  Settings"));
@@ -259,6 +259,7 @@ public partial class MainForm : Form
         // Attach shared preview handlers after loading. A change to text, visibility, layout or DPI follows the same validation path.
         foreach(var check in new[]{showAssetType,showBrand,showModel,showSerialText,showPartNumber,showMacAddress,showCode})check.CheckedChanged+=(_,_)=>UpdatePreview();
         foreach(var t in new[]{assetType,brand,model,serial,partNumber,macAddress})t.TextChanged+=(_,_)=>UpdatePreview();
+        serial.TextChanged+=(_,_)=>{if(ready)selectedAssetUid=null;};
         foreach(var c in new[]{layout,code,mode,dpi})c.SelectedIndexChanged+=(_,_)=>UpdatePreview();
         sizes.SelectedIndexChanged+=(_,_)=>ApplySize(); width.ValueChanged+=(_,_)=>UpdatePreview();height.ValueChanged+=(_,_)=>UpdatePreview();
         language.SelectedIndex=Ui.Language=="es"?1:0;
@@ -284,7 +285,7 @@ public partial class MainForm : Form
     /// </summary>
     internal void StartNewAsset()
     {
-        sourceHistoryId=null;assetSection.Expanded=true;
+        sourceHistoryId=null;selectedAssetUid=null;assetSection.Expanded=true;
         bool active=ready;ready=false;
         foreach(var input in new[]{assetType,brand,model,serial,partNumber,macAddress,freeText})input.Clear();
         ready=active;UpdatePreview();SaveConfig();assetType.Focus();
@@ -293,7 +294,7 @@ public partial class MainForm : Form
     void UpdatePrintSummary()
     {
         string printerName=printers.SelectedIndex>=0?printers.Text:Ui.T("Sin seleccionar","Not selected");
-        printSummary.Text=string.Format(Ui.T("Impresora: {0}\nCopias: {1} · {2}","Printer: {0}\nCopies: {1} · {2}"),printerName,copies.Value,mode.SelectedIndex==1?"ZPL":"Windows");
+        printSummary.Text=string.Format(Ui.T("Impresora: {0}\nCopias: {1}","Printer: {0}\nCopies: {1}"),printerName,copies.Value)+(mode.SelectedIndex==1?" · ZPL":"");
     }
     /// <summary>
     /// Runs a UI action and displays failures as warnings instead of letting click-handler exceptions
@@ -426,7 +427,7 @@ public partial class MainForm : Form
     void ScheduleSave(){if(!ready)return;autosave.Stop();autosave.Start();}
     /// <summary>Copies all editor values/preferences to WorkState without trimming or writing files.</summary>
     /// <returns>Complete serializable editor snapshot.</returns>
-    internal WorkState CaptureWork()=>new(){Printer=printers.Text,Size=sizes.SelectedIndex,LabelPresetId=sizes.SelectedIndex<appConfig.LabelSizes.Count?appConfig.LabelSizes[sizes.SelectedIndex].Id:"custom",Width=width.Value,Height=height.Value,Layout=layout.SelectedIndex,Code=code.SelectedIndex,Mode=mode.SelectedIndex,Dpi=dpi.SelectedIndex,AssetType=assetType.Text,ShowAssetType=showAssetType.Checked,Brand=brand.Text,PartNumber=partNumber.Text,MacAddress=macAddress.Text,ShowPartNumber=showPartNumber.Checked,ShowMacAddress=showMacAddress.Checked,Model=model.Text,Serial=serial.Text,Language=Ui.Language,ShowBrand=showBrand.Checked,ShowModel=showModel.Checked,ShowSerialText=showSerialText.Checked,ShowCode=showCode.Checked,ShowGuides=showGuides.Checked,AutoFont=autoFont.Checked,FontPercent=fontPercent,MarginMm=margin.Value,OffsetXmm=offsetX.Value,OffsetYmm=offsetY.Value,Copies=(int)copies.Value,FontFamily=fontFamily.Text,FontSizePt=fontSize.Value,Bold=bold.Checked,HeadingBold=headingBold.Checked,ContentRotation=rotation.SelectedIndex*90,CodePercent=(int)codePercent.Value,CenterText=centerText.Checked,FreeTextMode=freeTextMode.Checked,FreeText=freeText.Text.ReplaceLineEndings("\n"),ShowFeedGuide=showFeedGuide.Checked,FeedDirection=legacyFeedDirection};
+    internal WorkState CaptureWork()=>new(){AssetUid=selectedAssetUid??"",Printer=printers.Text,Size=sizes.SelectedIndex,LabelPresetId=sizes.SelectedIndex<appConfig.LabelSizes.Count?appConfig.LabelSizes[sizes.SelectedIndex].Id:"custom",Width=width.Value,Height=height.Value,Layout=layout.SelectedIndex,Code=code.SelectedIndex,Mode=mode.SelectedIndex,Dpi=dpi.SelectedIndex,AssetType=assetType.Text,ShowAssetType=showAssetType.Checked,Brand=brand.Text,PartNumber=partNumber.Text,MacAddress=macAddress.Text,ShowPartNumber=showPartNumber.Checked,ShowMacAddress=showMacAddress.Checked,Model=model.Text,Serial=serial.Text,Language=Ui.Language,ShowBrand=showBrand.Checked,ShowModel=showModel.Checked,ShowSerialText=showSerialText.Checked,ShowCode=showCode.Checked,ShowGuides=showGuides.Checked,AutoFont=autoFont.Checked,FontPercent=fontPercent,MarginMm=margin.Value,OffsetXmm=offsetX.Value,OffsetYmm=offsetY.Value,Copies=(int)copies.Value,FontFamily=fontFamily.Text,FontSizePt=fontSize.Value,Bold=bold.Checked,HeadingBold=headingBold.Checked,ContentRotation=rotation.SelectedIndex*90,CodePercent=(int)codePercent.Value,CenterText=centerText.Checked,FreeTextMode=freeTextMode.Checked,FreeText=freeText.Text.ReplaceLineEndings("\n"),ShowFeedGuide=showFeedGuide.Checked,FeedDirection=legacyFeedDirection};
     /// <summary>
     /// Restores a snapshot with range checks and preset lookup while suppressing preview events; missing
     /// presets become custom media.
@@ -434,7 +435,7 @@ public partial class MainForm : Form
     /// <param name="s">Saved work; numeric values are clamped to supported ranges.</param>
     internal void Restore(WorkState s)
     {
-        bool wasReady=ready;ready=false;
+        bool wasReady=ready;ready=false;selectedAssetUid=string.IsNullOrEmpty(s.AssetUid)?null:s.AssetUid;
         // An empty/unavailable restored destination must not silently fall back to another printer.
         printers.SelectedIndex=-1;
         if(printers.Items.Contains(s.Printer))printers.SelectedItem=s.Printer;

@@ -1,0 +1,4 @@
+Microsoft Fluent System Icons
+https://github.com/microsoft/fluentui-system-icons
+Pinned commit: e15fc0de25fab983e3e42bac8798be69a85c23bf
+Regular font and matching glyph map. No font installation required.

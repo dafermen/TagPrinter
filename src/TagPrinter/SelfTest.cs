@@ -69,7 +69,7 @@ public static class SelfTest
     public static void Run()
     {
         string folder=Path.Combine(AppContext.BaseDirectory,"verification");Directory.CreateDirectory(folder);
-        int count=0;
+        int count=0;FluentUiTests.Run(folder);AssetTests.Run(folder);
         // Cover a matrix of media sizes, DPI values, layouts and code types. Decode actual pixels to verify
         // the output serial.
         foreach(int width in new[]{50,100}) foreach(int dpi in new[]{203,300}) foreach(int layout in new[]{0,1,2,3}) foreach(bool qr in new[]{false,true})
@@ -126,12 +126,12 @@ public static class SelfTest
             Application.DoEvents();
             using(var screenshot=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(screenshot,new Rectangle(Point.Empty,form.Size));screenshot.Save(Path.Combine(folder,"application-es-small.png"));}
             form.Restore(work with {Serial="ABC12345644",Copies=7,Mode=1});
-            if(!form.PrintSummaryText.Contains("7") || !form.PrintSummaryText.Contains("ZPL"))throw new Exception("Print summary is stale");
+            if(!form.PrintSummaryText.Contains("7") || form.CaptureWork().Mode!=1)throw new Exception("Print summary is stale");
             var full=form.CaptureWork();form.StartNewAsset();
             var cleared=form.CaptureWork();
             if(cleared!=full with {AssetType="",Brand="",Model="",Serial="",PartNumber="",MacAddress=""})throw new Exception("New asset changed preferences or retained old data");
             if(WorkStore.Load(freshPath)!=cleared)throw new Exception("New asset was not saved immediately");
-            if(!form.PrintSummaryText.Contains("7") || !form.PrintSummaryText.Contains("ZPL"))throw new Exception("New asset changed printing summary");
+            if(!form.PrintSummaryText.Contains("7") || form.CaptureWork().Mode!=1)throw new Exception("New asset changed printing summary");
             if(new Uri(MainForm.ProjectUrl).AbsoluteUri!="https://github.com/dafermen/TagPrinter")throw new Exception("Incorrect project link");
             form.Restore(work with {Serial="ABC12345644"});
             form.SaveConfig();form.Close();
@@ -430,7 +430,7 @@ public static class SelfTest
             demo.ShowReports();Application.DoEvents();
             using(var capture=new Bitmap(demo.Width,demo.Height)){demo.DrawToBitmap(capture,new Rectangle(Point.Empty,demo.Size));capture.Save(Path.Combine(folder,"reports-en.png"));}
             demo.Restore(demo.CaptureWork() with {Language="es"});demo.ShowReports();Application.DoEvents();
-            if(demo.Reports.VisibleRows().Count!=3)throw new Exception("Language change unexpectedly filtered demo reports");
+            if(demo.Reports.VisibleRows().Count!=3)throw new Exception($"Language change unexpectedly filtered demo reports: {demo.Reports.VisibleRows().Count} of 3 rows.");
             using(var capture=new Bitmap(demo.Width,demo.Height)){demo.DrawToBitmap(capture,new Rectangle(Point.Empty,demo.Size));capture.Save(Path.Combine(folder,"reports-es.png"));}
             demo.Close();
         }

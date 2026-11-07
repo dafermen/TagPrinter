@@ -1,4 +1,4 @@
-# Inventory tools — TagPrinter 0.22
+# Inventory tools — TagPrinter 0.23
 
 ## Import inventory without printing
 
@@ -11,7 +11,7 @@ Monitor;Dell;H22203H;000123;ZYX123;00:1A:2B:3C:4D:5E
 
 Serial is required; other named columns are optional. Unknown columns are ignored, so the application's inventory report CSV can also supply these fields. Import uses the current label design, not report StateJson or printer settings. Keep serials as text in a spreadsheet so leading zeros are not removed before saving the CSV. Quotes, embedded semicolons and quoted newlines are supported. A file is limited to 10 MB / 10000 records; use multiple files for larger batches.
 
-**Import inventory CSV** validates the entire file, then opens a read-only preview. Closing/canceling it writes nothing. Skip duplicates is initially checked: active serials already in the database and earlier rows in the same batch are omitted. Comparison trims the input and uses SQLite's ASCII case-insensitive serial matching. Uncheck deliberately to register repeated inventory snapshots. Recycled/Free text records do not prevent a new import.
+**Import inventory CSV** validates the entire file, then opens a read-only preview. Closing/canceling it writes nothing. Skip duplicates is initially checked: active serials already in the database and earlier rows in the same batch are omitted. Comparison trims input; canonical lookup uses invariant Unicode uppercase while legacy event matching uses SQLite ASCII folding. Active master serials also participate. Uncheck deliberately to register repeated inventory snapshots without overwriting a master. Free text does not block import. Recycling only a label does not retire its canonical asset.
 
 After confirmation, a consistent pre-import backup is made and all accepted rows commit in one transaction as **Imported** actions. They appear in Reports and Dashboard without being counted as printed jobs or tag exports. There is no automatic printing. On validation/write failure the batch is rejected/rolled back; it is not partially imported. Invalid text lengths, missing serials, malformed CSV or invalid UTF-8 must be corrected first. Label rendering is checked when loading/printing; choose QR for non-ASCII serials.
 
@@ -19,7 +19,7 @@ After confirmation, a consistent pre-import backup is made and all accepted rows
 
 Reports displays 50 rows initially; choose 50, 100 or 250 and use the previous/next arrows. The page indicator shows page number, number of pages and total matching events. Search/date/action/recycle filters apply before pagination. Sorting a header applies to the whole matching dataset, not just the current page, using whitelisted stored SQL values and an ID tie breaker. Action ordering uses stored action codes rather than translated captions.
 
-Filters reset to the first page; deleting records clamps an out-of-range page. Dashboard drill-down applies its trimmed type/brand/model group in SQL before counting/paging. Clear filters exits the group. **Export view CSV** exports the current page in displayed order; **Export all CSV** keeps its earlier meaning: every inventory event in the selected active/recycle scope, regardless of page/filter. Full exports and Dashboard aggregation still load their complete result; this version does not provide streaming analytics or cross-instance snapshot paging.
+Filters reset to the first page; deleting records clamps an out-of-range page. Dashboard now opens the exact canonical group in Assets; Reports retains its own history filters. Clear filters exits the group. **Export view CSV** exports the current page in displayed order; **Export all CSV** keeps its earlier meaning: every inventory event in the selected active/recycle scope, regardless of page/filter. Full history exports still load their result. Dashboard now aggregates in SQL and materializes groups rather than every event; cross-instance snapshot paging is not implemented.
 
 ![SQL-backed report pages](images/reports-paging-en.png)
 
@@ -27,9 +27,9 @@ Filters reset to the first page; deleting records clamps an out-of-range page. D
 
 Open **05 Settings > Restore database** and choose a TagPrinter SQLite backup. Close other TagPrinter instances first; printing/tracking and an active automatic backup must finish. Confirmation explicitly replaces all events and recycle-bin membership, not last-work JSON, profiles, printer drivers, settings or external PNG/ZPL files.
 
-The app stages a consistent read-only copy, checks SQLite integrity, version/tables, expected foreign keys/data links and readable event snapshots, and rejects unrelated/trigger-bearing/newer/corrupt files before touching live pages. It saves a separate **TagPrinter-before-restore-...db** safety copy, then restores through SQLite's transactional backup API. The editor keeps its draft but clears its historical source reference; Reports reloads. Safety copies are not automatically pruned. If validation fails, the current inventory remains unchanged.
+The app stages a consistent read-only copy, checks SQLite integrity, version/tables, expected foreign keys/data links and readable event snapshots, and rejects unrelated/trigger-bearing/newer/corrupt files before touching live pages. It saves a separate **TagPrinter-before-restore-...db** safety copy, then restores through SQLite's transactional backup API. The editor keeps its draft but clears its historical and selected master references; Reports reloads. Safety copies are not automatically pruned. If validation fails, the current inventory remains unchanged.
 
-This restores an inventory database, not a synchronization merge. Backups from an app-created database with schema version 1 are supported. Choose a proper SQLite backup rather than copying a live WAL database file in Explorer. If startup rejects a corrupt live database, preserve it and follow TROUBLESHOOTING.md before using the restore UI in a working installation.
+This restores an inventory database, not a synchronization merge. Schema 1 and 2 backups are supported; version 1 is upgraded only in staging. Choose a proper SQLite backup rather than copying a live WAL database file in Explorer. If startup rejects a corrupt live database, preserve it and follow TROUBLESHOOTING.md before using the restore UI in a working installation.
 
 ## Automatic backups
 
@@ -66,3 +66,5 @@ InventoryCsv parses and bounds input before any write. HistoryStore.ImportInvent
 InventoryServices also validates/stages backups and restores them via SQLite's backup transaction. AppConfig contains profiles and automatic-backup policy; MainForm.Inventory coordinates dialogs, timers and design-only application. No imported row is sent to a printer. InventoryToolsTests uses real isolated SQLite/CSV/forms to check rollback, quoted text, leading zeros, duplicates, page boundaries/global order/groups, backup retention, restoration/safety/invalid preservation, profile transfer and identity-clearing duplication.
 
 SQLite transaction contract: [Online Backup API](https://www.sqlite.org/c3ref/backup_finish.html). Physical printer calibration/RFID verification remain separate hardware tasks.
+
+Since 0.23, new nonempty serials also register a canonical asset in Needs review, in the same import transaction. Existing master metadata is not overwritten by repeated imports/label snapshots; edit it explicitly in Assets. Database backups include masters and movements. See ASSETS.md.

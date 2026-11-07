@@ -73,7 +73,7 @@ public partial class MainForm
     /// <summary>Starts another asset with the same type/brand/model/design, clearing potentially unique identifiers and provenance.</summary>
     internal void DuplicateAsset()
     {
-        var state=CaptureWork();sourceHistoryId=null;Restore(state with {Serial="",PartNumber="",MacAddress=""});assetSection.Expanded=true;SaveConfig();serial.Focus();
+        var state=CaptureWork();sourceHistoryId=null;selectedAssetUid=null;Restore(state with {AssetUid="",Serial="",PartNumber="",MacAddress=""});assetSection.Expanded=true;SaveConfig();serial.Focus();
     }
     /// <summary>Warns without blocking legitimate reprints; free text and recycled events are excluded.</summary>
     private void RefreshDuplicateWarning()
@@ -102,11 +102,11 @@ public partial class MainForm
         if(printBusy)throw new InvalidOperationException(Ui.T("Espera a que termine el envío de impresión.","Wait for the print submission/tracking to finish."));
         using var d=new OpenFileDialog{Filter="CSV|*.csv"};if(d.ShowDialog(this)!=DialogResult.OK)return;
         var rows=InventoryCsv.Read(d.FileName,CaptureWork());
-        using var previewDialog=new Form{Text=Ui.T("Vista previa de importación","Import preview"),Width=850,Height=520,StartPosition=FormStartPosition.CenterParent};
+        using var previewDialog=new AppWindow{Text=Ui.T("Vista previa de importación","Import preview"),Width=850,Height=520,StartPosition=FormStartPosition.CenterParent};
         var grid=new DataGridView{Dock=DockStyle.Fill,ReadOnly=true,AllowUserToAddRows=false,DataSource=rows.Select(s=>new{s.AssetType,s.Brand,s.Model,s.Serial,s.PartNumber,s.MacAddress}).ToList()};
         var panel=new FlowLayoutPanel{Dock=DockStyle.Bottom,Height=76};var skip=new CheckBox{AutoSize=true,Checked=true,Text=Ui.T("Omitir seriales existentes o repetidos en el archivo","Skip existing serials and duplicates within the file")};
         var commit=new Button{AutoSize=true,Text=Ui.T("Importar","Import"),DialogResult=DialogResult.OK};panel.Controls.AddRange([new Label{AutoSize=true,Text=$"{rows.Count} "+Ui.T("registros. No se imprimirán etiquetas.","records. No labels will be printed.")},skip,commit]);previewDialog.Controls.Add(grid);previewDialog.Controls.Add(panel);
-        if(previewDialog.ShowDialog(this)!=DialogResult.OK)return;
+        FluentIcons.ApplyTree(previewDialog);if(previewDialog.ShowDialog(this)!=DialogResult.OK)return;
         history.AutomaticBackup(BackupDirectory,true);var result=history.ImportInventory(rows,skip.Checked);reports?.RefreshData();RefreshDuplicateWarning();
         MessageBox.Show(this,string.Format(Ui.T("Importados: {0}. Omitidos: {1}.","Imported: {0}. Skipped: {1}."),result.Added,result.Skipped),"TagPrinter");
     }
@@ -116,7 +116,7 @@ public partial class MainForm
         if(printBusy || backupRunning)throw new InvalidOperationException(Ui.T("Espera a que termine la operación actual.","Wait for the current operation to finish."));
         using var d=new OpenFileDialog{Filter="SQLite|*.db"};if(d.ShowDialog(this)!=DialogResult.OK)return;
         if(MessageBox.Show(this,Ui.T("Se reemplazará TODO el inventario y la papelera. Se guardará un respaldo previo. Cierra otras instancias de TagPrinter. ¿Restaurar?","This replaces ALL inventory and the recycle bin. A safety backup will be saved. Close other TagPrinter instances. Restore?"),"TagPrinter",MessageBoxButtons.YesNo,MessageBoxIcon.Warning,MessageBoxDefaultButton.Button2)!=DialogResult.Yes)return;
-        string backup=history.RestoreBackup(d.FileName,BackupDirectory);sourceHistoryId=null;reports?.RefreshData();RefreshDuplicateWarning();status.Text=Ui.T("Base restaurada. Respaldo previo: ","Database restored. Safety backup: ")+backup;
+        string backup=history.RestoreBackup(d.FileName,BackupDirectory);sourceHistoryId=null;selectedAssetUid=null;SaveConfig();reports?.RefreshData();assetsView?.RefreshData();RefreshDuplicateWarning();status.Text=Ui.T("Base restaurada. Respaldo previo: ","Database restored. Safety backup: ")+backup;
     }
     /// <summary>Stops local timers; any already-running backup owns and closes its own SQLite connections.</summary>
     private void DisposeInventoryTools(){backupTimer.Stop();backupTimer.Dispose();duplicateTimer.Stop();duplicateTimer.Dispose();}

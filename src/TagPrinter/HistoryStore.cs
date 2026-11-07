@@ -28,7 +28,11 @@ public record HistoryQuery(string Search="",string Field="all",string Action="",
 /// <param name="State">Full saved-work snapshot.</param>
 /// <param name="OutputPath">Exported file path; empty for print jobs.</param>
 /// <param name="SourceEventId">Optional source event of a reloaded label.</param>
-public record HistoryEvent(long Id,DateTimeOffset CreatedUtc,string Action,WorkState State,string OutputPath,long? SourceEventId);
+public record HistoryEvent(long Id,DateTimeOffset CreatedUtc,string Action,WorkState State,string OutputPath,long? SourceEventId)
+{
+    /// <summary>Stable master-asset reference, separate from the immutable label snapshot.</summary>
+    public string? AssetUid {get;init;}
+}
 /// <summary>
 /// Owns SQLite connections, event inserts, reversible deletion, parameterized searches, CSV and backups.
 /// </summary>
@@ -53,10 +57,18 @@ public sealed partial class HistoryStore
             using var reader=check.ExecuteReader();
             while(reader.Read())if(!string.Equals(reader.GetString(0),"ok",StringComparison.OrdinalIgnoreCase))throw new InvalidDataException("SQLite integrity check failed: "+reader.GetString(0));
         }
+        int existingVersion;
         using(var version=connection.CreateCommand())
         {
             version.CommandText="PRAGMA user_version";
-            if(Convert.ToInt32(version.ExecuteScalar())>1)throw new InvalidDataException("History database version is newer than this app.");
+            existingVersion=Convert.ToInt32(version.ExecuteScalar());
+            if(existingVersion>2)throw new InvalidDataException("History database version is newer than this app.");
+        }
+        if(existingVersion==1)
+        {
+            string backups=Path.Combine(Path.GetDirectoryName(DatabasePath)!,"backups");Directory.CreateDirectory(backups);
+            string migrationBackup=Path.Combine(backups,"TagPrinter-before-assets-"+DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff")+"-"+Guid.NewGuid()+".db");
+            using var destination=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=migrationBackup,Pooling=false}.ToString());destination.Open();connection.BackupDatabase(destination);
         }
         using var command=connection.CreateCommand();
         // Idempotent initialization keeps existing events. Metadata columns support queries; state_json
@@ -81,13 +93,13 @@ public sealed partial class HistoryStore
             CREATE INDEX IF NOT EXISTS ix_events_serial_trim ON events(trim(serial) COLLATE NOCASE);
             CREATE INDEX IF NOT EXISTS ix_events_created ON events(created_utc);
             CREATE TABLE IF NOT EXISTS trash(event_id INTEGER PRIMARY KEY REFERENCES events(id), deleted_utc TEXT NOT NULL);
-            PRAGMA user_version=1;
+
             """;
-        command.ExecuteNonQuery();
+        command.ExecuteNonQuery();AssetStore.Initialize(connection);
     }
     /// <summary>Opens a caller-owned, unpooled connection with foreign keys and five-second busy timeout.</summary>
     /// <returns>Open caller-owned connection; dispose after use.</returns>
-    SqliteConnection Open()
+    internal SqliteConnection Open()
     {
         var connection=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=DatabasePath,Pooling=false}.ToString());connection.Open();
         using var command=connection.CreateCommand();command.CommandText="PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;";command.ExecuteNonQuery();return connection;
@@ -108,17 +120,18 @@ public sealed partial class HistoryStore
         if(state.FreeTextMode)return 0; // Free text is a draft/output, not an inventory event.
         if(!Actions.Contains(action))throw new ArgumentException("Unknown history action.");
         if(string.IsNullOrWhiteSpace(state.Serial) && (state.ShowCode || action=="ExportCode"))throw new ArgumentException("A generated code requires a serial.");
-        using var connection=Open();return Insert(connection,null,action,state,outputPath,sourceEventId,timestamp);
+        using var connection=Open();using var transaction=connection.BeginTransaction();long id=Insert(connection,transaction,action,state,outputPath,sourceEventId,timestamp);transaction.Commit();return id;
     }
     /// <summary>Inserts within the caller's transaction, allowing an entire import to commit or roll back together.</summary>
     private static long Insert(SqliteConnection connection,SqliteTransaction? transaction,string action,WorkState state,string outputPath="",long? sourceEventId=null,DateTimeOffset? timestamp=null)
     {
         using var command=connection.CreateCommand();command.Transaction=transaction;
         command.CommandText="""
-            INSERT INTO events(created_utc,action,serial,asset_type,brand,model,part_number,mac_address,state_json,output_path,source_event_id)
-            VALUES($date,$action,$serial,$type,$brand,$model,$part,$mac,$state,$output,$source);
+            INSERT INTO events(created_utc,action,serial,asset_type,brand,model,part_number,mac_address,state_json,output_path,source_event_id,asset_uid)
+            VALUES($date,$action,$serial,$type,$brand,$model,$part,$mac,$state,$output,$source,$asset);
             SELECT last_insert_rowid();
             """;
+        command.Parameters.AddWithValue("$asset",(object?)AssetStore.EnsureForLabel(connection,transaction,state,action=="Imported"?"Imported":"Registered")??DBNull.Value);
         command.Parameters.AddWithValue("$date",(timestamp??DateTimeOffset.UtcNow).ToUniversalTime().ToString("O",CultureInfo.InvariantCulture));
         command.Parameters.AddWithValue("$action",action);command.Parameters.AddWithValue("$serial",state.Serial);
         command.Parameters.AddWithValue("$type",state.AssetType);command.Parameters.AddWithValue("$brand",state.Brand);command.Parameters.AddWithValue("$model",state.Model);
@@ -133,13 +146,17 @@ public sealed partial class HistoryStore
     /// </summary>
     /// <param name="reader">Reader positioned on a row with the documented SELECT column order.</param>
     /// <returns>Reconstructed event including design snapshot.</returns>
-    static HistoryEvent Read(SqliteDataReader reader)=>new(reader.GetInt64(0),DateTimeOffset.Parse(reader.GetString(1),CultureInfo.InvariantCulture),reader.GetString(2),JsonSerializer.Deserialize<WorkState>(reader.GetString(3))??throw new InvalidDataException("Invalid saved label."),reader.GetString(4),reader.IsDBNull(5)?null:reader.GetInt64(5));
+    static HistoryEvent Read(SqliteDataReader reader)
+    {
+        string? uid=null;for(int i=0;i<reader.FieldCount;i++)if(reader.GetName(i)=="asset_uid" && !reader.IsDBNull(i))uid=reader.GetString(i);
+        return new(reader.GetInt64(0),DateTimeOffset.Parse(reader.GetString(1),CultureInfo.InvariantCulture),reader.GetString(2),JsonSerializer.Deserialize<WorkState>(reader.GetString(3))??throw new InvalidDataException("Invalid saved label."),reader.GetString(4),reader.IsDBNull(5)?null:reader.GetInt64(5)){AssetUid=uid};
+    }
     /// <summary>Retrieves a stable ID, including recycled records; returns null if absent.</summary>
     /// <param name="id">Stable numeric event ID, independent of serial text and display order.</param>
     /// <returns>Matching event, or null if absent.</returns>
     public HistoryEvent? Get(long id)
     {
-        using var connection=Open();using var command=connection.CreateCommand();command.CommandText="SELECT id,created_utc,action,state_json,output_path,source_event_id FROM events WHERE id=$id";command.Parameters.AddWithValue("$id",id);
+        using var connection=Open();using var command=connection.CreateCommand();command.CommandText="SELECT id,created_utc,action,state_json,output_path,source_event_id,asset_uid FROM events WHERE id=$id";command.Parameters.AddWithValue("$id",id);
         using var reader=command.ExecuteReader();return reader.Read()?Read(reader):null;
     }
     /// <summary>
@@ -157,7 +174,7 @@ public sealed partial class HistoryStore
         if(limit is <1 or >10000 || offset<0)throw new ArgumentOutOfRangeException(nameof(limit));
         using var connection=Open();using var command=connection.CreateCommand();string where=Where(command,query??new());
         string column=sort switch {"Date"=>"created_utc","Serial"=>"serial COLLATE NOCASE","AssetType"=>"asset_type","Brand"=>"brand","Model"=>"model","PartNumber"=>"part_number","MacAddress"=>"mac_address","Printer"=>"json_extract(state_json,'$.Printer')","Copies"=>"CAST(json_extract(state_json,'$.Copies') AS INTEGER)","Action"=>"action","SourceEventId"=>"source_event_id","CodeType"=>"CASE WHEN action!='ExportCode' AND COALESCE(json_extract(state_json,'$.ShowCode'),1)=0 THEN 'TextOnly' WHEN json_extract(state_json,'$.Code')=1 THEN 'QR' ELSE 'Code128' END",_=>"id"};
-        command.CommandText="SELECT id,created_utc,action,state_json,output_path,source_event_id FROM events WHERE "+where+" ORDER BY "+column+(descending?" DESC":" ASC")+",id DESC";
+        command.CommandText="SELECT id,created_utc,action,state_json,output_path,source_event_id,asset_uid FROM events WHERE "+where+" ORDER BY "+column+(descending?" DESC":" ASC")+",id DESC";
         if(limit is {} size){command.CommandText+=" LIMIT $limit OFFSET $offset";command.Parameters.AddWithValue("$limit",size);command.Parameters.AddWithValue("$offset",offset);}
         using var reader=command.ExecuteReader();var rows=new List<HistoryEvent>();while(reader.Read())rows.Add(Read(reader));return rows;
     }
@@ -256,4 +273,10 @@ public sealed partial class HistoryStore
             Write([row.Id.ToString(CultureInfo.InvariantCulture),row.CreatedUtc.ToUniversalTime().ToString("O",CultureInfo.InvariantCulture),row.Action,state.Serial,state.AssetType,state.Brand,state.Model,state.PartNumber,state.MacAddress,state.Printer,state.Copies.ToString(CultureInfo.InvariantCulture),!state.ShowCode && row.Action!="ExportCode"?"TextOnly":state.Code==1?"QR":"Code128",state.Width.ToString(CultureInfo.InvariantCulture),state.Height.ToString(CultureInfo.InvariantCulture),row.OutputPath,row.SourceEventId?.ToString(CultureInfo.InvariantCulture)??"",JsonSerializer.Serialize(state)]);
         }
     }
+    /// <summary>Totals active label actions in SQL without loading snapshots or treating submissions as physical output.</summary>
+    internal (long Exports,long Jobs,long Copies) LabelTotals()
+    {
+        using var c=Open();using var cmd=c.CreateCommand();cmd.CommandText="SELECT COALESCE(SUM(action='ExportTag'),0),COALESCE(SUM(action='PrintSubmitted'),0),COALESCE(SUM(CASE WHEN action='PrintSubmitted' THEN CAST(json_extract(state_json,'$.Copies') AS INTEGER) ELSE 0 END),0) FROM events WHERE "+Where(cmd,new());using var reader=cmd.ExecuteReader();reader.Read();return (reader.GetInt64(0),reader.GetInt64(1),reader.GetInt64(2));
+    }
+
 }

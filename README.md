@@ -1,6 +1,6 @@
 # TagPrinter
 
-Windows desktop application for inventory labels, local event history and reporting.
+Windows desktop application for inventory labels, local asset administration and reporting.
 
 **C# · WinForms · .NET 8 · SQLite · Windows x64 · English/Spanish UI**
 
@@ -14,7 +14,7 @@ See [full configuration transfer and code size](docs/CONFIGURATION_TRANSFER.md) 
 
 See [centering, empty recycle bin and Windows status](docs/TEXT_TRASH_PRINTER_STATUS.md) for the latest usability options.
 
-## Current features — 0.22
+## Current features — 0.23
 
 - Asset type, brand, model, serial, part number and MAC address, with inline visibility controls.
 - Optional QR/Code128, text-only labels, preset/custom media and four layouts.
@@ -22,10 +22,15 @@ See [centering, empty recycle bin and Windows status](docs/TEXT_TRASH_PRINTER_ST
 - Automatic last-work restoration, New asset and visible print destination/copy summary.
 - Full-label/code PNG export, raster ZPL export and Windows-driver/RAW-ZPL submission.
 - SQLite event snapshots; Reports search/filter/sort/load, CSV, backup and reversible deletion/restoration.
-- Dashboard groups latest matching unique serials by type/brand/model, separate from event/job/copy counts.
+- Assets: stable internal codes, editable records, location, custodian, state, notes and movement history.
+- Dashboard groups current master assets by type/brand/model and state, separately from global label-log counts.
+- Previewed CSV inventory import, SQL pages, validated restore, automatic backups and reusable label profiles.
+- Fluent icon/text actions and a visible Print · Ctrl + P shortcut.
 - Collapsible sections and remembered English/Spanish interface language; lower-left GitHub About link.
 
-![TagPrinter font and orientation controls](docs/images/format-en.png)
+![TagPrinter label workspace](docs/images/fluent-home-en.png)
+
+![Asset administration](docs/images/assets-en.png)
 
 ![Reports](docs/images/reports-en.png)
 
@@ -40,6 +45,8 @@ All source comments and project documentation are in English. The interface rema
 | [Documentation index](docs/README.md) | Suggested paths for users, students and maintainers. |
 | [User guide](docs/USER_GUIDE.md) | Creating, formatting, exporting and printing labels. |
 | [Student guide](docs/STUDENT_GUIDE.md) | C# concepts, function contracts, variables/units and complete data flow. |
+| [Assets](docs/ASSETS.md) | Local master records, assignment/location, movement history and upgrade safety. |
+| [Interface refresh](docs/UI_REFRESH.md) | Shortcut presentation, offline Fluent buttons and attribution. |
 | [Architecture](docs/ARCHITECTURE.md) | Component responsibilities and persistence boundaries. |
 | [Configuration](docs/CONFIGURATION.md) | JSON options, data paths, indexes and compatibility. |
 | [History and Dashboard](docs/HISTORY.md) | Schema, querying, CSV, recycle bin, backups and count semantics. |
@@ -62,7 +69,7 @@ dotnet run --project src/TagPrinter
 
 The project emits an XML API documentation file alongside build output for editor/tooling use. Source comments explain every explicit class/record and method, saved properties, meaningful state and complex algorithms. Read the student guide before changing rendering or persistence.
 
-Publish builds and verifies the self-contained executable, then creates artifacts/TagPrinter-v0.22-PORTABLE-Windows-x64.zip. Generated outputs and personal databases are excluded from Git. Distribute the entire portable folder.
+Publish builds and verifies the self-contained executable, then creates artifacts/TagPrinter-v0.23-PORTABLE-Windows-x64.zip. Generated outputs and personal databases are excluded from Git. Distribute the entire portable folder.
 
 ## Data
 
@@ -70,13 +77,13 @@ Publish builds and verifies the self-contained executable, then creates artifact
 |---|---|---|
 | config.json | Beside EXE | Installation media/defaults. |
 | settings.json | %LOCALAPPDATA%/InventoryLabels | Last edited work; compatible historical location. |
-| TagPrinter.db | %LOCALAPPDATA%/TagPrinter | Events, saved designs and recycle bin. |
+| TagPrinter.db | %LOCALAPPDATA%/TagPrinter | Asset masters/audit, label events/designs and recycle bin. |
 
 Updates do not replace user history. Last work overrides startup defaults. Database backups do not include external images/ZPL, installation config or last-work settings.
 
 ## Limits
 
-RFID chip encoding/verification is not implemented. Submission does not confirm physical printing. Validate a real printed sample and scan before a batch. History loading never prints automatically. Dashboard summarizes recorded serials/actions, not verified inventory. Permanent deletion is limited to confirmed recycle-bin emptying. There is no bulk import, synchronization or database encryption.
+RFID chip encoding/verification is not implemented. Submission does not confirm physical printing. Validate a real printed sample and scan before a batch. History loading never prints automatically. Dashboard summarizes registered master data and label actions; it does not verify physical inventory. Permanent deletion is limited to confirmed history recycle-bin emptying; retire assets to preserve their records. RFID, synchronization and database encryption remain unimplemented. Schema 2 upgrades existing data after a protected backup; see the asset guide before rolling back to older binaries.
 
 ## License
 
@@ -90,6 +97,7 @@ Third-party libraries, bundled runtimes and GitHub artwork retain their own lice
 - ZXing.Net 0.16.11: https://github.com/micjahn/ZXing.Net — Apache-2.0.
 - Microsoft.Data.Sqlite 8.0.28 / SQLitePCLRaw: embedded provider/native engine distributed through NuGet.
 - .NET runtime: https://github.com/dotnet/runtime/blob/main/LICENSE.TXT — license and notices.
+- Microsoft Fluent System Icons: pinned embedded private font and glyph map, MIT; see [upstream notices](docs/THIRD_PARTY_NOTICES.md).
 - Official GitHub mark: https://brand.github.com/foundations/logo — used as the project link. GitHub marks belong to GitHub, Inc.; no affiliation or endorsement is implied.
 
 Flexible labels: wrapped headings, dedicated free text, code space reclamation and fixed printer/paper-exit reference. See [the guide](docs/FLEXIBLE_LABELS.md).
@@ -99,3 +107,5 @@ The [paper-exit preview](docs/PAPER_EXIT_PREVIEW.md) keeps a fixed printer and l
 Free text stays out of inventory history. Ctrl+P on Labels shares the print command, with a temporary [Windows job-progress notice](docs/PRINT_JOB_PROGRESS.md).
 
 [Inventory tools](docs/INVENTORY_TOOLS.md): transactional CSV import, SQL history pages, SQLite restore/daily backups, reusable profiles, duplication and serial warnings. Local use; synchronization remains pending.
+
+The [interface refresh](docs/UI_REFRESH.md) adds visible Ctrl+P and offline Fluent icon/text actions. The new second [Assets module](docs/ASSETS.md) manages canonical records, assignment, location, status and movement audit, independently of label events. Database schema 2 is upgraded with a protected prior backup.

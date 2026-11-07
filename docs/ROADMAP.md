@@ -2,6 +2,8 @@
 
 ## Completed
 
+- 0.23: discoverable print shortcut, offline Fluent actions and first canonical Assets module with movement audit, stable label links, current-asset Dashboard and protected schema-2 migration.
+
 - 0.22: previewed transactional CSV inventory import, SQL-backed history pages, validated SQLite restore with safety copy, daily/retained backups, transferable design profiles, duplicate-asset command and inline serial warnings.
 
 - 0.21: inventory-only history, Ctrl+P on Labels and correlated asynchronous Windows job progress with temporary notices.
@@ -29,4 +31,6 @@
 2. Define RFID identifiers/memory and implement write/read-back verification.
 3. Synchronization is explicitly deferred: user confirmed local-only use for 0.22. Define server/API, access, offline/conflict rules when multiple devices are needed.
 
-Future proposals require their own scope/authorization. Dashboard streaming aggregation and very large-history export remain possible performance follow-ups.
+Future proposals require their own scope/authorization. Very large group sets, indexed master-field queries and streaming history export remain possible performance follow-ups.
+
+Potential later asset features: employee/site catalogs, full administrative CSV workflows, procurement/attachments and permissions. These are proposals, not implemented or authorized automatically.

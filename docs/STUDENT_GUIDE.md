@@ -1,10 +1,10 @@
 # Learning TagPrinter from the source
 
-This guide describes TagPrinter 0.15. All technical documentation and source comments use English. The application still supports English and Spanish. Read this alongside the source; the XML comments explain function contracts in the editor.
+This guide describes TagPrinter 0.23. All technical documentation and source comments use English. The application still supports English and Spanish. Read this alongside the source; the XML comments explain function contracts in the editor.
 
 ## 1. What this application does
 
-TagPrinter turns asset information into a printable label. A label can contain asset type, brand, model, serial, part number, MAC address and an optional QR/barcode. The user chooses physical media dimensions, design and printer. Completed output actions are recorded in SQLite. Reports can reload their original designs; Dashboard summarizes those recorded actions.
+TagPrinter turns asset information into a printable label. A label can contain asset type, brand, model, serial, part number, MAC address and an optional QR/barcode. The user chooses physical media dimensions, design and printer. Completed output actions are recorded in SQLite. Reports can reload original designs; Assets holds independent editable master records and movements, while Dashboard groups current masters and separately totals label activity.
 
 A label is a picture. A saved preference is JSON. A history event is a SQLite row. These are separate things, with different lifetimes.
 
@@ -18,7 +18,9 @@ A label is a picture. A saved preference is JSON. A history event is a SQLite ro
 6. `MainForm.History.cs` and `HistoryStore.cs`: output completion and persistence.
 7. `ReportsView.cs` and `DashboardView.cs`: display projections, searches and counting rules.
 8. `RawPrinter.cs`, `Ui.cs`, `CollapsibleSection.cs`: native printing and reusable UI helpers.
-9. `SelfTest.cs`: executable examples that verify behavior without printing.
+9. `AssetStore.cs`, `AssetsView.cs`, `MainForm.Assets.cs`: stable master identity, transactional audit and label loading.
+10. `FluentIcons.cs`: private embedded font and per-button image ownership.
+11. `SelfTest.cs` and focused test classes: executable examples that verify behavior without real printing.
 
 See [architecture](ARCHITECTURE.md) for file responsibilities and [configuration](CONFIGURATION.md) for the stored data contracts.
 
@@ -115,21 +117,21 @@ A selected From date includes its local midnight. A selected To date includes it
 
 Reports creates a typed DataTable for display. current preserves original events; table.DefaultView owns current sorting/filtering. VisibleRows maps back by numeric ID so an export follows the displayed order and a click loads the intended snapshot even after sorting.
 
-Deleting inserts IDs into trash; restoring removes those markers. The events remain, preserving provenance and enabling restoration. Normal reports/dashboard exclude recycled records. Backup includes them. No PNG, ZPL or queued printer job is deleted.
+Deleting inserts IDs into trash; restoring removes those markers. The events remain, preserving provenance and enabling restoration. Normal reports and global label totals exclude recycled events; canonical Dashboard asset counts are independent of recycling. Backup includes them. No PNG, ZPL or queued printer job is deleted.
 
 CSV quotes every cell, doubles embedded quotes and uses semicolon plus UTF-8 BOM. It includes JSON, which can itself contain quotes and newlines. When importing, explicitly treat serial, MAC and part number as text to retain leading zeroes.
 
 ## 10. Why Dashboard counts differ
 
-Assume one monitor serial ABC123 is exported twice and submitted once with three copies. History has three actions; Dashboard has one unique serial, one submitted job and three requested copies. It does not claim three physical prints.
+Assume one monitor serial ABC123 is exported twice and submitted once with three copies. History has three actions; Dashboard has one canonical asset plus separate global totals of one submitted job and three requested copies. It does not claim three physical prints.
 
-UniqueAssets removes blank serials, orders descending by ID, groups trimmed serials case-insensitively and keeps the first event in each group. Grouping then uses that representative type/brand/model. These grouping values are trimmed but not case-normalized, so brand spelling/case differences may create separate groups.
+AssetStore resolves a nonempty normalized serial once, assigns an immutable UID/code and links future events to that master. Explicitly registered assets without serials have distinct identities too. Dashboard groups current master type/brand/model in SQL; administrative corrections change the group without rewriting old label snapshots. Brand spelling/case differences may create separate groups.
 
-Search and date filters run before deduplication. Consequently the representative snapshot is the latest matching event, not necessarily the newest overall. Rows without serial are counted as actions separately because their physical asset identity is unknown. Double-click applies a type/brand/model equality filter to all active Reports history; it does not preserve Dashboard date/search restrictions. Reports filters original strings using DataView default comparison, whereas Dashboard trims group values and groups case-sensitively. Case/edge-space variants can therefore produce a different drill-down row count. This documents the current implementation rather than assuming both grouping engines are identical.
+Asset search and last-administrative-update dates run before SQL grouping. Retired records are excluded initially. Double-click opens the full exact type/brand/model group in Assets without carrying Dashboard date/search restrictions. The second summary line independently aggregates all active label-log events; it is not narrowed by asset filters. Historical UniqueAssets remains only as a tested compatibility helper, not the current Dashboard algorithm.
 
 ## 11. Tests and safe exercises
 
-Run scripts/Test.ps1 before changing behavior. It builds Release and invokes --self-test with isolated paths. SelfTest uses synthetic files and real SQLite, reopens CSV/backups and decodes generated code pixels. It never invokes the print action.
+Run scripts/Test.ps1 before changing behavior. It builds Release and invokes --self-test with isolated paths. SelfTest uses synthetic files and real SQLite, reopens CSV/backups and decodes generated code pixels. It never submits real printer jobs; print-coordinator tests use injected fake submitters/queue observations.
 
 Useful learning exercises: trace a change from Data to Render; calculate pixel dimensions for both supported resolutions; follow one event ID through sorting/reloading; compare filtered action counts with unique serials; inspect how with preserves a snapshot while changing rotation.
 
@@ -174,3 +176,9 @@ PrintJobTracker is a small state machine: missing before first observation is un
 Validate every CSV row before opening a write transaction. Inside that transaction, reuse parameterized Insert and duplicate lookup; a later exception disposes the uncommitted transaction and rolls back earlier rows. Imported is a registration action, not evidence of a physical label.
 
 Pagination must happen after WHERE/ORDER BY in SQL; slicing a fully loaded C# list would not reduce database-to-UI memory. Count and Query reuse the same criteria and bind all input values. The sort column is selected from a fixed map, never interpolated from arbitrary text. Profiles copy design, then explicitly restore the current asset identity/destination so applying a template cannot accidentally label a different device. Restore stages/validates a snapshot and saves recovery data before replacing live pages. See INVENTORY_TOOLS.md for concrete UI steps and tests.
+
+## Canonical assets and immutable output — 0.23
+
+A serial can be corrected; a stable asset UID must survive that correction. Keep editable master records apart from the immutable label snapshot, and link events through a separate foreign key. Assignment/location/status saves include their before/after movement in the same transaction. Revision checks reject stale edits. Historical reprinting uses the stable event link and must not overwrite current master data or resurrect a retired asset. Migration derives only what prior data establishes; Needs review avoids inventing physical availability or assignment.
+
+FluentIcons keeps one embedded private font/map alive for the process, turns glyph outlines into small DPI-sized paths and gives each button ownership of its disposable bitmap. Captions remain visible and accessible. These images are UI resources, separate from LabelRenderer and therefore absent from printed labels.

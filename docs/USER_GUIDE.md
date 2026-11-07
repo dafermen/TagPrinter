@@ -1,4 +1,4 @@
-# User guide — TagPrinter 0.22
+# User guide — TagPrinter 0.23
 
 ## Start and update
 
@@ -38,7 +38,7 @@ Inner margin is 1–5 mm. The optional guide is preview-only. Print offsets shif
 
 Select an installed printer, resolution (203/300 DPI), copies and method. Windows driver works through PrintDocument; direct ZPL is for printers that understand ZPL. Selecting a printer model alone does not establish ZPL compatibility.
 
-The visible summary repeats destination, copies and method. Check it before Print labels. Also configure material, calibration and scaling in the driver. Print a sample and scan it before a batch. A successful submission does not confirm physical output or RFID encoding.
+The visible summary shows destination/copies and identifies Direct ZPL when selected. Check it before Print · Ctrl + P. Also configure material, calibration and scaling in the driver. Print a sample and scan it before a batch. A successful submission does not confirm physical output or RFID encoding.
 
 On Labels, **Ctrl + P** runs Print labels. A temporary notice follows the submitted Windows job through the observable queue states and hides after a terminal message. Queue completion/removal is not physical-output confirmation. See [Print-job progress](PRINT_JOB_PROGRESS.md).
 
@@ -64,13 +64,9 @@ Select one or multiple rows, click Delete and confirm to recycle them. Check Rec
 
 ![Reports and recycle-bin controls](images/reports-en.png)
 
-## Dashboard
+## Assets and Dashboard
 
-Search and optional dates restrict active events. The grouping table shows asset type + brand + model and quantity of unique normalized serials. Repeated actions for the same serial count once using its latest matching snapshot. Blank serials are reported separately as actions. Group spelling/case differences can create separate groups.
-
-Summary indicators separate actions, PNG tag exports, submitted jobs and requested copies. They are not physical inventory/print verification. Double-click a group to open its full active matching history in Reports; Dashboard search/date restrictions are not carried over.
-
-![Dashboard](images/dashboard-en.png)
+The second tab, Assets, manages canonical records, location, custodian, state and movement history. Load label opens the existing designer without printing; repeated outputs stay linked to that asset. Dashboard counts current masters and their states, with retired assets optional and global label-log totals separate. Search/dates refer to current values and last administrative update; double-click opens Assets. See [Asset administration](ASSETS.md) for migration, review-state defaults and backup compatibility.
 
 ## Further reading
 
@@ -95,3 +91,5 @@ Use 05 Settings > Export configuration / Import configuration to transfer catalo
 ## Inventory tools — 0.22
 
 05 Settings adds CSV template/import, Restore database and daily automatic backups. 02 adds reusable profile save/apply/delete. 01 adds Duplicate asset and nonblocking serial warnings. Reports adds SQL-backed page sizes and previous/next navigation; Export view means the current page. See [Inventory tools](INVENTORY_TOOLS.md) before importing or restoring. Synchronization is pending; this version is local-only.
+
+Print visibly shows Ctrl + P and uses a Fluent icon with its translated text. Home no longer repeats Windows; technical origin/limits stay in tooltips. See [Interface refresh](UI_REFRESH.md).

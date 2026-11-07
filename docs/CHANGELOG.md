@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.23.0 — 2026-11-06
+
+- Show Ctrl+P on the print button, remove repetitive Windows wording from home and add offline embedded Fluent icon/text actions with source/license notices.
+- Add Assets as the second module: stable master identity/code, editable core data, location/custodian/notes, reviewed states, retirement, optimistic edits and field-level movement audit.
+- Link repeated label outputs to a canonical asset without overwriting current administration; preserve stable identity across serial correction and historical reprints.
+- Make Dashboard aggregate current master records and state counts separately from global label-log totals.
+- Keep synthetic verification windows off-screen/nonactivating so user desktop input cannot alter test data.
+- Introduce schema 2 with transactional, protected version-1 migration; preserve historical events and normalize staged legacy backups before restore.
+
+
 ## 0.22.0 — 2026-11-05
 
 - Add previewed UTF-8/semicolon CSV import, full-batch validation, transactional Imported events and optional duplicate skipping.

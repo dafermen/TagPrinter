@@ -1,4 +1,4 @@
-# Architecture — TagPrinter 0.22
+# Architecture — TagPrinter 0.23
 
 TagPrinter is a Windows Forms application targeting .NET 8. It uses ZXing.Net 0.16.11 for symbols and Microsoft.Data.Sqlite 8.0.28 for embedded local storage. The Windows x64 portable bundles its runtime; printer drivers remain external.
 
@@ -8,6 +8,7 @@ TagPrinter is a Windows Forms application targeting .NET 8. It uses ZXing.Net 0.
 |---|---|
 | src/TagPrinter.Launcher/Launcher.cs | Windows Framework launcher, embedded payload hashes and pre-runtime diagnostics. |
 | StartupDiagnostics.cs | Mutable-data preflight, portable configuration root and startup logs. |
+| AppWindow.cs | Normal windows with nonactivating/off-screen isolation only under --self-test. |
 | Program.cs | STA WinForms startup, configuration/data errors, --self-test routing. |
 | MainForm.cs | Editable controls, live preview, autosave, fonts, media, driver printing and export dialogs. |
 | MainForm.History.cs | Tabs/footer, output recording, snapshot recovery and report/dashboard navigation. |
@@ -17,7 +18,10 @@ TagPrinter is a Windows Forms application targeting .NET 8. It uses ZXing.Net 0.
 | CodeRenderer.cs | Standalone symbol PNG with independent quiet zones/scaling. |
 | HistoryStore.cs | SQLite initialization/connections/events/queries/trash/CSV/backup. |
 | ReportsView.cs | Typed sortable projection, filters, recovery callback and history actions. |
-| DashboardView.cs | Filtered event summary and latest-per-serial group counts. |
+| DashboardView.cs | SQL canonical groups/states and separate global label totals. |
+| AssetStore.cs / AssetsView.cs | Transactional master/audit storage and paged administrative editor. |
+| MainForm.Assets.cs | Stable selected identity and loading core fields into Labels. |
+| FluentIcons.cs | Embedded private font/map and disposable per-button Fluent images. |
 | Ui.cs | English/Spanish caption catalog and recursive control translation. |
 | CollapsibleSection.cs | Accessible collapsible header/body. |
 | RawPrinter.cs | Windows spooler P/Invoke and RAW submission lifecycle. |
@@ -37,26 +41,30 @@ flowchart TD
     F --> H
     H --> I[SQLite events and snapshots]
     I --> J[Reports]
-    I --> K[Dashboard]
+    H --> N[Resolve canonical asset identity]
+    N --> O[SQLite assets and movements]
+    O --> K[Dashboard]
+    O --> P[Assets editor]
+    P -->|Load core fields; no printing| A
     J -->|Load snapshot; no automatic printing| A
     A --> L[CodeRenderer]
     L --> M[Standalone code PNG]
     M --> H
 ```
 
-Preview and output share geometry, but exported/printed labels exclude guides. Standalone export ignores full-label layout and ShowCode. The UI thread performs these operations synchronously; ready/translating suppress reactive control events, not concurrent access.
+Preview and output share geometry, but exported/printed labels exclude guides. Standalone export ignores full-label layout and ShowCode. Rendering and ordinary database/UI operations run synchronously; print submission and bounded queue observation use workers. ready/translating suppress reactive control events, not concurrent access.
 
 ## Persistence contracts
 
 config.json defines installation defaults and stable media IDs. Existing last-work preferences override defaults. WorkState stores selection indexes for code/mode/DPI plus actual physical dimensions. LabelData holds actual DPI and rendering-only inputs. See [configuration](CONFIGURATION.md).
 
-SQLite user_version remains 1. events stores immutable action metadata plus complete JSON snapshots. trash stores reversible event membership; initialization adds it idempotently to older databases. Indexes cover serial and creation time. Foreign keys preserve loaded-source links. No unique constraint exists on serial.
+SQLite user_version is 2; protected migration upgrades version 1. events stores immutable action metadata plus complete JSON snapshots. trash stores reversible event membership; initialization adds it idempotently to older databases. Indexes cover serial and creation time. Foreign keys preserve loaded-source links. History serials are not unique; canonical assets separately enforce normalized nonempty serial uniqueness.
 
 Connections use Pooling=false, WAL, foreign keys and a 5000 ms busy timeout. Queries bind input parameters and whitelist field expressions. Backup uses the SQLite backup API; CSV preserves values rather than localized display captions. See [history](HISTORY.md).
 
 ## Resource ownership and failures
 
-Renderers return caller-owned Bitmaps. The preview disposes its previous image; output methods use scoped disposal. Reports/Dashboard dispose replaced DataTables. PrintDocument belongs to its caller. Native spooler scopes close with nested finally blocks.
+Renderers return caller-owned Bitmaps. The preview disposes its previous image; output methods use scoped disposal. Reports/Dashboard dispose replaced DataTables. PrintDocument belongs to its caller. Native spooler scopes close with ownership flags and finally blocks.
 
 Output must succeed before an event is appended. File/spooler output and SQLite are not one distributed transaction. Recording failure after output warns without automatic retry. Initialization distinguishes installation-config failures from data-folder/SQLite failures.
 
@@ -64,7 +72,7 @@ Output must succeed before an event is appended. File/spooler output and SQLite 
 
 The last-work path remains %LOCALAPPDATA%/InventoryLabels/settings.json. Legacy Title/ShowTitle migrate to Brand/ShowBrand only when replacement keys are absent. New properties use compatible defaults. Historical recovery uses Custom media to preserve dimensions, retains current language and clears missing printers.
 
-No RFID write/verification, inventory synchronization, bulk import, background rendering, pagination exists. Permanent deletion is limited to the recycle bin after explicit confirmation. Dashboard derives assets from event serials; it does not verify physical inventory. Driver behavior and scans require real hardware validation.
+CSV import and SQL pagination are implemented. RFID write/verification, synchronization and background rendering remain absent. Permanent deletion is limited to the history recycle bin after explicit confirmation; masters are retired. Dashboard counts canonical records and does not verify physical inventory. Driver behavior and scans require real hardware validation.
 
 Read [the student guide](STUDENT_GUIDE.md) for an algorithm walkthrough and [validation](VALIDATION.md) for actual checks.
 
@@ -95,3 +103,7 @@ MainForm.Printing routes Ctrl+P/button into one busy-gated command, captures sta
 ## Inventory tools — 0.22
 
 InventoryServices defines strict CSV parsing, design-only LabelProfile helpers, transactional batch insertion, serial lookup, retained backups and staged restore. HistoryStore.Where binds shared search/group/trash criteria; Query optionally applies whitelisted global order and SQL LIMIT/OFFSET; Count avoids snapshot materialization. ReportsView.Paging holds transient navigation only. MainForm.Inventory owns explicit preview/confirm dialogs, profile/catalog atomic writes, backup timer and duplicate warning debounce. Profiles are settings; imported events are inventory; neither operation prints. Synchronization remains unimplemented by explicit local-only scope.
+
+## Assets and Fluent actions — 0.23
+
+AssetStore owns master/audit transactions, optimistic revisions, normalized serial identity and schema migration. History inserts resolve events.asset_uid without mutating immutable WorkState snapshots. Current label selection is optional WorkState.AssetUid; profiles strip it and Load history uses the authoritative event link. AssetsView provides paged SQL search/sort, explicit editing/retirement and field-level audit. Dashboard aggregates master JSON in SQL; label totals use a separate aggregate. FluentIcons uses a pinned embedded private font/map, DPI-sized per-button bitmap ownership and no runtime downloads. See ASSETS.md and UI_REFRESH.md.

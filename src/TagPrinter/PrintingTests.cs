@@ -65,7 +65,7 @@ internal static class PrintingTests
         if(submissions!=1 || !form.PrintNoticeText.Contains("Sending"))throw new Exception("Duplicate shortcut submitted or sending notice missing");
         long other=form.History.Add("ExportTag",new WorkState{Serial="OTHER"});form.LoadHistoryEvent(form.History.Get(other)!);
         pending.SetResult(new PrintTicket("Simulated label queue","unique-test"));
-        Pump(()=>form.PrintNoticeText.Contains("Printing ("));
+        Pump(()=>form.PrintNoticeText.Contains("Printing…"));
         using(var shot=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(shot,form.ClientRectangle);shot.Save(Path.Combine(folder,"printing-job-en.png"));}
         Pump(()=>form.PrintNoticeText.Contains("Job left"));
         var row=form.History.Query().Single(e=>e.Action=="PrintSubmitted");if(row.State.Serial!="FROZEN123" || row.SourceEventId!=null || submitted?.Serial!="FROZEN123")throw new Exception("Submission/history used later editor values or provenance");

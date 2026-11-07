@@ -73,7 +73,7 @@ internal static class WindowsPrinterStatus
     internal static string Caption(PrinterStatusSnapshot value)=>value.Key switch
     {
         "none"=>Ui.T("Sin seleccionar","Not selected"),"checking"=>Ui.T("Consultando…","Checking…"),
-        "ready"=>Ui.T("Lista (Windows)","Ready (Windows)"),"offline"=>Ui.T("Sin conexión (Windows)","Offline (Windows)"),
+        "ready"=>Ui.T("Lista","Ready"),"offline"=>Ui.T("Sin conexión","Offline"),
         "paused"=>Ui.T("En pausa","Paused"),"printing"=>Ui.T("Imprimiendo","Printing"),"busy"=>Ui.T("Ocupada / esperando","Busy / waiting"),
         "sleep"=>Ui.T("Ahorro de energía","Power saving"),"paper"=>Ui.T("Sin papel","Out of paper"),"jam"=>Ui.T("Atasco de papel","Paper jam"),
         "door"=>Ui.T("Cubierta abierta","Cover open"),"toner"=>Ui.T("Sin tóner","Out of toner"),"low-toner"=>Ui.T("Tóner bajo","Low toner"),

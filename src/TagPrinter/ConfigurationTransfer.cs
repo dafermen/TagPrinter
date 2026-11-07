@@ -9,7 +9,7 @@ public sealed record ConfigurationBundle
     /// <summary>Transfer schema version, independent of AppConfig and SQLite versions.</summary>
     public int SchemaVersion {get;init;}=1;
     /// <summary>Exporting application version, for diagnostics.</summary>
-    public string AppVersion {get;init;}="0.22.0";
+    public string AppVersion {get;init;}="0.23.0";
     /// <summary>UTC export timestamp; not a label history event.</summary>
     public DateTimeOffset ExportedUtc {get;init;}=DateTimeOffset.UtcNow;
     /// <summary>Complete preset catalog and installation startup defaults.</summary>
@@ -55,6 +55,7 @@ public static class ConfigurationTransfer
             decimal.Round(s.OffsetXmm,1)!=s.OffsetXmm || decimal.Round(s.OffsetYmm,1)!=s.OffsetYmm || s.ContentRotation is not (0 or 90 or 180 or 270) || s.Language is not ("en" or "es"))
             throw new InvalidDataException(Ui.T("La configuración contiene valores fuera del rango permitido.","Configuration values are outside the supported ranges."));
         void Text(string? value,int max,string name){if(value is null || value.Length>max)throw new InvalidDataException("Invalid "+name);}
+        Text(s.AssetUid,64,"AssetUid");if(s.AssetUid.Length>0 && !Guid.TryParse(s.AssetUid,out _))throw new InvalidDataException("Invalid asset identity.");
         Text(s.FreeText,2000,"FreeText");Text(s.AssetType,80,"AssetType");Text(s.Brand,80,"Brand");Text(s.Model,100,"Model");Text(s.Serial,120,"Serial");Text(s.PartNumber,100,"PartNumber");Text(s.MacAddress,100,"MacAddress");Text(s.Printer,512,"Printer");Text(s.FontFamily,256,"FontFamily");
         if(string.IsNullOrWhiteSpace(s.FontFamily) || string.IsNullOrEmpty(s.LabelPresetId))throw new InvalidDataException("Missing font or media selection.");
         if(s.LabelPresetId!="custom")

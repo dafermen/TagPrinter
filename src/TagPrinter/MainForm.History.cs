@@ -42,8 +42,9 @@ public partial class MainForm
         reports=new ReportsView(history,LoadHistoryEvent,()=>{if(sourceHistoryId is { } id && history.Get(id) is null)sourceHistoryId=null;});reportsTab.Controls.Add(reports);
         // Refresh on selection so recent output appears without continuous background polling.
         workspaceTabs.SelectedIndexChanged+=(_,_)=>{if(ready && workspaceTabs.SelectedTab==reportsTab)Guard(()=>reports.RefreshData());};
-        dashboard=new DashboardView(history,(type,brand,model)=>{workspaceTabs.SelectedTab=reportsTab;reports.ShowGroup(type,brand,model);});dashboardTab.Controls.Add(dashboard);
+        dashboard=new DashboardView(history,(type,brand,model)=>{workspaceTabs.SelectedTab=assetsTab;assetsView?.ShowGroup(type,brand,model);});dashboardTab.Controls.Add(dashboard);
         workspaceTabs.SelectedIndexChanged+=(_,_)=>{if(ready && workspaceTabs.SelectedTab==dashboardTab)Guard(()=>dashboard.RefreshData());};
+        InitializeAssets();
         aboutButton.FlatAppearance.BorderSize=0;
         using(var stream=typeof(MainForm).Assembly.GetManifestResourceStream("TagPrinter.GitHub.png"))
         {
@@ -58,13 +59,14 @@ public partial class MainForm
     /// <summary>Updates tab captions, accessibility hints and child-view translations.</summary>
     void UpdateChrome()
     {
-        labelTab.Text=Ui.T("Etiquetas","Labels");reportsTab.Text=Ui.T("Reportes","Reports");
+        labelTab.Text=Ui.T("Etiquetas","Labels");assetsTab.Text=Ui.T("Activos","Assets");assetsView?.RefreshLanguage();reportsTab.Text=Ui.T("Reportes","Reports");
         string about=Ui.T("Acerca de","About");aboutTip.SetToolTip(aboutButton,about);aboutButton.AccessibleName=about;
         foreach(var item in visibilityFields)
         {
             string hint=string.Format(Ui.T("Incluir {0} en la etiqueta","Include {0} on the label"),item.Caption.Text);
             item.Check.AccessibleName=hint;aboutTip.SetToolTip(item.Check,hint);
         }
+        print.Text=Ui.T("Imprimir · Ctrl + P","Print · Ctrl + P");FluentIcons.ApplyTree(this);
         aboutTip.SetToolTip(print,Ui.T("Imprimir etiqueta · Ctrl + P","Print label · Ctrl + P"));
         aboutTip.SetToolTip(freeTextMode,Ui.T("Solo texto libre: no se guarda en el historial de inventario. El trabajo se guarda automáticamente.","Free text is excluded from inventory history. Last work is still saved automatically."));
         ShowPrinterStatus(lastPrinterState);RefreshJobNotice();
@@ -146,7 +148,7 @@ public partial class MainForm
     internal void LoadHistoryEvent(HistoryEvent row)
     {
         // Keep exact historical dimensions even when the preset catalog has since changed.
-        Restore(row.State with {LabelPresetId="custom",Language=Ui.Language});
+        Restore(row.State with {AssetUid=row.AssetUid??"",LabelPresetId="custom",Language=Ui.Language});
         bool available=printers.Items.Contains(row.State.Printer);
         if(!available)printers.SelectedIndex=-1;
         sourceHistoryId=row.Id;assetSection.Expanded=true;workspaceTabs.SelectedTab=labelTab;

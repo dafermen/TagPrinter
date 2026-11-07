@@ -6,6 +6,8 @@ namespace TagPrinter;
 /// </summary>
 public record WorkState
 {
+    /// <summary>Optional local master-asset selection; event linkage is resolved separately when output is recorded.</summary>
+    public string AssetUid {get;init;}="";
     /// <summary>Uses the independent text editor instead of all asset fields and codes.</summary>
     public bool FreeTextMode {get;init;}
     /// <summary>Free-form multiline content, at most 2000 characters.</summary>

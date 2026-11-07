@@ -1,6 +1,6 @@
 # Documentation index
 
-These English manuals describe application version 0.22. Source XML comments explain individual members; algorithm comments explain meaningful intermediate variables and decisions. The UI still supports English and Spanish.
+These English manuals describe application version 0.23. Source XML comments explain individual members; algorithm comments explain meaningful intermediate variables and decisions. The UI still supports English and Spanish.
 
 ## For users
 
@@ -38,3 +38,7 @@ These English manuals describe application version 0.22. Source XML comments exp
 - [Inventory-only history and print-job progress](PRINT_JOB_PROGRESS.md): Free text exclusion, Ctrl+P, correlated queue observations and temporary notices.
 
 - [Inventory tools](INVENTORY_TOOLS.md): CSV import, pagination, restore/backups, profiles, duplication, serial warnings and local-only scope.
+
+- [Interface refresh](UI_REFRESH.md): visible shortcut, clear home and offline Fluent icons.
+- [Asset administration](ASSETS.md): canonical records, movements, label links, Dashboard and protected schema migration.
+- [Third-party notices](THIRD_PARTY_NOTICES.md): pinned Fluent assets and their upstream terms.

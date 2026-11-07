@@ -1,4 +1,4 @@
-# Troubleshooting — TagPrinter 0.15
+# Troubleshooting — TagPrinter 0.23
 
 ## Windows asks for .NET
 
@@ -30,7 +30,7 @@ Existing last-work settings override startup defaults. The catalog still loads f
 
 ## History or Dashboard looks different than expected
 
-Check search, action, optional dates and Recycle bin in Reports. Dashboard excludes recycled events and counts one latest matching event per normalized nonblank serial. It reports blank-serial actions separately. Repeated exports are multiple events, not multiple unique assets. Group metadata is trimmed but case-sensitive.
+Check search, action, optional dates and Recycle bin in Reports. Dashboard counts current canonical asset records and excludes retired assets initially. Recycling label events changes label-log totals, not master counts. Its dates filter administrative updates. Repeated exports are multiple events linked to one master. Use Assets to review state/location/custodian and clear filters before comparing counts; explicitly registered blank-serial masters are counted too.
 
 Dashboard filters apply before deduplication. Double-clicking a group opens full matching active history, not the Dashboard date/search subset. See HISTORY.md for exact counting rules.
 

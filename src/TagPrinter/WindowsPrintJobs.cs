@@ -50,11 +50,11 @@ internal static class WindowsPrintJobs
             bool first=EnumJobs(handle,0,10000,1,IntPtr.Zero,0,out uint needed,out _);
             if(!first && Marshal.GetLastWin32Error()!=122)throw new Win32Exception();
             if(needed==0)return new(true);
-            if(needed>16*1024*1024)throw new InvalidDataException("Windows queue buffer exceeds the supported limit.");
+            if(needed>16*1024*1024)throw new InvalidDataException("Print queue buffer exceeds the supported limit.");
             buffer=Marshal.AllocHGlobal(checked((int)needed));
             if(!EnumJobs(handle,0,10000,1,buffer,needed,out _,out uint count))throw new Win32Exception();
             int stride=Marshal.SizeOf<JobInfo1>();
-            if((long)count*stride>needed)throw new InvalidDataException("Invalid Windows queue buffer.");
+            if((long)count*stride>needed)throw new InvalidDataException("Invalid print queue buffer.");
             for(int i=0;i<count;i++)
             {
                 var job=Marshal.PtrToStructure<JobInfo1>(IntPtr.Add(buffer,i*stride));
@@ -94,22 +94,22 @@ internal sealed class PrintJobTracker
     /// <summary>Translates banner states while explicitly separating queue progress from physical output.</summary>
     internal static string Caption(PrintProgress state)=>state.Key switch
     {
-        "sending"=>Ui.T("Enviando a Windows…","Sending to Windows…"),
+        "sending"=>Ui.T("Enviando a la impresora…","Sending to the printer…"),
         "submitted"=>Ui.T("Enviado. Buscando el trabajo en la cola…","Submitted. Looking for the job in the queue…"),
         "queued"=>Ui.T("En cola de impresión…","In the print queue…"),
-        "spooling"=>Ui.T("Windows está preparando el trabajo…","Windows is spooling the job…"),
-        "printing"=>Ui.T("Imprimiendo (informado por Windows)…","Printing (reported by Windows)…"),
-        "paused"=>Ui.T("Trabajo en pausa. Revisa la cola de Windows.","Job paused. Check the Windows queue."),
+        "spooling"=>Ui.T("Preparando el trabajo…","Spooling the job…"),
+        "printing"=>Ui.T("Imprimiendo…","Printing…"),
+        "paused"=>Ui.T("Trabajo en pausa. Revisa la cola de impresión.","Job paused. Check the print queue."),
         "offline"=>Ui.T("Trabajo sin conexión. Revisa la impresora.","Job offline. Check the printer."),
         "paper"=>Ui.T("Trabajo detenido: falta papel.","Job waiting: out of paper."),
-        "error"=>Ui.T("Windows informa un error en el trabajo. Revisa la cola.","Windows reports a job error. Check the queue."),
-        "deleting"=>Ui.T("Windows está retirando el trabajo de la cola…","Windows is removing the job from the queue…"),
-        "deleted"=>Ui.T("Windows eliminó el trabajo. Resultado físico sin confirmar.","Windows deleted the job. Physical output is unconfirmed."),
-        "complete"=>Ui.T("Windows informa trabajo enviado/completado; verifica la etiqueta.","Windows reports sent/completed; check the label."),
+        "error"=>Ui.T("La cola informa un error en el trabajo. Revisa la cola.","The queue reports a job error. Check the queue."),
+        "deleting"=>Ui.T("Retirando el trabajo de la cola…","Removing the job from the queue…"),
+        "deleted"=>Ui.T("La cola eliminó el trabajo. Resultado físico sin confirmar.","The queue deleted the job. Physical output is unconfirmed."),
+        "complete"=>Ui.T("La cola informa trabajo enviado/completado; verifica la etiqueta.","The queue reports sent/completed; check the label."),
         "left"=>Ui.T("El trabajo salió de la cola. Resultado físico sin confirmar.","Job left the queue. Physical output is unconfirmed."),
         "unobserved"=>Ui.T("Enviado; no se alcanzó a observar en la cola. Verifica la etiqueta.","Submitted; job was not observed in the queue. Check the label."),
-        "timeout"=>Ui.T("Seguimiento finalizado. Revisa el trabajo en la cola de Windows.","Tracking ended. Check the job in the Windows queue."),
+        "timeout"=>Ui.T("Seguimiento finalizado. Revisa el trabajo en la cola de impresión.","Tracking ended. Check the job in the print queue."),
         "failed"=>Ui.T("Falló el envío. Revisa la cola antes de reintentar.","Sending failed. Check the queue before retrying."),
-        _=>Ui.T("Enviado; seguimiento no disponible. Revisa la cola de Windows.","Submitted; tracking unavailable. Check the Windows queue.")
+        _=>Ui.T("Enviado; seguimiento no disponible. Revisa la cola de impresión.","Submitted; tracking unavailable. Check the print queue.")
     };
 }
