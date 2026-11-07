@@ -29,7 +29,7 @@ The progress window stays responsive and keeps cancellation/cleanup alive before
 
 ## Derived indexes and compatibility
 
-Inventory schema remains **3**. Startup installs eleven rebuildable expression/partial/prefix indexes when missing; it does not rewrite event snapshots, master identity, assignments, audit or catalogs. Existing schema-3 files stay compatible with earlier binaries. Schema-1/2 migrations retain their protected safety-copy behavior. Restoring an older snapshot creates the same performance indexes on its staged copy before live replacement.
+The performance work introduced in 0.25 used schema **3**. Current 0.26 adds schema **4** for service records; the eleven derived indexes and their behavior are unchanged. Startup installs eleven rebuildable expression/partial/prefix indexes when missing; it does not rewrite event snapshots, master identity, assignments, audit or catalogs. Current schema-4 files are rejected by older binaries; preserve the protected schema-3 copy for rollback. Schema-1/2 migrations retain their protected safety-copy behavior. Restoring an older snapshot creates the same performance indexes on its staged copy before live replacement.
 
 Indexes cover inventory-event IDs/date/action/trimmed serial, master update order/state/location/custodian/description/active groups, and catalog prefix browsing. Expressions match the query predicates and ordering exactly. For the existing partial unique master-serial index, lookup SQL explicitly includes serial_key!=''; an application-side nonempty check alone does not make SQLite's partial-index proof select that index. The benchmark asserts actual EXPLAIN QUERY PLAN output.
 
@@ -47,7 +47,7 @@ The active fixture has 95000 visible history rows and 80000 non-retired unique d
 
 Managed-memory evidence samples live managed objects after forced collections at export checkpoints. It excludes native SQLite caches, transient allocations, OS file cache and total process working set; it is not a claim about total RAM. Timings depend on hardware, disk, concurrent load and cache state. Assertions check correctness/bounds/planner use, not a brittle maximum latency. Full source and published suites remain required.
 
-Published Windows x64 verification, 2026-11-07 (synthetic data):
+Published v0.25 Windows x64 verification, 2026-11-07 (synthetic data):
 
 | Measurement | Observed |
 |---|---|
@@ -83,3 +83,20 @@ The application remains local and has no login/roles module. Synchronization and
 - [Microsoft.Data.Sqlite async limitations](https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/async): SQLite ADO.NET async methods execute synchronously; work belongs outside the UI thread.
 - [Deferred SQLite transactions](https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/transactions): consistent read scope.
 - [SQLite interrupt contract](https://sqlite.org/c3ref/interrupt.html): cross-thread interruption and handle lifetime.
+
+## Service extension — 0.26
+
+Maintenance/warranty lists use the same cancellable read infrastructure, 50-record/revision pages, due-date/state/asset indexes and streaming CSV. ServiceTests additionally verifies a 10000-record service fixture and actual due-date index use. Earlier 0.25 timing evidence above remains labeled with its release. Full 0.26 verification repeats the original scale checks. See [service contracts](SERVICES.md).
+
+## Published 0.26 regression measurements
+
+The complete source/root-launcher suites repeat the original 100000-record-per-collection fixture. Published Windows x64 verification on 2026-11-07 observed these environment-specific values:
+
+| Measurement | Observed |
+|---|---|
+| Median default asset query before / after derived indexes | 706.027 / 2.047 ms |
+| Dashboard groups materialized / total | 50 / 80,000 |
+| Full history export rows / bytes / time | 95,000 / 92,104,632 / 2,231 ms |
+| Additional sampled live managed bytes during export | 341,056 |
+
+ServiceTests independently verifies 10000 service records, due-date index selection, bounded lists/revisions and backup-chain correctness. These checks do not establish a universal maximum capacity or total process-RAM guarantee.

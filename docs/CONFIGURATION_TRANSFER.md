@@ -60,3 +60,5 @@ Transient print-job notices, live job IDs and current queue observations are not
 Since 0.22, Catalog includes reusable label Profiles and AutomaticBackups. Validation checks each profile using an isolated catalog without profiles to avoid recursive validation. Import refreshes profile choices and backup checkbox. CSV inventory import and SQLite restoration are separate operations.
 
 Since 0.23, WorkState may retain a selected local AssetUid. This is a selection reference, not the asset record or its movements. A different database without that UID resolves subsequent inventory output by serial; use a full SQLite backup for master-data recovery. Reusable profiles and CSV imports clear inherited master identity.
+
+Since 0.26, maintenance/warranties and their revision history remain business data in the full SQLite backup. They are not transferred by configuration/profile JSON. Service list filters and reminder look-ahead are transient view state.

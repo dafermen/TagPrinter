@@ -87,7 +87,7 @@ internal sealed partial class AssetStore
             c.CreateFunction<string,string>("tagprinter_serial_key",v=>SerialKey(v),isDeterministic:true);
             cmd.CommandText="UPDATE events SET asset_uid=(SELECT uid FROM assets WHERE serial_key=tagprinter_serial_key(events.serial)) WHERE trim(serial)!='' AND COALESCE(json_extract(state_json,'$.FreeTextMode'),0)=0";cmd.ExecuteNonQuery();
         }
-        cmd.CommandText="PRAGMA user_version=3";cmd.ExecuteNonQuery();tx.Commit();
+        cmd.CommandText="PRAGMA user_version";if(Convert.ToInt32(cmd.ExecuteScalar())<3){cmd.CommandText="PRAGMA user_version=3";cmd.ExecuteNonQuery();}tx.Commit();
     }
 
     /// <summary>Registers a new serial once, without overwriting an existing asset from a reprint or historical snapshot.</summary>
@@ -172,6 +172,7 @@ internal sealed partial class AssetStore
         }
         if(scope is not null)
         {
+            if(scope.AssetUid is not null){where+=" AND uid=$assetUid";cmd.Parameters.AddWithValue("$assetUid",scope.AssetUid);}
             if(scope.ExcludeRetired)where+=" AND json_extract(record_json,'$.Status')!='Retired'";
             foreach(var pair in new[]{("Location",scope.Location),("Custodian",scope.Custodian)})if(pair.Item2 is not null){where+=" AND json_extract(record_json,'$."+pair.Item1+"')=$"+pair.Item1;cmd.Parameters.AddWithValue("$"+pair.Item1,pair.Item2);}
             if(scope.FromUtc is {} start){where+=" AND json_extract(record_json,'$.UpdatedUtc')>=$from";cmd.Parameters.AddWithValue("$from",start.ToUniversalTime().ToString("O",CultureInfo.InvariantCulture));}

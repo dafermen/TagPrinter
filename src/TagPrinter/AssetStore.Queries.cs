@@ -2,7 +2,7 @@ using System.Text.Json;
 namespace TagPrinter;
 
 /// <summary>Exact Dashboard/list navigation scope; null differs from an empty (unassigned) location or custodian.</summary>
-internal sealed record AssetFilter(string Search="",string Status="",string? Type=null,string? Brand=null,string? Model=null,string? Location=null,string? Custodian=null,DateTimeOffset? FromUtc=null,DateTimeOffset? ToUtc=null,bool ExcludeRetired=false,bool ExactSerial=false);
+internal sealed record AssetFilter(string Search="",string Status="",string? Type=null,string? Brand=null,string? Model=null,string? Location=null,string? Custodian=null,DateTimeOffset? FromUtc=null,DateTimeOffset? ToUtc=null,bool ExcludeRetired=false,bool ExactSerial=false,string? AssetUid=null);
 /// <summary>One canonical grouping with raw values retained for exact drill-down.</summary>
 internal sealed record AssetGroup(string Type,string Brand,string Model,string Location,string Custodian,long Count);
 internal sealed partial class AssetStore

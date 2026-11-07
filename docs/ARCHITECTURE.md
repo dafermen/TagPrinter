@@ -1,4 +1,4 @@
-# Architecture — TagPrinter 0.25
+# Architecture — TagPrinter 0.26
 
 TagPrinter is a Windows Forms application targeting .NET 8. It uses ZXing.Net 0.16.11 for symbols and Microsoft.Data.Sqlite 8.0.28 for embedded local storage. The Windows x64 portable bundles its runtime; printer drivers remain external.
 
@@ -60,13 +60,13 @@ flowchart TD
     M --> H
 ```
 
-Preview and output share geometry, but exported/printed labels exclude guides. Standalone export ignores full-label layout and ShowCode. Rendering and ordinary database/UI operations run synchronously; print submission and bounded queue observation use workers. ready/translating suppress reactive control events, not concurrent access.
+Preview and output share geometry, but exported/printed labels exclude guides. Standalone export ignores full-label layout and ShowCode. Rendering and business writes run synchronously; bounded list reads, CSV exports, print submission and queue observation use workers. ready/translating suppress reactive control events, not concurrent access.
 
 ## Persistence contracts
 
 config.json defines installation defaults and stable media IDs. Existing last-work preferences override defaults. WorkState stores selection indexes for code/mode/DPI plus actual physical dimensions. LabelData holds actual DPI and rendering-only inputs. See [configuration](CONFIGURATION.md).
 
-SQLite user_version is 3; protected migration upgrades version 1 or 2. events stores immutable action metadata plus complete JSON snapshots. trash stores reversible event membership; initialization adds it idempotently to older databases. Indexes cover serial and creation time. Foreign keys preserve loaded-source links. History serials are not unique; canonical assets separately enforce normalized nonempty serial uniqueness.
+SQLite user_version is 4; protected migration upgrades versions 1, 2 or 3. events stores immutable action metadata plus complete JSON snapshots. trash stores reversible event membership; initialization adds it idempotently to older databases. Indexes cover serial and creation time. Foreign keys preserve loaded-source links. History serials are not unique; canonical assets separately enforce normalized nonempty serial uniqueness.
 
 Connections use Pooling=false, WAL, foreign keys and a 5000 ms busy timeout. Queries bind input parameters and whitelist field expressions. Backup uses the SQLite backup API; CSV preserves values rather than localized display captions. See [history](HISTORY.md).
 
@@ -123,3 +123,9 @@ AssetCatalog participates in the same transaction as master/audit writes; normal
 ## Large inventories — 0.25
 
 Read delegates capture immutable UI criteria before leaving the UI thread. BackgroundRead owns one running request and one replaceable pending request. DatabaseRead owns the unpooled connection, deferred transaction and native interrupt registration in lifetime-safe disposal order. Reports binds summary DTOs; full designs are loaded by stable ID only when needed. CsvFile owns a staged destination and commits it after flush/cancellation checks. Dashboard totals and page groups share one read snapshot. Derived indexes do not raise user_version or rewrite user snapshots. See PERFORMANCE.md.
+
+## Local services — 0.26
+
+ServiceStore uses the same database for asset_services (current records/duplicated indexed fields) and service_changes (immutable revision snapshots). Save validates identity, calendar/workflow and decimal/currency values, rejects stale revisions and commits both records in one transaction. ServiceStore.Validation checks a staged restore's full revision chains with bounded retained state. Existing asset/label snapshots are not rewritten by schema-4 migration.
+
+ServicesView hosts maintenance/warranty lists; ServiceListView uses BackgroundRead/DatabaseRead and 50-row pages, exact stable asset scopes, full-scope reminders and streaming CSV. ServiceEditor/AssetPicker never access printers. A job status does not imply a physical asset lifecycle transition. Local calendar dates drive reminders independently of stored workflow keys; UTC timestamps describe audit instants. MainForm.Services integrates navigation. See [module contracts and student walkthrough](SERVICES.md).

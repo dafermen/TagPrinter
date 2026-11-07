@@ -1,6 +1,6 @@
 # Learning TagPrinter from the source
 
-This guide describes TagPrinter 0.25. All technical documentation and source comments use English. The application still supports English and Spanish. Read this alongside the source; the XML comments explain function contracts in the editor.
+This guide describes TagPrinter 0.26. All technical documentation and source comments use English. The application still supports English and Spanish. Read this alongside the source; the XML comments explain function contracts in the editor.
 
 ## 1. What this application does
 
@@ -192,3 +192,9 @@ AssetFilter carries exact navigation criteria. A hidden GroupIndex maps sorted d
 ## Large data — 0.25
 
 An index helps only if the query can use it; inspect EXPLAIN QUERY PLAN rather than judging the index name. The partial serial index excludes blank serials, so lookup SQL explicitly states that predicate. Expression indexes match the actual JSON expressions. BackgroundRead separates worker-only SQLite from UI-only binding and coalesces rapid changes. DatabaseRead disposes its interrupt registration before closing the native handle. A page DTO holds counts plus bounded rows; it is not a full in-memory database. CsvFile writes and escapes cells incrementally, with a same-folder temporary file as the replacement boundary. Benchmarks check correctness/plans/memory bounds and report timing without treating one machine as a universal SLA.
+
+## Service records — 0.26
+
+Follow ServiceRecord → ServiceStore → ServiceStore.Queries → ServiceEditor → ServicesView → MainForm.Services. A service has one stable asset foreign key and an optimistic revision. The transaction writes both its current state and its audit; failure must roll back both. Calendar dates are strings with a strict ISO contract, while audit instants use round-trip UTC. Nullable decimal cost distinguishes unknown from zero, and explicit currency prevents silently combining unrelated amounts.
+
+Study ServiceStore.Validation's ordered revision-chain reader: compare before to the preceding after, enforce revision continuity, then compare the final after to the current master. The reader retains only one chain's latest record. ServiceTests uses actual SQLite, injects an audit-write failure, constructs old-schema backups, mutates bad snapshots and drives the real bilingual editors. The [module guide](SERVICES.md) walks through field and workflow rules.

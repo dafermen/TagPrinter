@@ -86,3 +86,5 @@ AppConfig.Profiles stores up to 100 unique named design-only WorkState snapshots
 WorkState.AssetUid optionally retains the selected local master identity. Profiles clear it on capture and preserve the current selection on application. It is not a master-data backup; configuration transfer alone does not create asset assignments or synchronize a database.
 
 Inventory vocabulary is stored in SQLite asset_catalog and restored with database snapshots. It is separate from ConfigurationBundle.Catalog (installation media/defaults/profiles). TagPrinter.db.backup-status.json beside the database records last success/path/attempt/failure independently of inventory restoration. See ASSET_OPERATIONS.md.
+
+Maintenance/warranty business records and revision history live in the same schema-4 SQLite database as assets. They are included in SQLite backups, not application configuration JSON. Service view filters/look-ahead are transient view state. See [service data contracts](SERVICES.md).

@@ -10,7 +10,7 @@
     <AssemblyName>TagPrinter</AssemblyName>
     <RootNamespace>TagPrinter</RootNamespace>
     <ApplicationIcon>TagPrinter.ico</ApplicationIcon>
-    <Version>0.25.0</Version>
+    <Version>0.26.0</Version>
     <Product>TagPrinter</Product>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>

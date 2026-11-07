@@ -28,7 +28,7 @@ internal sealed partial class AssetsView : UserControl
     private Action? resizeToolbar;
     private sealed record StatusChoice(string Key,string Caption){public override string ToString()=>Caption;}
     /// <summary>Builds wrapped toolbars above the grid; commands never print automatically.</summary>
-    internal AssetsView(HistoryStore history,Action<AssetRecord> onLoad)
+    internal AssetsView(HistoryStore history,Action<AssetRecord> onLoad,Action<AssetRecord>? onServices=null)
     {
         this.history=history;store=new(history);loadLabel=onLoad;Dock=DockStyle.Fill;Padding=new Padding(16);BackColor=Color.White;
         var root=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=3};root.ColumnStyles.Add(new(SizeType.Percent,100));root.RowStyles.Add(new(SizeType.Absolute,160));root.RowStyles.Add(new(SizeType.Percent,100));root.RowStyles.Add(new(SizeType.Absolute,80));
@@ -42,7 +42,7 @@ internal sealed partial class AssetsView : UserControl
         Add(actions,"Duplicar","Duplicate",()=>Edit(Selected() with {Uid="",Number=0,Revision=0,Serial="",PartNumber="",MacAddress="",Status="Available",Custodian="",Location="",Notes="",CreatedUtc="",UpdatedUtc=""}));
         Add(actions,"Asignar","Assign",()=>ShowMovementAction("Assigned"));Add(actions,"Devolver","Return",()=>ShowMovementAction("Returned"));Add(actions,"Enviar a reparación","Send to repair",()=>ShowMovementAction("RepairStarted"));
         Add(actions,"Dar de baja","Retire",()=>{var item=Selected();if(MessageBox.Show(FindForm(),Ui.T("¿Dar de baja este activo? Su ficha e historial se conservarán.","Retire this asset? Its record and history will be preserved."),"TagPrinter",MessageBoxButtons.YesNo,MessageBoxIcon.Question)==DialogResult.Yes){store.Save(item with {Status="Retired"});RefreshData();}});
-        Add(actions,"Cargar etiqueta","Load label",()=>loadLabel(Selected()));Add(actions,"Movimientos","Movements",ShowMovements);Add(actions,"Catálogos…","Catalogs…",ShowCatalogs);
+        Add(actions,"Cargar etiqueta","Load label",()=>loadLabel(Selected()));Add(actions,"Movimientos","Movements",ShowMovements);if(onServices is not null)Add(actions,"Mantenimientos / garantías","Maintenance / warranties",()=>onServices(Selected()));Add(actions,"Catálogos…","Catalogs…",ShowCatalogs);
         var files=Row();Add(files,"Exportar activos CSV…","Export assets CSV…",ExportAssets);Add(files,"Importar activos CSV…","Import assets CSV…",ImportAssets);Add(files,"Plantilla de activos…","Asset CSV template…",SaveAssetTemplate);
         previous.Click+=(_,_)=>Run(()=>{if(page>0){page--;RefreshData();}});next.Click+=(_,_)=>Run(()=>{page++;RefreshData();});files.Controls.AddRange([previous,pageLabel,next]);
         exactSerial.CheckedChanged+=(_,_)=>{if(!translating){page=0;Run(RefreshData);}};HandleCreated+=(_,_)=>{if(refreshPending && Visible)RefreshData();};VisibleChanged+=(_,_)=>{if(Visible && refreshPending)RefreshData();};
@@ -103,7 +103,7 @@ internal sealed partial class AssetsView : UserControl
     /// <summary>Describes hidden drill-down restrictions so the user can understand and clear the scope.</summary>
     private static string ScopeCaption(AssetFilter filter)
     {
-        var parts=new List<string>();if(filter.Type is not null)parts.Add(filter.Type+" / "+filter.Brand+" / "+filter.Model);
+        var parts=new List<string>();if(filter.AssetUid is not null)parts.Add(Ui.T("Activo seleccionado desde Mantenimientos y garantías","Asset selected from Maintenance & warranties"));if(filter.Type is not null)parts.Add(filter.Type+" / "+filter.Brand+" / "+filter.Model);
         if(filter.Location is not null)parts.Add(Ui.T("Ubicación: ","Location: ")+(filter.Location.Length==0?Ui.T("Sin indicar","Not set"):filter.Location));
         if(filter.Custodian is not null)parts.Add(Ui.T("Responsable: ","Custodian: ")+(filter.Custodian.Length==0?Ui.T("Sin indicar","Not set"):filter.Custodian));
         if(filter.FromUtc is {} from)parts.Add(Ui.T("Desde ","From ")+from.LocalDateTime.ToString("yyyy-MM-dd"));if(filter.ToUtc is {} to)parts.Add(Ui.T("Antes de ","Before ")+to.LocalDateTime.ToString("yyyy-MM-dd"));

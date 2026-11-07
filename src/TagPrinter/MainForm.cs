@@ -128,7 +128,7 @@ public partial class MainForm : AppWindow
         catalogPath=configPath is not null?Path.Combine(Path.GetDirectoryName(Path.GetFullPath(configPath))!,"catalog.json"):Path.Combine(StartupDiagnostics.InstallationRoot,"config.json");
         appConfig=configuration ?? AppConfig.Load(catalogPath);
         Ui.Language=appConfig.Defaults.Language;
-        Text="TagPrinter | v0.25";
+        Text="TagPrinter | v0.26";
         using var iconStream=typeof(MainForm).Assembly.GetManifestResourceStream("TagPrinter.TagPrinter.ico");
         if(iconStream is not null)Icon=new Icon(iconStream); Width=1160; Height=850; MinimumSize=new Size(980,720);
         Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;

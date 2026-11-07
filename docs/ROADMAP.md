@@ -2,6 +2,8 @@
 
 ## Completed
 
+- 0.26: local maintenance/warranties, date reminders, explicit costs/currency, immutable revisions, paged lists/CSV and protected schema-4 backup/restore.
+
 - 0.25: indexed/coalesced background reads, lightweight history projection, paged aggregate/audit views, bounded vocabulary/import lookup and atomic streaming/cancellable CSV; measured synthetic scale.
 
 - 0.24: explicit serial recognition, inventory catalogs, guided workflows/reasons, administrative CSV, exact Dashboard navigation and durable/manual backup feedback.
@@ -39,4 +41,4 @@ Future proposals require their own scope/authorization. Those performance follow
 
 Potential later asset features: structured employee/site entities and hierarchy, procurement/attachments and permissions. These are proposals, not implemented or authorized automatically.
 
-User accounts and permissions are explicitly deferred; keep current operation local without a login module. New module proposals awaiting selection: maintenance/warranties, physical inventory reconciliation by scanner, asset photos/documents and batch label output.
+User accounts and permissions are explicitly deferred; keep current operation local without a login module. New module proposals awaiting selection: physical inventory reconciliation by scanner, asset photos/documents and batch label output. Recurring jobs, attachments and notifications can extend the delivered service module later.

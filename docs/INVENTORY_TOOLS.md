@@ -1,4 +1,4 @@
-# Inventory tools — TagPrinter 0.25
+# Inventory tools — TagPrinter 0.26
 
 ## Import inventory without printing
 
@@ -29,13 +29,13 @@ Open **05 Settings > Restore database** and choose a TagPrinter SQLite backup. C
 
 The app stages a consistent read-only copy, checks SQLite integrity, version/tables, expected foreign keys/data links and readable event snapshots, and rejects unrelated/trigger-bearing/newer/corrupt files before touching live pages. It saves a separate **TagPrinter-before-restore-...db** safety copy, then restores through SQLite's transactional backup API. The editor keeps its draft but clears its historical and selected master references; Reports reloads. Safety copies are not automatically pruned. If validation fails, the current inventory remains unchanged.
 
-This restores an inventory database, not a synchronization merge. Schema 1, 2 and 3 backups are supported; older schemas are upgraded only in staging. Choose a proper SQLite backup rather than copying a live WAL database file in Explorer. If startup rejects a corrupt live database, preserve it and follow TROUBLESHOOTING.md before using the restore UI in a working installation.
+This restores an inventory database, not a synchronization merge. Schema 1, 2, 3 and 4 backups are supported; older schemas are upgraded only in staging. Choose a proper SQLite backup rather than copying a live WAL database file in Explorer. If startup rejects a corrupt live database, preserve it and follow TROUBLESHOOTING.md before using the restore UI in a working installation.
 
 ## Automatic backups
 
 Daily automatic backups are enabled initially. The checkbox in 05 Settings controls daily copies, and is included in full configuration transfer. While the app runs, it checks at startup and hourly, creating at most one routine copy per UTC date in `%LOCALAPPDATA%/TagPrinter/backups` (beside a custom database for isolated/custom data). Only the ten newest files named **TagPrinter-auto-...db** are retained. Independently, confirmed imports force a pre-import copy in that retention group; restores always create protected safety copies, even when daily backups are disabled.
 
-Automatic copying uses the SQLite API with separate connections, never an Explorer copy of the live DB. Failed daily attempts appear in the status area and may retry on the next timer tick. No backup timer runs against real user data during self-tests. Backups contain database events/trash, not configuration, profile JSON or exported files. Changes since the last successful copy are outside that backup; this is a daily policy, not continuous versioning. Copy important backups to another location separately if needed.
+Automatic copying uses the SQLite API with separate connections, never an Explorer copy of the live DB. Failed daily attempts appear in the status area and may retry on the next timer tick. No backup timer runs against real user data during self-tests. Backups contain events/trash, assets, catalogs, movements, maintenance, warranties and service revisions; configuration, profile JSON and exported files remain separate. Changes since the last successful copy are outside that backup; this is a daily policy, not continuous versioning. Copy important backups to another location separately if needed.
 
 ## Reusable label profiles
 

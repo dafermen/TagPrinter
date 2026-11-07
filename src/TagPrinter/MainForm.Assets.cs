@@ -9,7 +9,7 @@ public partial class MainForm
     /// <summary>Builds the second module without replacing the existing label-event history.</summary>
     private void InitializeAssets()
     {
-        assetsView=new AssetsView(history,LoadAssetLabel);assetsTab.Controls.Add(assetsView);workspaceTabs.TabPages.Insert(1,assetsTab);
+        assetsView=new AssetsView(history,LoadAssetLabel,asset=>ShowServices(asset.Uid));assetsTab.Controls.Add(assetsView);workspaceTabs.TabPages.Insert(1,assetsTab);
         workspaceTabs.SelectedIndexChanged+=(_,_)=>{if(!ready)return;if(workspaceTabs.SelectedTab==assetsTab)Guard(()=>assetsView.RefreshData());if(workspaceTabs.SelectedTab==labelTab)Guard(()=>{RefreshAssetSuggestions();RefreshAssetMatch();});};
     }
     /// <summary>Loads only identity into the current template; blank serial assets use text-only output and never auto-print.</summary>

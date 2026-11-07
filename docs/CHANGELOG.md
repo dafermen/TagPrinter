@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.26.0 — 2026-11-07
+
+- Add local Maintenance & warranties workspace and per-asset entry/navigation, with no application accounts.
+- Track preventive/corrective jobs, lifecycle dates/states, provider/reference/notes and optional decimal cost with explicit currency; track warranty periods and open claims independently.
+- Calculate inclusive calendar reminders with adjustable 1–365-day look-ahead, retired scope and preserved closed/completed records.
+- Save current service records and immutable before/after revisions atomically; reject stale/reassigned records and retain input on invalid saves.
+- Add cancellable 50-row service/revision pages, due-date/state/asset indexes and filtered atomic streaming CSV.
+- Upgrade to SQLite schema 4 after protected prior backups; include full service/audit validation in staged old/current backup restores.
+- Add 10000-record service tests, actual editor/bilingual/minimum-size/async checks, English manuals and screenshots. No printer jobs are submitted.
+
 ## 0.25.0 — 2026-11-07
 
 - Add compatible derived indexes and explicit partial-index predicates for fast canonical/legacy serial lookup.

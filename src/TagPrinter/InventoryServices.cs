@@ -91,7 +91,7 @@ public sealed partial class HistoryStore
             using(var source=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=sourcePath,Mode=SqliteOpenMode.ReadOnly,Pooling=false}.ToString()))
             using(var staged=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=stage,Pooling=false}.ToString())){source.Open();staged.Open();source.BackupDatabase(staged);}
             ValidateBackup(stage);
-            using(var upgrade=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=stage,Pooling=false}.ToString())){upgrade.Open();AssetStore.Initialize(upgrade);DatabasePerformance.Initialize(upgrade);}
+            using(var upgrade=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=stage,Pooling=false}.ToString())){upgrade.Open();AssetStore.Initialize(upgrade);ServiceStore.Initialize(upgrade);DatabasePerformance.Initialize(upgrade);}
             ValidateBackup(stage);
             Directory.CreateDirectory(safetyDirectory);string safety=Path.Combine(safetyDirectory,"TagPrinter-before-restore-"+DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff")+"-"+Guid.NewGuid()+".db");Backup(safety);
             using var candidate=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=stage,Mode=SqliteOpenMode.ReadOnly,Pooling=false}.ToString());candidate.Open();using var destination=Open();candidate.BackupDatabase(destination);return safety;
@@ -103,8 +103,8 @@ public sealed partial class HistoryStore
     {
         using var c=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=path,Mode=SqliteOpenMode.ReadOnly,Pooling=false}.ToString());c.Open();
         using var cmd=c.CreateCommand();cmd.CommandText="PRAGMA integrity_check";using(var reader=cmd.ExecuteReader()){while(reader.Read())if(reader.GetString(0)!="ok")throw new InvalidDataException("Backup integrity check failed.");}
-        cmd.CommandText="PRAGMA user_version";int version=Convert.ToInt32(cmd.ExecuteScalar());if(version is not (1 or 2 or 3))throw new InvalidDataException("Unsupported backup schema version.");
-        cmd.CommandText="SELECT COUNT(*) FROM sqlite_master WHERE type IN ('trigger','view') OR (type='table' AND name NOT IN ('events','trash','sqlite_sequence','assets','asset_movements','asset_catalog'))";if(Convert.ToInt32(cmd.ExecuteScalar())!=0)throw new InvalidDataException("Unexpected backup schema objects.");
+        cmd.CommandText="PRAGMA user_version";int version=Convert.ToInt32(cmd.ExecuteScalar());if(version is not (1 or 2 or 3 or 4))throw new InvalidDataException("Unsupported backup schema version.");
+        cmd.CommandText="SELECT COUNT(*) FROM sqlite_master WHERE type IN ('trigger','view') OR (type='table' AND name NOT IN ('events','trash','sqlite_sequence','assets','asset_movements','asset_catalog','asset_services','service_changes'))";if(Convert.ToInt32(cmd.ExecuteScalar())!=0)throw new InvalidDataException("Unexpected backup schema objects.");
         cmd.CommandText="SELECT id,created_utc,action,state_json,output_path,source_event_id,serial,asset_type,brand,model,part_number,mac_address FROM events";
         var catalog=AppConfig.CreateDefault();
         using(var reader=cmd.ExecuteReader())while(reader.Read())
@@ -123,6 +123,8 @@ public sealed partial class HistoryStore
         }
         if(version>=2)AssetStore.ValidateDatabase(c);
         if(version>=3){AssetCatalog.ValidateDatabase(c);cmd.CommandText="SELECT note FROM asset_movements";using var audit=cmd.ExecuteReader();while(audit.Read())if(audit.GetString(0).Length>1000 || audit.GetString(0).Contains('\0'))throw new InvalidDataException("Invalid movement note.");}
+        if(version>=4)ServiceStore.ValidateDatabase(c);
+        else {cmd.CommandText="SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('asset_services','service_changes')";if(Convert.ToInt32(cmd.ExecuteScalar())!=0)throw new InvalidDataException("Service tables require schema 4.");}
         cmd.CommandText="PRAGMA foreign_key_check";using(var reader=cmd.ExecuteReader())if(reader.Read())throw new InvalidDataException("Broken backup source links.");
     }
 }

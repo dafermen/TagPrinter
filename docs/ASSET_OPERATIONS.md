@@ -72,9 +72,9 @@ Metadata lives beside the database as TagPrinter.db.backup-status.json. It is lo
 
 ## Database compatibility
 
-Schema is now **3**: asset_catalog and movement-note support are added transactionally. Before upgrading schema 2, startup saves a protected TagPrinter-before-catalogs-...db. Schema-1 upgrades keep their protected before-assets copy. Vocabulary is seeded from existing master values without changing identity, revisions or original JSON snapshots. Old label events remain immutable.
+Current schema is **4**. Schema 3 introduced asset_catalog and movement notes; schema 4 adds maintenance/warranties and their immutable revisions. Startup preserves a protected before-assets (schema 1), before-catalogs (schema 2), or before-services (schema 3) copy before migration. Original master/label snapshots retain their identity and data.
 
-Restore accepts schema 1, 2 and 3: a separate staged copy is validated/upgraded/revalidated before live replacement. The selected file is not modified. Schema-3 snapshots include assets, vocabulary, movement reasons, label events and recycle-bin membership. Older binaries cannot open schema 3; preserve the protected prior-version copy for rollback, which excludes later changes. Close other instances during upgrade/restore.
+Restore accepts schemas 1–4 through validated/upgraded/revalidated staging, without modifying the chosen source. Current snapshots include all inventory and service data. Older binaries reject schema 4; preserve the protected matching prior-version copy for rollback, which excludes later changes. Close other instances during upgrade/restore. See [Maintenance and warranties](SERVICES.md).
 
 ## Source walkthrough and evidence
 
@@ -84,4 +84,4 @@ AssetOperationsTests exercises the actual catalog/assignment forms, explicit loo
 
 ## Large local datasets — 0.25
 
-Lists/aggregate groups/audit use bounded background pages and catalog pickers use up to 200 prefix options. Exact serial accelerates known-identifier lookup. Full master/history exports use cancellable streaming with a staged destination; master import vocabulary/identity lookup is prepared and lazy. See [Large histories and inventories](PERFORMANCE.md). Schema stays 3 and the established audit/backup semantics remain in place.
+Lists/aggregate groups/audit use bounded background pages and catalog pickers use up to 200 prefix options. Exact serial accelerates known-identifier lookup. Full master/history exports use cancellable streaming with a staged destination; master import vocabulary/identity lookup is prepared and lazy. See [Large histories and inventories](PERFORMANCE.md). The derived performance indexes remain in place with the schema-4 service extension.

@@ -1,4 +1,4 @@
-# Troubleshooting — TagPrinter 0.25
+# Troubleshooting — TagPrinter 0.26
 
 ## Windows asks for .NET
 
@@ -61,3 +61,11 @@ Open 05 Settings for the full error/path and use Back up now. Check destination 
 ## Large inventory search or export
 
 Use Exact serial for known serials and narrower date/state filters for broad queries. Substring searches and full aggregates can still take time; the UI shows loading and discards obsolete requests. Initial index creation/structural checking can lengthen first startup. CSV Cancel interrupts reading and cleans the staged file before closing; an open destination in another program can prevent final replacement while preserving the prior file. See PERFORMANCE.md.
+
+## Maintenance and warranties
+
+If records are missing, check the selected subtab, asset scope, state/deadline filter and Include retired assets. All assets removes per-asset scope; Clear filters keeps it. Reminder totals deliberately ignore only the deadline selector and are not page totals. Check the Windows date and refresh if crossing midnight. Reminders do not run while the app is closed.
+
+An amount needs a three-letter currency; Completed needs a completion date no earlier than an entered start. Invalid/stale saves leave the editor open with input intact. Reload a stale record before retrying. Coverage remains linked after serial edits. Job state never automatically changes assignment/physical asset state.
+
+Schema-4 restore errors can indicate corrupt fields, inconsistent metadata or broken revision history. Preserve the files/error and use a known-good complete backup. Do not remove service/audit tables or lower user_version to force older binaries to open current data. Use the protected matching pre-upgrade copy for rollback. See [service recovery](SERVICES.md).

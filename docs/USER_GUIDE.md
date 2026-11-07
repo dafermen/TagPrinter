@@ -1,4 +1,4 @@
-# User guide — TagPrinter 0.25
+# User guide — TagPrinter 0.26
 
 ## Start and update
 
@@ -97,3 +97,7 @@ Print visibly shows Ctrl + P and uses a Fluent icon with its translated text. Ho
 ## Large local inventories
 
 Reports and Assets offer Exact serial for a known identifier. Loading indicators accompany background searches; changing a filter cancels obsolete work. Dashboard and Movements have previous/next pages while counts retain their full scope. Catalog lists show up to 200 choices; use the prefix search in Catalogs for additional options. CSV exports show progress/cancel and replace the destination only on success. See [Large histories and inventories](PERFORMANCE.md) for measured evidence and practical limits.
+
+## Maintenance and warranties
+
+Open **Maintenance & warranties**, or select an asset in Assets and choose **Maintenance / warranties**. Use the separate subtabs to create/edit planned work and warranty coverage. Reminder counts use local dates, with an adjustable 1–365-day look-ahead. Completed/canceled jobs and closed warranties are preserved without overdue notices. Amounts require an explicit three-letter currency. Each save keeps a change history; CSV includes all filtered pages. SQLite backup/restore covers these records together with inventory. See [the complete module guide](SERVICES.md) for fields, date rules, screenshots and upgrade/recovery instructions. Operation stays local without accounts.

@@ -46,13 +46,13 @@ The second summary line keeps **global active label-log totals** for tag exports
 
 ## Updating an existing installation
 
-Inventory SQLite schema is now version **3**, in the same user database. Before upgrading a version-1 database, the app creates a protected **backups/TagPrinter-before-assets-...db** copy. A schema-2 upgrade preserves **backups/TagPrinter-before-catalogs-...db**. Both use consistent SQLite backup and are outside automatic ten-file pruning.
+Inventory SQLite schema is now version **4**, in the same user database. Before upgrading a version-1 database, the app creates a protected **backups/TagPrinter-before-assets-...db** copy. A schema-2 upgrade preserves **backups/TagPrinter-before-catalogs-...db**. A schema-3 upgrade preserves **backups/TagPrinter-before-services-...db**. All use consistent SQLite backup and are outside automatic ten-file pruning.
 
 Migration is transactional: it creates master/audit tables and a nullable stable asset link on events. It derives one master from the newest active inventory snapshot per normalized nonempty serial, excluding recycled-only and Free text work. The initial state is **Needs review**, with no invented responsible person/location. A Migrated audit entry records this derivation. Original event IDs, snapshot JSON, dates, source links and recycle-bin membership are retained. It runs once, not on every startup. Large legacy histories may take time to migrate; keep the application open until it completes.
 
-Existing backups with schema 1 or 2 can be restored: the chosen file is not modified; a staged copy is validated, upgraded and validated again before replacing live pages. Schema-3 backups include assets, movements/reasons, vocabulary, label events and recycle-bin membership together. Schema-1/2 backups upgrade only in staging. The pre-restore safety copy also includes all these records. Configuration/profile JSON and exported files remain separate.
+Existing backups with schema 1, 2 or 3 can be restored: the chosen file is not modified; a staged copy is validated, upgraded and validated again before replacing live pages. Current schema-4 backups include assets, movements/reasons, vocabulary, label events, recycle-bin membership, maintenance, warranties and their revision history together. The pre-restore safety copy includes all current records. Configuration/profile JSON and exported files remain separate.
 
-Older TagPrinter versions cannot open schema 3. To roll back, preserve current data and use the protected version-1/2 copy matching the older executable; later changes are not contained in that copy. Close other TagPrinter instances before upgrading/restoring. This is a local module; synchronization remains explicitly pending.
+Older binaries reject schema 4. Preserve current data and use the protected prior-version copy matching the older executable for rollback; later changes are not contained in that copy. Close other TagPrinter instances before upgrading/restoring. Synchronization remains pending. See [Maintenance and warranties](SERVICES.md) for schema-4 migration and recovery.
 
 ## Implementation and evidence
 
@@ -60,4 +60,6 @@ AssetStore owns validation, serial normalization/uniqueness, optimistic revision
 
 AssetTests uses real isolated SQLite to check repeated outputs, serial edits and historical reprints, assignment requirements, real editor binding/save, stale and duplicate rejection, no-serial links, Free text exclusion, retired Dashboard filters, literal field search, protected Unicode-aware version-1 migration and schema-1/2 backup restoration. It also captures the bilingual UI. Physical printer validation and RFID remain pending.
 
-Procurement, costs/depreciation, attachments, structured employee/site entities, access roles and synchronization remain future scope. Location/custodian/type/brand/model now use editable vocabulary dropdowns. Settings CSV keeps six-field registration; Assets adds reviewed administrative CSV with UID/revision safeguards. Use SQLite backups for catalogs and complete movement recovery. See [Daily asset operations](ASSET_OPERATIONS.md).
+Procurement, asset valuation/depreciation, attachments, structured employee/site entities, access roles and synchronization remain future scope. Location/custodian/type/brand/model now use editable vocabulary dropdowns. Settings CSV keeps six-field registration; Assets adds reviewed administrative CSV with UID/revision safeguards. Use SQLite backups for catalogs and complete movement recovery. See [Daily asset operations](ASSET_OPERATIONS.md).
+
+Select **Maintenance / warranties** on an asset to open its linked service lists. View asset in that module returns to the exact stable asset identity, including blank-serial assets. Service state changes do not silently change asset custody or lifecycle.

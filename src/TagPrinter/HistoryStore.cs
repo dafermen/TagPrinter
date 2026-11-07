@@ -63,12 +63,12 @@ public sealed partial class HistoryStore
         {
             version.CommandText="PRAGMA user_version";
             existingVersion=Convert.ToInt32(version.ExecuteScalar());
-            if(existingVersion>3)throw new InvalidDataException("History database version is newer than this app.");
+            if(existingVersion>4)throw new InvalidDataException("History database version is newer than this app.");
         }
-        if(existingVersion is 1 or 2)
+        if(existingVersion is 1 or 2 or 3)
         {
             string backups=Path.Combine(Path.GetDirectoryName(DatabasePath)!,"backups");Directory.CreateDirectory(backups);
-            string migrationBackup=Path.Combine(backups,(existingVersion==1?"TagPrinter-before-assets-":"TagPrinter-before-catalogs-")+DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff")+"-"+Guid.NewGuid()+".db");
+            string migrationBackup=Path.Combine(backups,(existingVersion==1?"TagPrinter-before-assets-":existingVersion==2?"TagPrinter-before-catalogs-":"TagPrinter-before-services-")+DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff")+"-"+Guid.NewGuid()+".db");
             using var destination=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=migrationBackup,Pooling=false}.ToString());destination.Open();connection.BackupDatabase(destination);
         }
         using var command=connection.CreateCommand();
@@ -96,7 +96,7 @@ public sealed partial class HistoryStore
             CREATE TABLE IF NOT EXISTS trash(event_id INTEGER PRIMARY KEY REFERENCES events(id), deleted_utc TEXT NOT NULL);
 
             """;
-        command.ExecuteNonQuery();AssetStore.Initialize(connection);DatabasePerformance.Initialize(connection);
+        command.ExecuteNonQuery();AssetStore.Initialize(connection);ServiceStore.Initialize(connection);DatabasePerformance.Initialize(connection);
     }
     /// <summary>Opens a caller-owned, unpooled connection with foreign keys and five-second busy timeout.</summary>
     /// <returns>Open caller-owned connection; dispose after use.</returns>

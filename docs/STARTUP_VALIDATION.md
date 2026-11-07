@@ -35,3 +35,5 @@ Build-Launcher.ps1 creates the manifest and compiles Launcher.cs with the Window
 --verify-only checks package integrity and config JSON syntax without opening the application; it does not run full AppConfig schema/SQLite/last-work checks. --report writes an explicit test report. Verify-only does not write live startup logs or user data. Normal launch performs the application-side checks as well.
 
 Schema 3 adds vocabulary and movement reasons. Opening version 1 makes a protected before-assets copy; opening version 2 makes a protected before-catalogs copy before transactional migration. If that backup/migration cannot complete, startup fails without silently deleting/replacing inventory. See ASSETS.md for rollback and old-backup restore behavior.
+
+Schema 4 adds service records/revisions. Opening a schema-3 file preserves TagPrinter-before-services-...db before migration. Schemas 1–3 are supported; newer-than-4 files are rejected. Service snapshots, metadata, revision chains and foreign keys are semantically validated during staged restore. See [Maintenance and warranties](SERVICES.md).

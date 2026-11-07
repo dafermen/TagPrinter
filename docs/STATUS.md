@@ -1,6 +1,6 @@
 # Current status
 
-Application version: 0.25.0. Project: https://github.com/dafermen/TagPrinter. Local checkout: C:/Projects/TagPrinter.
+Application version: 0.26.0. Project: https://github.com/dafermen/TagPrinter. Local checkout: C:/Projects/TagPrinter.
 
 The application supports six asset fields, independent visibility, optional QR/Code 128, text-only labels, media presets/custom dimensions, fonts/bold/fitting, margins/offsets, media orientation and content rotation. It restores last work, prints through Windows or RAW ZPL, exports label/code PNG and raster ZPL, and records successful actions in SQLite.
 
@@ -10,7 +10,7 @@ The interface remains English/Spanish, initially English. Source comments and te
 
 Source documentation covers classes/records, member functions, saved properties, meaningful state variables, local helpers and complex blocks. The student guide explains C# concepts, units, events, rendering, native resource ownership and data flow. Historical changes belong in CHANGELOG; manuals describe current behavior.
 
-Tests use synthetic data in isolated files/databases; no real user records or printer jobs are used. The live database is outside the portable and is not replaced by application updates. Schema-1 migration derives canonical assets from active serial history; schema-2 migration adds vocabulary/reasons without rewriting masters. Both preserve a protected prior copy before schema 3. External output files are not automatically imported.
+Tests use synthetic data in isolated files/databases; no real user records or printer jobs are used. The live database is outside the portable and is not replaced by application updates. Schema-1 migration derives canonical assets from active serial history; schema-2 migration adds vocabulary/reasons without rewriting masters. Both preserve a protected prior copy; schema-3 migration now preserves a before-services copy before schema 4. External output files are not automatically imported.
 
 Pending: physical hardware validation, RFID and multi-device synchronization (deferred by the user). No physical-print confirmation, event editing, synchronization or database encryption is implemented. See ROADMAP and VALIDATION.
 
@@ -35,3 +35,5 @@ License: MIT for TagPrinter source and project documentation, Copyright (c) 2026
 0.24 adds explicit serial recognition, New label captions, inventory vocabulary, guided assignment/return/repair with movement reasons, full administrative CSV review/import/export, exact Dashboard state/group navigation and persisted backup feedback with a manual command. Schema 3 and legacy backups are covered in ASSET_OPERATIONS.md. Synchronization stays deferred.
 
 0.25 optimizes large local registries: derived indexes and exact serial matching, projected report pages, one cancellable background reader per view, bounded Dashboard/audit/catalog displays, prepared lazy import lookup and atomic streaming CSV with progress. Schema remains 3. Scale tests use 100000 records in each major collection; see PERFORMANCE.md for evidence and limits. User accounts/permissions remain explicitly deferred.
+
+0.26 adds Maintenance & warranties: linked jobs/coverage, local calendar reminders, explicit amount/currency, optimistic/atomic revision audit, paged search/sort/change history, exact asset navigation and filtered CSV. Schema 4 and staged validation/restore include the complete module. Existing asset states and label events remain separate. Operation stays local with no application users; see SERVICES.md.
