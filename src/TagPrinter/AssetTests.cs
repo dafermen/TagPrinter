@@ -17,7 +17,7 @@ internal static class AssetTests
         try{assets.Save(original with {Status="Assigned"});throw new Exception("Assignment without custodian accepted");}catch(InvalidDataException){}
         using(var view=new AssetsView(history,_=>{}))using(var editor=view.CreateEditor(original))
         {
-            editor.Show();((TextBox)editor.Controls.Find("Location",true).Single()).Text="HQ / Floor 2";((TextBox)editor.Controls.Find("Custodian",true).Single()).Text="Alex Rivera";((TextBox)editor.Controls.Find("Notes",true).Single()).Text="Assigned for support";((ComboBox)editor.Controls.Find("Status",true).Single()).SelectedIndex=1;Application.DoEvents();
+            editor.Show();editor.Controls.Find("Location",true).Single().Text="HQ / Floor 2";editor.Controls.Find("Custodian",true).Single().Text="Alex Rivera";((TextBox)editor.Controls.Find("Notes",true).Single()).Text="Assigned for support";((ComboBox)editor.Controls.Find("Status",true).Single()).SelectedIndex=1;Application.DoEvents();
             using var image=new Bitmap(editor.Width,editor.Height);editor.DrawToBitmap(image,new Rectangle(Point.Empty,editor.Size));image.Save(Path.Combine(folder,"asset-editor-en.png"));
             editor.Controls.OfType<FlowLayoutPanel>().Single().Controls.OfType<Button>().Single(b=>b.Name=="SaveAsset").PerformClick();editor.Close();
         }

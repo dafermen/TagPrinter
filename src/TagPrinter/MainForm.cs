@@ -128,7 +128,7 @@ public partial class MainForm : AppWindow
         catalogPath=configPath is not null?Path.Combine(Path.GetDirectoryName(Path.GetFullPath(configPath))!,"catalog.json"):Path.Combine(StartupDiagnostics.InstallationRoot,"config.json");
         appConfig=configuration ?? AppConfig.Load(catalogPath);
         Ui.Language=appConfig.Defaults.Language;
-        Text="TagPrinter | v0.23";
+        Text="TagPrinter | v0.24";
         using var iconStream=typeof(MainForm).Assembly.GetManifestResourceStream("TagPrinter.TagPrinter.ico");
         if(iconStream is not null)Icon=new Icon(iconStream); Width=1160; Height=850; MinimumSize=new Size(980,720);
         Font=new Font("Segoe UI",10); BackColor=Color.White; StartPosition=FormStartPosition.CenterScreen;
@@ -243,7 +243,7 @@ public partial class MainForm : AppWindow
         actionArea.Controls.Add(jobNotice,0,2);printActionsRow=right.RowStyles[4];
         actionArea.Controls.Add(printSummary,0,0);actionArea.Controls.Add(CreatePrinterStatusRow(),0,1);
         var buttons=new FlowLayoutPanel{Dock=DockStyle.Fill,Margin=Padding.Empty};
-        var newAsset=new Button{Text=Ui.T("Nuevo activo","New asset"),AutoSize=true};
+        var newAsset=new Button{Name="NewLabel",Text=Ui.T("Nueva etiqueta","New label"),AutoSize=true};
         newAsset.Click+=(_,_)=>StartNewAsset();buttons.Controls.Add(newAsset); var export=new Button{Text=Ui.T("Exportar etiqueta","Export Tag"),AutoSize=true};var zpl=new Button{Text=Ui.T("Guardar ZPL…","Save ZPL…"),AutoSize=true};
         var codeExport=new Button{Text=Ui.T("Exportar código","Export Code"),AutoSize=true};
         codeExport.Click+=(_,_)=>Guard(ExportCode);

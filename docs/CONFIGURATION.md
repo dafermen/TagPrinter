@@ -1,4 +1,4 @@
-# Configuration and data contracts — 0.23
+# Configuration and data contracts — 0.24
 
 ## Three separate stores
 
@@ -6,7 +6,7 @@
 |---|---|---|
 | config.json | Beside EXE; source src/TagPrinter/config.json | Installation media catalog and startup defaults. |
 | settings.json | %LOCALAPPDATA%/InventoryLabels | Last edited values/preferences; historical path retained for compatibility. |
-| TagPrinter.db | %LOCALAPPDATA%/TagPrinter | Master assets/audit, completed events, design snapshots and recycle bin. |
+| TagPrinter.db | %LOCALAPPDATA%/TagPrinter | Master assets/audit/reasons/catalogs, completed events, design snapshots and recycle bin. |
 
 Close the app before manually editing configuration. Installation defaults apply first; last work overrides them. Changing defaults does not reset existing work. The catalog is always loaded from the current installation and never configures driver media automatically.
 
@@ -84,3 +84,5 @@ Since 0.20, ShowFeedGuide controls the fixed printer/paper-exit diagram. FeedDir
 AppConfig.Profiles stores up to 100 unique named design-only WorkState snapshots; Apply preserves current identity/language/printer/copies. AppConfig.AutomaticBackups defaults to true and controls the daily policy. Both are included in full configuration transfer and persisted to editable root config.json by the UI; they are not stored/restored with the inventory SQLite file. See INVENTORY_TOOLS.md.
 
 WorkState.AssetUid optionally retains the selected local master identity. Profiles clear it on capture and preserve the current selection on application. It is not a master-data backup; configuration transfer alone does not create asset assignments or synchronize a database.
+
+Inventory vocabulary is stored in SQLite asset_catalog and restored with database snapshots. It is separate from ConfigurationBundle.Catalog (installation media/defaults/profiles). TagPrinter.db.backup-status.json beside the database records last success/path/attempt/failure independently of inventory restoration. See ASSET_OPERATIONS.md.

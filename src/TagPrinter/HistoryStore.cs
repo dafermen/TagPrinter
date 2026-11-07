@@ -62,12 +62,12 @@ public sealed partial class HistoryStore
         {
             version.CommandText="PRAGMA user_version";
             existingVersion=Convert.ToInt32(version.ExecuteScalar());
-            if(existingVersion>2)throw new InvalidDataException("History database version is newer than this app.");
+            if(existingVersion>3)throw new InvalidDataException("History database version is newer than this app.");
         }
-        if(existingVersion==1)
+        if(existingVersion is 1 or 2)
         {
             string backups=Path.Combine(Path.GetDirectoryName(DatabasePath)!,"backups");Directory.CreateDirectory(backups);
-            string migrationBackup=Path.Combine(backups,"TagPrinter-before-assets-"+DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff")+"-"+Guid.NewGuid()+".db");
+            string migrationBackup=Path.Combine(backups,(existingVersion==1?"TagPrinter-before-assets-":"TagPrinter-before-catalogs-")+DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff")+"-"+Guid.NewGuid()+".db");
             using var destination=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=migrationBackup,Pooling=false}.ToString());destination.Open();connection.BackupDatabase(destination);
         }
         using var command=connection.CreateCommand();
@@ -249,7 +249,12 @@ public sealed partial class HistoryStore
     public void Backup(string target)
     {
         if(string.Equals(Path.GetFullPath(target),DatabasePath,StringComparison.OrdinalIgnoreCase))throw new ArgumentException("Choose a different backup file.");
-        using var source=Open();using var destination=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=target,Pooling=false}.ToString());destination.Open();source.BackupDatabase(destination);
+        try
+        {
+            using var source=Open();using var destination=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=target,Pooling=false}.ToString());destination.Open();source.BackupDatabase(destination);
+        }
+        catch(Exception failure){BackupStatus.Record(DatabasePath,target,failure);throw;}
+        BackupStatus.Record(DatabasePath,target);
     }
     /// <summary>
     /// Writes quoted semicolon-delimited UTF-8/BOM with invariant numbers, UTC times and complete JSON

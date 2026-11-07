@@ -1,69 +1,98 @@
 using System.Data;
 namespace TagPrinter;
-/// <summary>
-/// Groups canonical assets by type, brand and model and separately summarizes label activity. It is not verified physical
-/// inventory.
-/// </summary>
+
+/// <summary>Clickable canonical counts and groups; all drill-downs retain exact search/date/state scope.</summary>
 public sealed class DashboardView : UserControl
 {
-    // store supplies events; open navigates to Assets. This view owns and replaces the display table.
-    readonly HistoryStore store;
-    // open receives exact type/brand/model values for the selected group.
-    readonly Action<string,string,string> open;
-    // search matches canonical identity/administrative fields; unchecked from/to date controls do not restrict results.
-    readonly TextBox search=new(){Width=220};
-    // Optional local date boundaries; Checked=false leaves the corresponding side unbounded.
-    readonly DateTimePicker from=new(){ShowCheckBox=true,Checked=false,Format=DateTimePickerFormat.Short,Width=130},to=new(){ShowCheckBox=true,Checked=false,Format=DateTimePickerFormat.Short,Width=130};
-    // refresh explicitly rebuilds counts; caption labels and summary/help are presentation-only.
-    readonly CheckBox includeRetired=new(){AutoSize=true};
-    readonly Button refresh=new(){AutoSize=true};
-    // Translated search/from/to captions, separate from user input.
-    readonly Label searchLabel=new(){AutoSize=true}, fromLabel=new(){AutoSize=true},toLabel=new(){AutoSize=true};
-    // summary displays computed counts; help describes drill-down behavior.
-    readonly Label summary=new(){Dock=DockStyle.Fill}, help=new(){AutoSize=true};
-    // grid displays one row per grouping, with an integer quantity for correct numeric sorting.
-    readonly DataGridView grid=new(){Dock=DockStyle.Fill,ReadOnly=true,AllowUserToAddRows=false,AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.Fill,BackgroundColor=Color.White,RowHeadersVisible=false};
-    // Owned grouping data, replaced and disposed whenever the view is rebuilt.
-    DataTable? table;
-    /// <summary>Builds search/dates/summary/group table and a double-click callback to Assets.</summary>
-    /// <param name="history">History store; tests supply an isolated instance.</param>
-    /// <param name="onOpen">Callback opening Assets for a type/brand/model grouping.</param>
-    public DashboardView(HistoryStore history,Action<string,string,string> onOpen)
+    private readonly HistoryStore history;
+    private readonly Action<AssetFilter> open;
+    private readonly TextBox search=new(){Width=210};
+    private readonly ComboBox grouping=new(){Width=175,DropDownStyle=ComboBoxStyle.DropDownList,Tag="UserData"};
+    private readonly DateTimePicker from=new(){ShowCheckBox=true,Checked=false,Format=DateTimePickerFormat.Short,Width=125},to=new(){ShowCheckBox=true,Checked=false,Format=DateTimePickerFormat.Short,Width=125};
+    private readonly CheckBox includeRetired=new(){AutoSize=true};
+    private readonly Button refresh=new(){AutoSize=true};
+    private readonly Label searchLabel=new(){AutoSize=true},fromLabel=new(){AutoSize=true},toLabel=new(){AutoSize=true},groupLabel=new(){AutoSize=true};
+    private readonly Label summary=new(){Dock=DockStyle.Fill},help=new(){Dock=DockStyle.Fill};
+    private readonly DataGridView grid=new(){Dock=DockStyle.Fill,ReadOnly=true,AllowUserToAddRows=false,AllowUserToDeleteRows=false,AutoGenerateColumns=false,AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.Fill,BackgroundColor=Color.White,RowHeadersVisible=false};
+    private readonly Dictionary<string,Button> cards=[];
+    private DataTable? table;
+    private List<AssetGroup> groups=[];
+    private bool translating;
+    private sealed record Choice(string Key,string Caption){public override string ToString()=>Caption;}
+    /// <summary>Builds a Dashboard with the historical description-group navigation callback.</summary>
+    /// <param name="history">Shared inventory database; tests supply isolated paths.</param>
+    /// <param name="onOpen">Compatibility callback for description groups.</param>
+    public DashboardView(HistoryStore history,Action<string,string,string> onOpen):this(history,f=>onOpen(f.Type??"",f.Brand??"",f.Model??"")){}
+    /// <summary>Builds exact scoped navigation, state cards and flexible grouping without generating labels.</summary>
+    internal DashboardView(HistoryStore history,Action<AssetFilter> onOpen)
     {
-        store=history;open=onOpen;BackColor=Color.White;Dock=DockStyle.Fill;Padding=new Padding(16);
-        var layout=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=4};
-        layout.RowStyles.Add(new(SizeType.Absolute,70));layout.RowStyles.Add(new(SizeType.Absolute,80));layout.RowStyles.Add(new(SizeType.Percent,100));layout.RowStyles.Add(new(SizeType.Absolute,50));
-        var filters=new FlowLayoutPanel{Dock=DockStyle.Fill};filters.Controls.AddRange([searchLabel,search,fromLabel,from,toLabel,to,refresh,includeRetired]);layout.Controls.Add(filters);layout.Controls.Add(summary);layout.Controls.Add(grid);layout.Controls.Add(help);Controls.Add(layout);
-        includeRetired.CheckedChanged+=(_,_)=>Run();
-        refresh.Click+=(_,_)=>Run();search.KeyDown+=(_,e)=>{if(e.KeyCode==Keys.Enter){e.SuppressKeyPress=true;Run();}};
-        grid.CellDoubleClick+=(_,e)=>{if(e.RowIndex>=0){var r=grid.Rows[e.RowIndex];open(Convert.ToString(r.Cells[0].Value)!,Convert.ToString(r.Cells[1].Value)!,Convert.ToString(r.Cells[2].Value)!);}};
-        from.Checked=to.Checked=false;RefreshLanguage();
+        this.history=history;open=onOpen;BackColor=Color.White;Dock=DockStyle.Fill;Padding=new Padding(16);
+        var root=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=5};root.ColumnStyles.Add(new(SizeType.Percent,100));root.RowStyles.Add(new(SizeType.AutoSize));root.RowStyles.Add(new(SizeType.AutoSize));root.RowStyles.Add(new(SizeType.Absolute,70));root.RowStyles.Add(new(SizeType.Percent,100));root.RowStyles.Add(new(SizeType.Absolute,50));
+        var filters=new FlowLayoutPanel{Dock=DockStyle.Top,AutoSize=true,WrapContents=true};filters.Controls.AddRange([searchLabel,search,fromLabel,from,toLabel,to,refresh,includeRetired,groupLabel,grouping]);
+        var cardRow=new FlowLayoutPanel{Dock=DockStyle.Top,AutoSize=true,WrapContents=true};
+        foreach(string key in new[]{"", "Available","Assigned","Repair","Unspecified","Retired"})
+        {
+            var button=new Button{Width=155,Height=56,BackColor=key=="Unspecified"?Color.FromArgb(255,244,214):Color.FromArgb(237,242,248),FlatStyle=FlatStyle.Flat};button.Click+=(_,_)=>OpenStatus(key);cards.Add(key,button);cardRow.Controls.Add(button);
+        }
+        root.Controls.Add(filters,0,0);root.Controls.Add(cardRow,0,1);root.Controls.Add(summary,0,2);root.Controls.Add(grid,0,3);root.Controls.Add(help,0,4);Controls.Add(root);
+        refresh.Click+=(_,_)=>Run(RefreshData);search.KeyDown+=(_,e)=>{if(e.KeyCode==Keys.Enter){e.SuppressKeyPress=true;Run(RefreshData);}};includeRetired.CheckedChanged+=(_,_)=>{if(!translating)Run(RefreshData);};grouping.SelectedIndexChanged+=(_,_)=>{if(!translating)Run(RefreshData);};
+        grid.CellContentClick+=(_,e)=>{if(e.RowIndex>=0 && e.ColumnIndex>=0 && grid.Columns[e.ColumnIndex].Name=="Quantity")Run(()=>OpenGroup(Convert.ToInt32(grid.Rows[e.RowIndex].Cells["GroupIndex"].Value)));};
+        grid.CellDoubleClick+=(_,e)=>{if(e.RowIndex>=0)Run(()=>OpenGroup(Convert.ToInt32(grid.Rows[e.RowIndex].Cells["GroupIndex"].Value)));};from.Checked=to.Checked=false;RefreshLanguage();
     }
-    /// <summary>Refreshes and displays readable filter/query failures.</summary>
-    void Run(){try{RefreshData();}catch(Exception ex){if(Environment.GetCommandLineArgs().Contains("--self-test"))throw;MessageBox.Show(FindForm(),ex.Message,"TagPrinter");}}
-    /// <summary>Translates captions and rebuilds summary/columns.</summary>
-    public void RefreshLanguage(){searchLabel.Text=Ui.T("Buscar","Search");fromLabel.Text=Ui.T("Actualizados desde","Updated from");toLabel.Text=Ui.T("Hasta","To");refresh.Text=Ui.T("Buscar / actualizar","Search / refresh");search.PlaceholderText=Ui.T("Buscar activo…","Search assets…");from.AccessibleName=Ui.T("Desde","From");to.AccessibleName=Ui.T("Hasta","To");includeRetired.Text=Ui.T("Incluir dados de baja","Include retired");help.Text=Ui.T("Doble clic para abrir Activos. Las fechas filtran la última modificación del activo.","Double-click to open Assets. Dates filter each asset's last update.");RefreshData();}
-    /// <summary>Excludes empty serials and selects greatest event ID per trimmed, case-insensitive serial.</summary>
-    /// <param name="events">Candidate events already filtered to the desired scope.</param>
-    /// <returns>One latest matching event per nonblank normalized serial.</returns>
+    /// <summary>Builds the exact current scope used by both the displayed counts and destination list.</summary>
+    internal AssetFilter CurrentScope
+    {
+        get
+        {
+            if(from.Checked && to.Checked && from.Value.Date>to.Value.Date)throw new ArgumentException(Ui.T("Revisa las fechas.","Check the date range."));
+            return new(Search:search.Text.Trim(),FromUtc:from.Checked?new DateTimeOffset(from.Value.Date).ToUniversalTime():null,ToUtc:to.Checked?new DateTimeOffset(to.Value.Date.AddDays(1)).ToUniversalTime():null,ExcludeRetired:!includeRetired.Checked);
+        }
+    }
+    /// <summary>Refreshes a translated selector without translating user values or enabling optional date filters.</summary>
+    public void RefreshLanguage()
+    {
+        translating=true;string key=(grouping.SelectedItem as Choice)?.Key??"Description";
+        searchLabel.Text=Ui.T("Buscar","Search");fromLabel.Text=Ui.T("Actualizados desde","Updated from");toLabel.Text=Ui.T("Hasta","To");groupLabel.Text=Ui.T("Agrupar por","Group by");refresh.Text=Ui.T("Buscar / actualizar","Search / refresh");search.PlaceholderText=Ui.T("Buscar activo…","Search assets…");from.AccessibleName=Ui.T("Desde","From");to.AccessibleName=Ui.T("Hasta","To");includeRetired.Text=Ui.T("Incluir dados de baja","Include retired");
+        grouping.Items.Clear();grouping.Items.AddRange([new Choice("Description",Ui.T("Tipo / marca / modelo","Type / brand / model")),new Choice("Location",Ui.T("Ubicación","Location")),new Choice("Custodian",Ui.T("Responsable","Custodian"))]);grouping.SelectedIndex=Math.Max(0,grouping.Items.Cast<Choice>().ToList().FindIndex(c=>c.Key==key));translating=false;
+        help.Text=Ui.T("Pulsa una tarjeta o cantidad para abrir los activos con los mismos filtros. Las fechas filtran su última modificación.","Click a card or quantity to open assets with the same filters. Dates filter their last administrative update.");FluentIcons.ApplyTree(this);RefreshData();
+    }
+    /// <summary>Retained legacy helper for tests of earlier snapshots, not the current aggregation algorithm.</summary>
+    /// <param name="events">Candidate historical events.</param>
+    /// <returns>Latest event for each nonblank normalized serial.</returns>
     internal static List<HistoryEvent> UniqueAssets(IEnumerable<HistoryEvent> events)=>events.Where(e=>!string.IsNullOrWhiteSpace(e.State.Serial)).OrderByDescending(e=>e.Id).GroupBy(e=>e.State.Serial.Trim(),StringComparer.OrdinalIgnoreCase).Select(g=>g.First()).ToList();
-    /// <summary>
-    /// Filters current master records by last-update dates, groups in SQL and separately totals global
-    /// label log activity without confusing it with canonical asset counts.
-    /// </summary>
+    /// <summary>Aggregates in SQL, rebinds a small grouping table and maintains index-based identity through display sorting.</summary>
     public void RefreshData()
     {
-        if(from.Checked && to.Checked && from.Value.Date>to.Value.Date)throw new ArgumentException(Ui.T("Revisa las fechas.","Check the date range."));
-        DateTimeOffset? start=from.Checked?new DateTimeOffset(from.Value.Date).ToUniversalTime():null,end=to.Checked?new DateTimeOffset(to.Value.Date.AddDays(1)).ToUniversalTime():null;
-        var data=new AssetStore(store).Dashboard(search.Text.Trim(),start,end,includeRetired.Checked);
-        var next=new DataTable();next.Columns.Add(Ui.T("Tipo de activo","Asset type"));next.Columns.Add(Ui.T("Marca","Brand"));next.Columns.Add(Ui.T("Modelo","Model"));next.Columns.Add(Ui.T("Cantidad","Quantity"),typeof(long));
-        foreach(var group in data.Groups)next.Rows.Add(group.Type,group.Brand,group.Model,group.Count);
-        var previous=table;table=next;grid.DataSource=next;previous?.Dispose();var labels=store.LabelTotals();
-        long State(string key)=>data.States.GetValueOrDefault(key);
-        summary.Text=string.Format(Ui.T("Activos: {0} · Disponibles: {1} · Asignados: {2} · En reparación: {3} · Dados de baja: {4} · Pendientes revisión: {5}\nHistorial global de etiquetas: {6} exportaciones · {7} trabajos enviados · {8} copias solicitadas.","Assets: {0} · Available: {1} · Assigned: {2} · In repair: {3} · Retired: {4} · Needs review: {5}\nGlobal label log: {6} exports · {7} submitted jobs · {8} requested copies."),data.Groups.Sum(g=>g.Count),State("Available"),State("Assigned"),State("Repair"),State("Retired"),State("Unspecified"),labels.Exports,labels.Jobs,labels.Copies);
-
+        var filter=CurrentScope;string group=(grouping.SelectedItem as Choice)?.Key??"Description";var result=new AssetStore(history).Overview(filter,group);groups=result.Groups;
+        var data=new DataTable();data.Columns.Add("GroupIndex",typeof(int));
+        string[] columns=group=="Description"?["Type","Brand","Model"]:[group];foreach(string column in columns)data.Columns.Add(column);data.Columns.Add("Quantity",typeof(long));
+        for(int i=0;i<groups.Count;i++){var row=groups[i];if(group=="Description")data.Rows.Add(i,row.Type,row.Brand,row.Model,row.Count);else{string value=group=="Location"?row.Location:row.Custodian;data.Rows.Add(i,value.Length==0?Ui.T("Sin indicar","Not set"):value,row.Count);}}
+        grid.DataSource=null;grid.Columns.Clear();grid.Columns.Add(new DataGridViewTextBoxColumn{Name="GroupIndex",DataPropertyName="GroupIndex",Visible=false});
+        foreach(string column in columns)grid.Columns.Add(new DataGridViewTextBoxColumn{Name=column,DataPropertyName=column,HeaderText=column=="Type"?AssetCsv.Caption("AssetType"):AssetCsv.Caption(column),SortMode=DataGridViewColumnSortMode.Automatic});
+        grid.Columns.Add(new DataGridViewLinkColumn{Name="Quantity",DataPropertyName="Quantity",HeaderText=Ui.T("Cantidad","Quantity"),TrackVisitedState=false,SortMode=DataGridViewColumnSortMode.Automatic});var old=table;table=data;grid.DataSource=data;old?.Dispose();
+        foreach(var pair in cards){long number=pair.Key.Length==0?result.States.Values.Sum():result.States.GetValueOrDefault(pair.Key);pair.Value.Text=(pair.Key.Length==0?Ui.T("Activos","Assets"):AssetStore.StatusCaption(pair.Key))+Environment.NewLine+number;pair.Value.Enabled=number>0;pair.Value.AccessibleName=pair.Value.Text;}
+        var labels=history.LabelTotals();var backup=BackupStatus.Read(history.DatabasePath);string when=DateTimeOffset.TryParse(backup.LastSuccessUtc,out var instant)?instant.LocalDateTime.ToString("yyyy-MM-dd HH:mm"):Ui.T("Aún no registrado","Not recorded yet");
+        summary.Text=string.Format(Ui.T("Historial global de etiquetas: {0} exportaciones · {1} trabajos enviados · {2} copias solicitadas.","Global label log: {0} exports · {1} submitted jobs · {2} requested copies."),labels.Exports,labels.Jobs,labels.Copies)+Environment.NewLine+Ui.T("Último respaldo: ","Last backup: ")+when+(backup.Error.Length>0 || (backup.LastPath.Length>0 && !File.Exists(backup.LastPath))?Ui.T(" · Atención: revisa el estado del respaldo en Configuración."," · Attention: check backup status in Settings."):"");
     }
-    /// <summary>Disposes the owned display table before child controls.</summary>
-    /// <param name="disposing">True for explicit managed disposal; passed to the base class.</param>
+    /// <summary>Opens exactly the state behind a visible card; no reprint happens on navigation.</summary>
+    internal void OpenStatus(string state)=>Run(()=>open(CurrentScope with {Status=state}));
+    /// <summary>Changes grouping explicitly; useful for isolated integration checks.</summary>
+    internal void SetGrouping(string key){grouping.SelectedIndex=grouping.Items.Cast<Choice>().ToList().FindIndex(c=>c.Key==key);}
+    /// <summary>Opens a stored raw group, including empty location/custodian and current date/search restrictions.</summary>
+    internal void OpenGroup(int index)
+    {
+        var row=groups[index];var filter=CurrentScope;string group=(grouping.SelectedItem as Choice)?.Key??"Description";
+        open(group switch{"Location"=>filter with {Location=row.Location},"Custodian"=>filter with {Custodian=row.Custodian},_=>filter with {Type=row.Type,Brand=row.Brand,Model=row.Model}});
+    }
+    /// <summary>Shows readable query errors; verification must propagate failures instead of blocking on a modal warning.</summary>
+    internal IReadOnlyList<AssetGroup> GroupRows=>groups;
+    /// <summary>Sets real filter controls for integration tests and future scoped navigation.</summary>
+    internal void SetFilters(string query,DateTime? start=null,DateTime? end=null,bool retired=false)
+    {
+        translating=true;search.Text=query;from.Checked=start.HasValue;if(start is {} a)from.Value=a;to.Checked=end.HasValue;if(end is {} b)to.Value=b;includeRetired.Checked=retired;translating=false;RefreshData();
+    }
+    private void Run(Action action){try{action();}catch(Exception error){if(Environment.GetCommandLineArgs().Contains("--self-test"))throw;MessageBox.Show(FindForm(),error.Message,"TagPrinter");}}
+    /// <summary>Releases the owned projection.</summary>
+    /// <param name="disposing">True for explicit managed disposal.</param>
     protected override void Dispose(bool disposing){if(disposing)table?.Dispose();base.Dispose(disposing);}
 }

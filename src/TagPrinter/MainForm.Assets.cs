@@ -10,7 +10,7 @@ public partial class MainForm
     private void InitializeAssets()
     {
         assetsView=new AssetsView(history,LoadAssetLabel);assetsTab.Controls.Add(assetsView);workspaceTabs.TabPages.Insert(1,assetsTab);
-        workspaceTabs.SelectedIndexChanged+=(_,_)=>{if(ready && workspaceTabs.SelectedTab==assetsTab)Guard(()=>assetsView.RefreshData());};
+        workspaceTabs.SelectedIndexChanged+=(_,_)=>{if(!ready)return;if(workspaceTabs.SelectedTab==assetsTab)Guard(()=>assetsView.RefreshData());if(workspaceTabs.SelectedTab==labelTab)Guard(()=>{RefreshAssetSuggestions();RefreshAssetMatch();});};
     }
     /// <summary>Loads only identity into the current template; blank serial assets use text-only output and never auto-print.</summary>
     internal void LoadAssetLabel(AssetRecord asset)
@@ -20,5 +20,9 @@ public partial class MainForm
         selectedAssetUid=asset.Uid;assetSection.Expanded=true;workspaceTabs.SelectedTab=labelTab;SaveConfig();status.Text=Ui.T("Activo cargado: ","Asset loaded: ")+asset.Code+Ui.T(". Revisa la etiqueta antes de imprimir.",". Review the label before printing.");
     }
     /// <summary>Selects and refreshes master records without loading or printing a label.</summary>
-    internal void ShowAssets(){workspaceTabs.SelectedTab=assetsTab;assetsView!.RefreshData();}
+    internal bool AssetListHasUsableSpace=>assetsView!.ListHasUsableSpace;
+    /// <summary>Selects master records and refreshes their bounded SQL page.</summary>
+    internal void ShowAssets(AssetFilter? filter=null){workspaceTabs.SelectedTab=assetsTab;if(filter is not null)assetsView!.ShowFilter(filter);else assetsView!.RefreshData();}
+    /// <summary>Checks translated command geometry under the current window size.</summary>
+    internal bool AssetCommandsFit=>assetsView!.CommandsFit;
 }

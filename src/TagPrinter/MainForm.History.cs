@@ -33,7 +33,7 @@ public partial class MainForm
     internal ReportsView Reports=>reports!;
     /// <summary>Whether history loading selected the editor tab.</summary>
     internal bool ShowingLabel=>workspaceTabs.SelectedTab==labelTab;
-    /// <summary>Creates three tabs, refresh/load callbacks and footer project link.</summary>
+    /// <summary>Creates the label, assets and reporting tabs, refresh/load callbacks and footer project link.</summary>
     /// <param name="labelContent">Editor layout hosted by the Labels tab.</param>
     void InitializeWorkspace(Control labelContent)
     {
@@ -42,7 +42,7 @@ public partial class MainForm
         reports=new ReportsView(history,LoadHistoryEvent,()=>{if(sourceHistoryId is { } id && history.Get(id) is null)sourceHistoryId=null;});reportsTab.Controls.Add(reports);
         // Refresh on selection so recent output appears without continuous background polling.
         workspaceTabs.SelectedIndexChanged+=(_,_)=>{if(ready && workspaceTabs.SelectedTab==reportsTab)Guard(()=>reports.RefreshData());};
-        dashboard=new DashboardView(history,(type,brand,model)=>{workspaceTabs.SelectedTab=assetsTab;assetsView?.ShowGroup(type,brand,model);});dashboardTab.Controls.Add(dashboard);
+        dashboard=new DashboardView(history,filter=>{workspaceTabs.SelectedTab=assetsTab;assetsView?.ShowFilter(filter);});dashboardTab.Controls.Add(dashboard);
         workspaceTabs.SelectedIndexChanged+=(_,_)=>{if(ready && workspaceTabs.SelectedTab==dashboardTab)Guard(()=>dashboard.RefreshData());};
         InitializeAssets();
         aboutButton.FlatAppearance.BorderSize=0;

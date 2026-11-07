@@ -39,7 +39,7 @@ public static class Ui
         ("Idioma","Language"),
         ("Código","Code"),
         ("Las casillas incluyen u ocultan cada elemento en la etiqueta.","Checkboxes include or hide each item on the label."),
-        ("Nuevo activo","New asset"),
+        ("Nuevo activo","New asset"),("Nueva etiqueta","New label"),
         ("Proyecto","Project"),
         ("05  Configuración","05  Settings"),
         ("No. de parte","Part number"),
@@ -104,6 +104,7 @@ public static class Ui
     {
         if(root is ComboBox combo)
         {
+            if(Equals(combo.Tag,"UserData"))return; // Catalog options are user vocabulary, never UI captions.
             // Keep selection while translating item captions; avoid replacing identical text and generating
             // needless change events.
             int index=combo.SelectedIndex;

@@ -13,13 +13,24 @@ internal static class Program
         ApplicationConfiguration.Initialize();
         if(args.Contains("--self-test"))
         {
-            try { SelfTest.Run(); }
-            catch(Exception error)
+            // Keep a real UI message loop alive for async continuations across many synthetic windows.
+            // The off-screen host prevents closing a test dialog from disposing its synchronization context.
+            using var host=new AppWindow();
+            host.Shown+=(_,_)=>
             {
-                string folder=Path.Combine(AppContext.BaseDirectory,"verification");Directory.CreateDirectory(folder);
-                File.WriteAllText(Path.Combine(folder,"self-test-error.txt"),error.ToString());
-                Environment.ExitCode=1;
-            }
+                try
+                {
+                    if(args.Contains("--asset-operations-only")){string folder=Path.Combine(AppContext.BaseDirectory,"verification");Directory.CreateDirectory(folder);AssetOperationsTests.Run(folder);}
+                    else SelfTest.Run();
+                }
+                catch(Exception error)
+                {
+                    string folder=Path.Combine(AppContext.BaseDirectory,"verification");Directory.CreateDirectory(folder);
+                    File.WriteAllText(Path.Combine(folder,"self-test-error.txt"),error.ToString());Environment.ExitCode=1;
+                }
+                finally{host.Close();}
+            };
+            Application.Run(host);
             return;
         }
         Application.ThreadException+=(_,e)=>Report(e.Exception);

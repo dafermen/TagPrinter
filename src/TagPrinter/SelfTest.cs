@@ -69,7 +69,7 @@ public static class SelfTest
     public static void Run()
     {
         string folder=Path.Combine(AppContext.BaseDirectory,"verification");Directory.CreateDirectory(folder);
-        int count=0;FluentUiTests.Run(folder);AssetTests.Run(folder);
+        int count=0;FluentUiTests.Run(folder);AssetTests.Run(folder);AssetOperationsTests.Run(folder);
         // Cover a matrix of media sizes, DPI values, layouts and code types. Decode actual pixels to verify
         // the output serial.
         foreach(int width in new[]{50,100}) foreach(int dpi in new[]{203,300}) foreach(int layout in new[]{0,1,2,3}) foreach(bool qr in new[]{false,true})

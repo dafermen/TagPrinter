@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.24.0 — 2026-11-06
+
+- Recognize canonical serials in Labels with an explicit load action and clarify New label / Duplicate label versus master creation.
+- Add reusable inventory catalogs with case/trim-normalized spellings, editable dropdowns and standalone option maintenance.
+- Guide Assign / Return / Send to repair with destination requirements, optimistic revisions and separate movement reasons.
+- Add full administrative CSV template/export/field-level review/import with stale/duplicate checks, protected backup and transactional rollback.
+- Add clickable Dashboard state cards and description/location/custodian quantities with exact search/date/group drill-down.
+- Persist last backup success/failure feedback, detect missing files and add a protected manual Back up now command.
+- Upgrade schema 1/2 safely to 3 with vocabulary/reason support; preserve old snapshots and upgrade restored copies only in staging.
+
+
 ## 0.23.0 — 2026-11-06
 
 - Show Ctrl+P on the print button, remove repetitive Windows wording from home and add offline embedded Fluent icon/text actions with source/license notices.

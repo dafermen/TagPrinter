@@ -23,7 +23,10 @@ public partial class MainForm
         var tools=new FlowLayoutPanel{AutoSize=true,MaximumSize=new Size(330,0)};tools.Controls.AddRange([Make("Importar inventario CSV…","Import inventory CSV…",ImportInventoryDialog),Make("Plantilla CSV…","CSV template…",SaveInventoryTemplate),Make("Restaurar base de datos…","Restore database…",RestoreDatabaseDialog)]);settingsSection.Body.Controls.Add(tools);
         automaticBackup.Checked=appConfig.AutomaticBackups;settingsSection.Body.Controls.Add(automaticBackup);
         automaticBackup.CheckedChanged+=(_,_)=>{if(!toolsReady)return;Guard(()=>SaveCatalog(appConfig with {AutomaticBackups=automaticBackup.Checked}));RefreshInventoryTools();};
-        var duplicate=Make("Duplicar activo","Duplicate asset",DuplicateAsset);assetSection.Body.Controls.Add(duplicate);assetSection.Body.Controls.Add(duplicateSerial);
+        var duplicate=Make("Duplicar etiqueta","Duplicate label",DuplicateAsset);assetSection.Body.Controls.Add(duplicate);assetSection.Body.Controls.Add(duplicateSerial);
+        loadSerialAsset.Click+=(_,_)=>Guard(LoadMatchedAsset);assetSection.Body.Controls.Add(loadSerialAsset);
+        backupNow=Make("Respaldar ahora","Back up now",()=>_ = BackupNowAsync());settingsSection.Body.Controls.Add(backupNow);settingsSection.Body.Controls.Add(backupState);
+        settingsSection.Body.VisibleChanged+=(_,_)=>{if(settingsSection.Body.Visible)RefreshBackupState();};
         freeTextMode.CheckedChanged+=(_,_)=>{duplicate.Enabled=!freeTextMode.Checked;if(toolsReady)duplicateTimer.Start();};
         serial.TextChanged+=(_,_)=>{duplicateTimer.Stop();if(toolsReady)duplicateTimer.Start();};
         duplicateTimer.Tick+=(_,_)=>{duplicateTimer.Stop();RefreshDuplicateWarning();};
@@ -38,7 +41,7 @@ public partial class MainForm
         automaticBackup.Text=Ui.T("Respaldos automáticos diarios (conservar 10)","Daily automatic backups (keep 10)");
         bool active=toolsReady;toolsReady=false;automaticBackup.Checked=appConfig.AutomaticBackups;toolsReady=active;
         string selected=profileName.Text;profileName.Items.Clear();profileName.Items.AddRange(appConfig.Profiles.Select(p=>(object)p.Name).ToArray());profileName.Text=selected;
-        RefreshDuplicateWarning();
+        loadSerialAsset.Text=Ui.T("Cargar activo","Load asset");RefreshDuplicateWarning();RefreshAssetSuggestions();RefreshBackupState();
     }
     /// <summary>Writes validated catalog settings atomically; failed writes leave the in-memory catalog unchanged.</summary>
     private void SaveCatalog(AppConfig candidate)
@@ -76,19 +79,14 @@ public partial class MainForm
         var state=CaptureWork();sourceHistoryId=null;selectedAssetUid=null;Restore(state with {AssetUid="",Serial="",PartNumber="",MacAddress=""});assetSection.Expanded=true;SaveConfig();serial.Focus();
     }
     /// <summary>Warns without blocking legitimate reprints; free text and recycled events are excluded.</summary>
-    private void RefreshDuplicateWarning()
-    {
-        if(!toolsReady || IsDisposed)return;
-        try{duplicateSerial.Text=!freeTextMode.Checked && history.HasSerial(serial.Text)?Ui.T("Serial existente en el inventario. Puedes cargarlo desde Reportes o reimprimirlo.","Serial already exists in inventory. Load it from Reports or reprint it."):"";}
-        catch(Exception e){duplicateSerial.Text=Ui.T("No se pudo verificar el serial: ","Could not check serial: ")+e.Message;}
-    }
+    private void RefreshDuplicateWarning()=>RefreshAssetMatch();
     /// <summary>Creates a consistent daily copy off-thread; an unsuccessful attempt is visible and can retry on the next tick.</summary>
     private async Task AutomaticBackupAsync()
     {
-        if(backupRunning || !appConfig.AutomaticBackups || IsDisposed)return;backupRunning=true;
+        if(backupRunning || !appConfig.AutomaticBackups || IsDisposed)return;backupRunning=true;RefreshBackupState();
         try{await Task.Run(()=>history.AutomaticBackup(BackupDirectory));}
         catch(Exception e){if(!IsDisposed)status.Text=Ui.T("Falló el respaldo automático: ","Automatic backup failed: ")+e.Message;}
-        finally{backupRunning=false;}
+        finally{backupRunning=false;RefreshBackupState();}
     }
     /// <summary>Writes a sample semicolon/UTF-8 CSV rather than guessing the user's input columns.</summary>
     private void SaveInventoryTemplate()
@@ -115,7 +113,7 @@ public partial class MainForm
     {
         if(printBusy || backupRunning)throw new InvalidOperationException(Ui.T("Espera a que termine la operación actual.","Wait for the current operation to finish."));
         using var d=new OpenFileDialog{Filter="SQLite|*.db"};if(d.ShowDialog(this)!=DialogResult.OK)return;
-        if(MessageBox.Show(this,Ui.T("Se reemplazará TODO el inventario y la papelera. Se guardará un respaldo previo. Cierra otras instancias de TagPrinter. ¿Restaurar?","This replaces ALL inventory and the recycle bin. A safety backup will be saved. Close other TagPrinter instances. Restore?"),"TagPrinter",MessageBoxButtons.YesNo,MessageBoxIcon.Warning,MessageBoxDefaultButton.Button2)!=DialogResult.Yes)return;
+        if(MessageBox.Show(this,Ui.T("Se reemplazarán los activos, catálogos, movimientos, historial de etiquetas y papelera. Se guardará un respaldo previo. Cierra otras instancias de TagPrinter. ¿Restaurar?","This replaces assets, catalogs, movements, label history and the recycle bin. A safety backup will be saved. Close other TagPrinter instances. Restore?"),"TagPrinter",MessageBoxButtons.YesNo,MessageBoxIcon.Warning,MessageBoxDefaultButton.Button2)!=DialogResult.Yes)return;
         string backup=history.RestoreBackup(d.FileName,BackupDirectory);sourceHistoryId=null;selectedAssetUid=null;SaveConfig();reports?.RefreshData();assetsView?.RefreshData();RefreshDuplicateWarning();status.Text=Ui.T("Base restaurada. Respaldo previo: ","Database restored. Safety backup: ")+backup;
     }
     /// <summary>Stops local timers; any already-running backup owns and closes its own SQLite connections.</summary>

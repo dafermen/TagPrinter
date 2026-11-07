@@ -1,4 +1,4 @@
-# User guide — TagPrinter 0.23
+# User guide — TagPrinter 0.24
 
 ## Start and update
 
@@ -12,7 +12,7 @@ English is the initial language. Change it in the collapsed 05 Settings section;
 
 The Code row chooses QR or Code 128 and whether the complete label includes a symbol. Both encode the serial. Code 128 accepts printable ASCII; use QR for other characters. Hiding serial text does not remove the serial from the symbol.
 
-Turn off Code for text-only output. Text then uses the entire content area and serial becomes optional. At least one nonempty visible text field is required. New asset clears the six text fields and loaded-record reference, retaining design/printer preferences.
+Turn off Code for text-only output. Text then uses the entire content area and serial becomes optional. At least one nonempty visible text field is required. New label clears the six text fields and loaded-record reference, retaining design/printer preferences.
 
 Enable **Free text only** to write a label without asset fields or codes. Printing/exporting in this mode creates no inventory history; autosave still keeps the draft. Long asset headings wrap; subsequent fields keep their space. See [Flexible labels](FLEXIBLE_LABELS.md) for examples, history behavior and paper-feed references.
 
@@ -66,7 +66,7 @@ Select one or multiple rows, click Delete and confirm to recycle them. Check Rec
 
 ## Assets and Dashboard
 
-The second tab, Assets, manages canonical records, location, custodian, state and movement history. Load label opens the existing designer without printing; repeated outputs stay linked to that asset. Dashboard counts current masters and their states, with retired assets optional and global label-log totals separate. Search/dates refer to current values and last administrative update; double-click opens Assets. See [Asset administration](ASSETS.md) for migration, review-state defaults and backup compatibility.
+The second tab, Assets, manages canonical records, location, custodian, state and movement history. Load label opens the existing designer without printing; repeated outputs stay linked to that asset. Dashboard counts current masters and their states, with retired assets optional and global label-log totals separate. Search/dates refer to current values and last administrative update. State cards and quantity links open Assets with matching filters. Group by description, location or custodian. See [Daily operations](ASSET_OPERATIONS.md) for reusable vocabulary, workflows, administrative CSV and backup feedback. See [Asset administration](ASSETS.md) for migration, review-state defaults and backup compatibility.
 
 ## Further reading
 

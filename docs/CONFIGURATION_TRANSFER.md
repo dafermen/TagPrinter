@@ -18,7 +18,7 @@ The imported catalog replaces the active catalog rather than merging IDs. Data a
 
 | Included | Not included |
 |---|---|
-| Complete application media/defaults and current editor preferences/data | SQLite assets/movements/events, report data, recycle bin or exported image/ZPL files |
+| Complete application media/defaults and current editor preferences/data | SQLite asset vocabulary/assets/movements/events, report data, recycle bin or exported image/ZPL files |
 | App-level printer name, method, DPI and requested copies | Driver installation, printer ports, firmware/calibration or native driver preferences |
 | Font-family name and text settings | Font files or font installation |
 | Code scale and template geometry | Application/runtime binaries, integrity manifests or Windows settings |

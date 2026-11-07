@@ -58,12 +58,13 @@ internal static class FluentIcons
             button.Disposed+=(_,_)=>{if(state.Image is {} old){button.Image=null;state.Image=null;old.Dispose();}};
         }
         string t=button.Text.ToLowerInvariant();
-        string key=t.Contains("edit")||t.Contains("editar")?"edit":t.Contains("movement")||t.Contains("movimiento")?"history":t.Contains("retire")||t.Contains("dar de baja")?"archive":t.Contains("clear filter")||t.Contains("limpiar filtro")?"filter_dismiss":t.Contains("imprim")||t.Contains("print")?"print":t.Contains("duplic")||t.Contains("copy")?"copy":t.Contains("nuevo")||t.Contains("new ")?"add":
+        string key=t.Contains("asign")||t.Contains("assign")?"person_arrow_right":t.Contains("devol")||t.Contains("return")?"arrow_undo":t.Contains("repar")||t.Contains("repair")?"wrench":t.Contains("catálogo")||t.Contains("catalog")?"book":t.Contains("pendiente")||t.Contains("needs review")?"warning":t.Contains("disponible")||t.Contains("available")?"checkmark_circle":t.Contains("edit")||t.Contains("editar")?"edit":t.Contains("movement")||t.Contains("movimiento")?"history":t.Contains("retire")||t.Contains("de baja")?"archive":t.Contains("clear filter")||t.Contains("limpiar filtro")?"filter_dismiss":t.Contains("imprim")||t.Contains("print")?"print":t.Contains("duplic")||t.Contains("copy")?"copy":t.Contains("nuevo")||t.Contains("nueva")||t.Contains("new ")?"add":
             t.Contains("código")||t.Contains(" code")?"qr_code":t.Contains("export")?"arrow_download":t.Contains("import")||t.Contains("restaur")||t.Contains("restore")?"arrow_upload":
             t.Contains("guard")||t.Contains("save")?"save":t.Contains("elimin")||t.Contains("delete")||t.Contains("vaciar")||t.Contains("empty")?"delete":
             t.Contains("actualiz")||t.Contains("refresh")?"arrow_sync":t.Contains("buscar")||t.Contains("search")?"search":t.Contains("backup")||t.Contains("back up")||t.Contains("seguridad")?"database":
             t.Contains("cargar")||t.Contains("load")||t.Contains("aplicar")||t.Contains("apply")?"folder":"document";
         int pixels=Math.Max(16,(int)Math.Round(18*button.DeviceDpi/96d));var color=button.Enabled?button.ForeColor:SystemColors.GrayText;
+        if(button.AutoSize)button.AutoSizeMode=AutoSizeMode.GrowAndShrink;
         button.AccessibleName=button.Text;button.TextImageRelation=TextImageRelation.ImageBeforeText;button.ImageAlign=ContentAlignment.MiddleLeft;button.Padding=new Padding(4,2,4,2);button.MinimumSize=new Size(0,30);
         if(state.Key==key && state.Pixels==pixels && state.Argb==color.ToArgb())return;
         var next=Render(key,pixels,color);var previous=state.Image;state.Key=key;state.Pixels=pixels;state.Argb=color.ToArgb();state.Image=next;button.Image=next;previous?.Dispose();

@@ -69,12 +69,16 @@ public sealed partial class HistoryStore
     /// <summary>Creates one automatic copy per UTC date, or a forced pre-operation copy; retains ten automatic files.</summary>
     public string? AutomaticBackup(string directory,bool force=false)
     {
+        try
+        {
         Directory.CreateDirectory(directory);
         string prefix="TagPrinter-auto-";var files=Directory.GetFiles(directory,prefix+"*.db").OrderByDescending(Path.GetFileName,StringComparer.Ordinal).ToList();
         if(!force && files.Any(f=>Path.GetFileName(f).StartsWith(prefix+DateTime.UtcNow.ToString("yyyyMMdd"),StringComparison.Ordinal)))return null;
         string path=Path.Combine(directory,prefix+DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff")+"-"+Guid.NewGuid().ToString("N")+".db");
         Backup(path);
         foreach(string old in files.Skip(9))File.Delete(old);return path;
+        }
+        catch(Exception error){BackupStatus.Record(DatabasePath,directory,error);throw;}
     }
     /// <summary>Validates a read-only staged snapshot before replacing live pages through SQLite's transactional backup API.</summary>
     /// <returns>Safety backup path. The current work/settings and exported images are not restored.</returns>
@@ -99,8 +103,8 @@ public sealed partial class HistoryStore
     {
         using var c=new SqliteConnection(new SqliteConnectionStringBuilder{DataSource=path,Mode=SqliteOpenMode.ReadOnly,Pooling=false}.ToString());c.Open();
         using var cmd=c.CreateCommand();cmd.CommandText="PRAGMA integrity_check";using(var reader=cmd.ExecuteReader()){while(reader.Read())if(reader.GetString(0)!="ok")throw new InvalidDataException("Backup integrity check failed.");}
-        cmd.CommandText="PRAGMA user_version";int version=Convert.ToInt32(cmd.ExecuteScalar());if(version is not (1 or 2))throw new InvalidDataException("Unsupported backup schema version.");
-        cmd.CommandText="SELECT COUNT(*) FROM sqlite_master WHERE type IN ('trigger','view') OR (type='table' AND name NOT IN ('events','trash','sqlite_sequence','assets','asset_movements'))";if(Convert.ToInt32(cmd.ExecuteScalar())!=0)throw new InvalidDataException("Unexpected backup schema objects.");
+        cmd.CommandText="PRAGMA user_version";int version=Convert.ToInt32(cmd.ExecuteScalar());if(version is not (1 or 2 or 3))throw new InvalidDataException("Unsupported backup schema version.");
+        cmd.CommandText="SELECT COUNT(*) FROM sqlite_master WHERE type IN ('trigger','view') OR (type='table' AND name NOT IN ('events','trash','sqlite_sequence','assets','asset_movements','asset_catalog'))";if(Convert.ToInt32(cmd.ExecuteScalar())!=0)throw new InvalidDataException("Unexpected backup schema objects.");
         cmd.CommandText="SELECT id,created_utc,action,state_json,output_path,source_event_id,serial,asset_type,brand,model,part_number,mac_address FROM events";
         var catalog=AppConfig.CreateDefault();
         using(var reader=cmd.ExecuteReader())while(reader.Read())
@@ -117,7 +121,8 @@ public sealed partial class HistoryStore
             using(var reader=cmd.ExecuteReader())while(reader.Read())if(reader.GetString(2)=="events" && reader.GetString(3)==spec.Item2 && reader.GetString(4)=="id")valid=true;
             if(!valid)throw new InvalidDataException("Missing backup foreign key constraints.");
         }
-        if(version==2)AssetStore.ValidateDatabase(c);
+        if(version>=2)AssetStore.ValidateDatabase(c);
+        if(version>=3){AssetCatalog.ValidateDatabase(c);cmd.CommandText="SELECT note FROM asset_movements";using var audit=cmd.ExecuteReader();while(audit.Read())if(audit.GetString(0).Length>1000 || audit.GetString(0).Contains('\0'))throw new InvalidDataException("Invalid movement note.");}
         cmd.CommandText="PRAGMA foreign_key_check";using(var reader=cmd.ExecuteReader())if(reader.Read())throw new InvalidDataException("Broken backup source links.");
     }
 }

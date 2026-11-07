@@ -2,6 +2,8 @@
 
 ## Completed
 
+- 0.24: explicit serial recognition, inventory catalogs, guided workflows/reasons, administrative CSV, exact Dashboard navigation and durable/manual backup feedback.
+
 - 0.23: discoverable print shortcut, offline Fluent actions and first canonical Assets module with movement audit, stable label links, current-asset Dashboard and protected schema-2 migration.
 
 - 0.22: previewed transactional CSV inventory import, SQL-backed history pages, validated SQLite restore with safety copy, daily/retained backups, transferable design profiles, duplicate-asset command and inline serial warnings.
@@ -33,4 +35,4 @@
 
 Future proposals require their own scope/authorization. Very large group sets, indexed master-field queries and streaming history export remain possible performance follow-ups.
 
-Potential later asset features: employee/site catalogs, full administrative CSV workflows, procurement/attachments and permissions. These are proposals, not implemented or authorized automatically.
+Potential later asset features: structured employee/site entities and hierarchy, procurement/attachments and permissions. These are proposals, not implemented or authorized automatically.

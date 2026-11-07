@@ -12,7 +12,7 @@ Each completed inventory output creates one independent event, even when its ser
 | PrintSubmitted | The application's print submission call completed. |
 | Imported | CSV inventory registration; no label generated or printed. |
 
-One submission with several copies is one event. It does not confirm physical printing or RFID. Preview edits, autosave, New asset, report exports and backups do not create label events. Canceled/failed output is not recorded as successful.
+One submission with several copies is one event. It does not confirm physical printing or RFID. Preview edits, autosave, New label, report exports and backups do not create label events. Canceled/failed output is not recorded as successful.
 
 Each event stores UTC time, six asset fields, full WorkState JSON (format, dimensions, visibility, fonts, rotation, margins, printer/copies), output path and optional source event ID. If an external output succeeds but SQLite fails, the app warns without retrying output. They are not one atomic transaction.
 
@@ -20,7 +20,7 @@ Each event stores UTC time, six asset fields, full WorkState JSON (format, dimen
 
 The live file is %LOCALAPPDATA%/TagPrinter/TagPrinter.db, outside the portable. History begins with actions recorded since v0.13; old output files are not automatically imported. Tests/screenshots use separate synthetic databases.
 
-SQLite user_version is 2. The events table holds id, created_utc, action, serial, asset_type, brand, model, part_number, mac_address, state_json, output_path, source_event_id and nullable asset_uid. Serial/date indexes assist queries; source_event_id links the loaded event and asset_uid links a canonical master. Event serials are intentionally not unique; nonempty master serials are normalized and unique. assets and asset_movements hold independent administration and its audit. See ASSETS.md for the protected version-1 upgrade.
+SQLite user_version is 3. The events table holds id, created_utc, action, serial, asset_type, brand, model, part_number, mac_address, state_json, output_path, source_event_id and nullable asset_uid. Serial/date indexes assist queries; source_event_id links the loaded event and asset_uid links a canonical master. Event serials are intentionally not unique; nonempty master serials are normalized and unique. assets, asset_movements (with optional reason) and asset_catalog hold independent administration, audit and reusable vocabulary. See ASSETS.md for the protected version-1 upgrade.
 
 The trash table holds event_id and deleted_utc. It preserves reversible membership without rewriting snapshots. Normal queries exclude its IDs; recycled queries include them. Get(id) can retrieve either scope. Connections enable WAL, foreign keys and a five-second busy timeout without pooling.
 
@@ -36,7 +36,7 @@ Click column headers to sort. Numeric/date columns use typed values. Horizontal 
 
 Click its serial link or select a row and choose Load label. Blank serials display (No serial) but resolve through the numeric ID. Recovery creates no event and sends no print job.
 
-Physical dimensions become Custom to preserve the old design despite catalog changes. Current UI language is retained. An unavailable saved printer is cleared; choose an installed printer before submitting. A later output is a new event with the loaded event ID as source. New asset clears that reference.
+Physical dimensions become Custom to preserve the old design despite catalog changes. Current UI language is retained. An unavailable saved printer is cleared; choose an installed printer before submitting. A later output is a new event with the loaded event ID as source. New label clears that reference.
 
 New properties use compatible defaults: older records keep ShowCode=true, Arial 10 pt, heading emphasis and rotation zero. Legacy Title/ShowTitle migration applies when loading last-work JSON; history was introduced after the brand fields.
 
@@ -60,7 +60,7 @@ Use 05 Settings > Restore database for validated replacement and a safety copy. 
 
 ## Canonical asset counting — 0.23
 
-Dashboard uses schema-2 master records, including explicitly registered no-serial assets, rather than deduplicating label snapshots. State/custodian/location edits are independent of print events. Label totals are separately aggregated from active non-Free-text history. Recycle-bin cleanup removes label events, not master assets; use Assets > Retire to change an asset's lifecycle state. See ASSETS.md.
+Dashboard uses canonical master records, including explicitly registered no-serial assets, rather than deduplicating label snapshots. State/custodian/location edits are independent of print events. Label totals are separately aggregated from active non-Free-text history. Recycle-bin cleanup removes label events, not master assets; use Assets > Retire to change an asset's lifecycle state. See ASSETS.md.
 
 ## Configuration transfer and code scale — 0.17
 
@@ -72,10 +72,10 @@ Empty recycle bin deletes all recycled events after confirmation, independent of
 
 ## Inventory-only events — 0.21
 
-FreeTextMode=true work does not add new events for printing or any export. Last-work autosave/configuration transfer still preserves its draft. Query filters explicitly marked legacy Free text rows out of Reports, CSV selections and Dashboard without deleting them; backups can still contain those older rows. Ordinary asset-field labels without a symbol remain inventory. PrintSubmitted means accepted by the spooler, not paper output; transient job monitoring does not rewrite the stored event. See PRINT_JOB_PROGRESS.md.
+FreeTextMode=true work does not add new events for printing or any export. Last-work autosave/configuration transfer still preserves its draft. Query filters explicitly marked legacy Free text rows out of Reports, CSV selections and global label-log totals without deleting them; backups can still contain those older rows. Ordinary asset-field labels without a symbol remain inventory. PrintSubmitted means accepted by the spooler, not paper output; transient job monitoring does not rewrite the stored event. See PRINT_JOB_PROGRESS.md.
 
 ## Inventory tools — 0.22
 
 Imported actions register inventory without printing/exporting. SQL pages and exact Dashboard groups precede row materialization; page export and whole-scope export remain distinct. Restoring replaces masters, movements, events and trash after staging/validation and safety backup. Automatic backups are daily with ten-copy automatic retention; pre-restore copies are protected. See INVENTORY_TOOLS.md.
 
-Schema 2 adds assets, asset_movements and events.asset_uid while preserving immutable label snapshots. Backups/restores include all tables; older schema-1 backups are normalized in staging. Config/profile transfer does not transfer master records or audit history.
+Schema 2 adds assets, asset_movements and events.asset_uid while preserving immutable label snapshots. Backups/restores include all tables; older schema-1/2 backups are normalized in staging. Administrative CSV updates masters/audit without creating label events; see ASSET_OPERATIONS.md. Config/profile transfer does not transfer master records or audit history.

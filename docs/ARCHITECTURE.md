@@ -1,4 +1,4 @@
-# Architecture — TagPrinter 0.23
+# Architecture — TagPrinter 0.24
 
 TagPrinter is a Windows Forms application targeting .NET 8. It uses ZXing.Net 0.16.11 for symbols and Microsoft.Data.Sqlite 8.0.28 for embedded local storage. The Windows x64 portable bundles its runtime; printer drivers remain external.
 
@@ -19,6 +19,10 @@ TagPrinter is a Windows Forms application targeting .NET 8. It uses ZXing.Net 0.
 | HistoryStore.cs | SQLite initialization/connections/events/queries/trash/CSV/backup. |
 | ReportsView.cs | Typed sortable projection, filters, recovery callback and history actions. |
 | DashboardView.cs | SQL canonical groups/states and separate global label totals. |
+| AssetCatalog.cs / AssetCsv.cs | Inventory vocabulary and reviewed full administrative CSV contracts. |
+| AssetStore.Workflows.cs / AssetsView.Workflows.cs | Guided actions, reasons, catalog maintenance and transactional import. |
+| AssetStore.Queries.cs | Shared exact scopes, SQL grouping and streaming master export. |
+| BackupStatus.cs / MainForm.AssetLookup.cs | Durable backup feedback, manual backup and explicit serial lookup/loading. |
 | AssetStore.cs / AssetsView.cs | Transactional master/audit storage and paged administrative editor. |
 | MainForm.Assets.cs | Stable selected identity and loading core fields into Labels. |
 | FluentIcons.cs | Embedded private font/map and disposable per-button Fluent images. |
@@ -58,7 +62,7 @@ Preview and output share geometry, but exported/printed labels exclude guides. S
 
 config.json defines installation defaults and stable media IDs. Existing last-work preferences override defaults. WorkState stores selection indexes for code/mode/DPI plus actual physical dimensions. LabelData holds actual DPI and rendering-only inputs. See [configuration](CONFIGURATION.md).
 
-SQLite user_version is 2; protected migration upgrades version 1. events stores immutable action metadata plus complete JSON snapshots. trash stores reversible event membership; initialization adds it idempotently to older databases. Indexes cover serial and creation time. Foreign keys preserve loaded-source links. History serials are not unique; canonical assets separately enforce normalized nonempty serial uniqueness.
+SQLite user_version is 3; protected migration upgrades version 1 or 2. events stores immutable action metadata plus complete JSON snapshots. trash stores reversible event membership; initialization adds it idempotently to older databases. Indexes cover serial and creation time. Foreign keys preserve loaded-source links. History serials are not unique; canonical assets separately enforce normalized nonempty serial uniqueness.
 
 Connections use Pooling=false, WAL, foreign keys and a 5000 ms busy timeout. Queries bind input parameters and whitelist field expressions. Backup uses the SQLite backup API; CSV preserves values rather than localized display captions. See [history](HISTORY.md).
 
@@ -107,3 +111,7 @@ InventoryServices defines strict CSV parsing, design-only LabelProfile helpers, 
 ## Assets and Fluent actions — 0.23
 
 AssetStore owns master/audit transactions, optimistic revisions, normalized serial identity and schema migration. History inserts resolve events.asset_uid without mutating immutable WorkState snapshots. Current label selection is optional WorkState.AssetUid; profiles strip it and Load history uses the authoritative event link. AssetsView provides paged SQL search/sort, explicit editing/retirement and field-level audit. Dashboard aggregates master JSON in SQL; label totals use a separate aggregate. FluentIcons uses a pinned embedded private font/map, DPI-sized per-button bitmap ownership and no runtime downloads. See ASSETS.md and UI_REFRESH.md.
+
+## Daily operations — 0.24
+
+AssetCatalog participates in the same transaction as master/audit writes; normalization cannot leak from a failed import. AssetCsv keeps before/after plans and AssetStore rechecks optimistic metadata at commit time. Dashboard and Assets share AssetFilter and SQL predicates, including empty-value groups and date bounds. Asset list toolbars measure wrapped content explicitly to reserve usable grid space. BackupStatus is a best-effort sidecar outside restore; a successful backup remains valid even if status persistence fails. See ASSET_OPERATIONS.md.

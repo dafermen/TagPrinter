@@ -1,4 +1,4 @@
-# Inventory tools — TagPrinter 0.23
+# Inventory tools — TagPrinter 0.24
 
 ## Import inventory without printing
 
@@ -19,7 +19,7 @@ After confirmation, a consistent pre-import backup is made and all accepted rows
 
 Reports displays 50 rows initially; choose 50, 100 or 250 and use the previous/next arrows. The page indicator shows page number, number of pages and total matching events. Search/date/action/recycle filters apply before pagination. Sorting a header applies to the whole matching dataset, not just the current page, using whitelisted stored SQL values and an ID tie breaker. Action ordering uses stored action codes rather than translated captions.
 
-Filters reset to the first page; deleting records clamps an out-of-range page. Dashboard now opens the exact canonical group in Assets; Reports retains its own history filters. Clear filters exits the group. **Export view CSV** exports the current page in displayed order; **Export all CSV** keeps its earlier meaning: every inventory event in the selected active/recycle scope, regardless of page/filter. Full history exports still load their result. Dashboard now aggregates in SQL and materializes groups rather than every event; cross-instance snapshot paging is not implemented.
+Filters reset to the first page; deleting records clamps an out-of-range page. Dashboard now opens Assets with its exact current search/date/retirement scope and description/location/custodian group; Reports retains its own history filters. Clear filters exits the group. **Export view CSV** exports the current page in displayed order; **Export all CSV** keeps its earlier meaning: every inventory event in the selected active/recycle scope, regardless of page/filter. Full history exports still load their result. Dashboard now aggregates in SQL and materializes groups rather than every event; cross-instance snapshot paging is not implemented.
 
 ![SQL-backed report pages](images/reports-paging-en.png)
 
@@ -29,7 +29,7 @@ Open **05 Settings > Restore database** and choose a TagPrinter SQLite backup. C
 
 The app stages a consistent read-only copy, checks SQLite integrity, version/tables, expected foreign keys/data links and readable event snapshots, and rejects unrelated/trigger-bearing/newer/corrupt files before touching live pages. It saves a separate **TagPrinter-before-restore-...db** safety copy, then restores through SQLite's transactional backup API. The editor keeps its draft but clears its historical and selected master references; Reports reloads. Safety copies are not automatically pruned. If validation fails, the current inventory remains unchanged.
 
-This restores an inventory database, not a synchronization merge. Schema 1 and 2 backups are supported; version 1 is upgraded only in staging. Choose a proper SQLite backup rather than copying a live WAL database file in Explorer. If startup rejects a corrupt live database, preserve it and follow TROUBLESHOOTING.md before using the restore UI in a working installation.
+This restores an inventory database, not a synchronization merge. Schema 1, 2 and 3 backups are supported; older schemas are upgraded only in staging. Choose a proper SQLite backup rather than copying a live WAL database file in Explorer. If startup rejects a corrupt live database, preserve it and follow TROUBLESHOOTING.md before using the restore UI in a working installation.
 
 ## Automatic backups
 
@@ -68,3 +68,5 @@ InventoryServices also validates/stages backups and restores them via SQLite's b
 SQLite transaction contract: [Online Backup API](https://www.sqlite.org/c3ref/backup_finish.html). Physical printer calibration/RFID verification remain separate hardware tasks.
 
 Since 0.23, new nonempty serials also register a canonical asset in Needs review, in the same import transaction. Existing master metadata is not overwritten by repeated imports/label snapshots; edit it explicitly in Assets. Database backups include masters and movements. See ASSETS.md.
+
+For master location/custodian/status/notes updates, use the separate Assets administrative CSV workflow in ASSET_OPERATIONS.md. The original Settings CSV still registers six-field label snapshots and remains compatible. New label / Duplicate label now identify draft commands; Assets New asset / Duplicate registers physical records explicitly.

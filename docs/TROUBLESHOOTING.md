@@ -1,4 +1,4 @@
-# Troubleshooting — TagPrinter 0.23
+# Troubleshooting — TagPrinter 0.24
 
 ## Windows asks for .NET
 
@@ -30,7 +30,7 @@ Existing last-work settings override startup defaults. The catalog still loads f
 
 ## History or Dashboard looks different than expected
 
-Check search, action, optional dates and Recycle bin in Reports. Dashboard counts current canonical asset records and excludes retired assets initially. Recycling label events changes label-log totals, not master counts. Its dates filter administrative updates. Repeated exports are multiple events linked to one master. Use Assets to review state/location/custodian and clear filters before comparing counts; explicitly registered blank-serial masters are counted too.
+Check search, action, optional dates and Recycle bin in Reports. Dashboard counts current canonical asset records and excludes retired assets initially. Recycling label events changes label-log totals, not master counts. Its dates filter administrative updates. Repeated exports are multiple events linked to one master. Use Assets to review state/location/custodian. Dashboard links now carry their search/date/group scope; clear filters before comparing the whole registry. Check Include retired for lifecycle counts; explicitly registered blank-serial masters are counted too.
 
 Dashboard filters apply before deduplication. Double-clicking a group opens full matching active history, not the Dashboard date/search subset. See HISTORY.md for exact counting rules.
 
@@ -49,3 +49,11 @@ This version prints visible labels on compatible printers. RFID chip encoding an
 ## Package integrity or damaged startup data
 
 Open the root EXE, not the app/ executable. Read the affected filenames and diagnostic log. Re-extract all program files into a fresh directory; preserve custom root config and user data. Malformed work or SQLite corruption is not automatically deleted. See [startup validation](STARTUP_VALIDATION.md).
+
+## Administrative CSV or assignment rejected
+
+Use the Assets CSV template with all business headers and stable English status keys. Keep exported UID/code/revision for the same local record; re-export after another edit. A changed preview target rejects the entire import. Assign needs a custodian and destination; Return/Repair need a destination. Catalog dropdowns accept typed new values within field limits. See ASSET_OPERATIONS.md.
+
+## Last backup shows a failure or missing file
+
+Open 05 Settings for the full error/path and use Back up now. Check destination access/free space and preserve the last successful snapshot. A missing metadata record initially shows Not recorded yet. A successful local backup is not off-machine protection or a tested restore; keep an independent copy.

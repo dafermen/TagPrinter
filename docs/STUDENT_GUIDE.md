@@ -1,6 +1,6 @@
 # Learning TagPrinter from the source
 
-This guide describes TagPrinter 0.23. All technical documentation and source comments use English. The application still supports English and Spanish. Read this alongside the source; the XML comments explain function contracts in the editor.
+This guide describes TagPrinter 0.24. All technical documentation and source comments use English. The application still supports English and Spanish. Read this alongside the source; the XML comments explain function contracts in the editor.
 
 ## 1. What this application does
 
@@ -127,7 +127,7 @@ Assume one monitor serial ABC123 is exported twice and submitted once with three
 
 AssetStore resolves a nonempty normalized serial once, assigns an immutable UID/code and links future events to that master. Explicitly registered assets without serials have distinct identities too. Dashboard groups current master type/brand/model in SQL; administrative corrections change the group without rewriting old label snapshots. Brand spelling/case differences may create separate groups.
 
-Asset search and last-administrative-update dates run before SQL grouping. Retired records are excluded initially. Double-click opens the full exact type/brand/model group in Assets without carrying Dashboard date/search restrictions. The second summary line independently aggregates all active label-log events; it is not narrowed by asset filters. Historical UniqueAssets remains only as a tested compatibility helper, not the current Dashboard algorithm.
+Asset search and last-administrative-update dates run before SQL grouping. Retired records are excluded initially. State cards and quantities open Assets with the exact description/location/custodian group and current date/search restrictions. The second summary line independently aggregates all active label-log events; it is not narrowed by asset filters. Historical UniqueAssets remains only as a tested compatibility helper, not the current Dashboard algorithm.
 
 ## 11. Tests and safe exercises
 
@@ -182,3 +182,9 @@ Pagination must happen after WHERE/ORDER BY in SQL; slicing a fully loaded C# li
 A serial can be corrected; a stable asset UID must survive that correction. Keep editable master records apart from the immutable label snapshot, and link events through a separate foreign key. Assignment/location/status saves include their before/after movement in the same transaction. Revision checks reject stale edits. Historical reprinting uses the stable event link and must not overwrite current master data or resurrect a retired asset. Migration derives only what prior data establishes; Needs review avoids inventing physical availability or assignment.
 
 FluentIcons keeps one embedded private font/map alive for the process, turns glyph outlines into small DPI-sized paths and gives each button ownership of its disposable bitmap. Captions remain visible and accessible. These images are UI resources, separate from LabelRenderer and therefore absent from printed labels.
+
+## Daily operations — 0.24
+
+A preview is a proposed change, not a write. AssetCsv parses every row and captures the current before snapshot; commit rechecks that snapshot inside a transaction. A new serial inserted concurrently therefore cannot be silently mistaken for the reviewed target. Catalog spelling is resolved inside the same transaction as the asset, so a later failure rolls back both data and newly learned options.
+
+AssetFilter carries exact navigation criteria. A hidden GroupIndex maps sorted display rows back to raw group values; an empty string means unassigned and differs from null (no filter). Workflow reasons belong to the movement, not the persistent Notes field. Backup operational feedback stays outside the restored database so restore cannot make an old backup appear newly completed.

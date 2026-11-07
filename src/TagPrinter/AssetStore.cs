@@ -40,9 +40,13 @@ internal sealed record AssetRecord
     public string Code=>"TP-"+Number.ToString("D8",CultureInfo.InvariantCulture);
 }
 /// <summary>One immutable administrative change; snapshots retain prior assignments, location and state.</summary>
-internal sealed record AssetMovement(long Id,string AtUtc,string Action,AssetRecord? Before,AssetRecord After,string Actor);
+internal sealed record AssetMovement(long Id,string AtUtc,string Action,AssetRecord? Before,AssetRecord After,string Actor)
+{
+    /// <summary>Optional reason for this movement, separate from persistent asset notes.</summary>
+    public string Note {get;init;}="";
+}
 /// <summary>Asset administration shares the inventory database and its consistent backup/restore policy.</summary>
-internal sealed class AssetStore
+internal sealed partial class AssetStore
 {
     // Reuse one database path/connection policy so a backup covers history, masters and movements together.
     private readonly HistoryStore history;
@@ -55,7 +59,7 @@ internal sealed class AssetStore
     /// <summary>Uses one culture-independent key for creation, imports, migration and duplicate checks.</summary>
     private static string SerialKey(string value)=>value.Trim().ToUpperInvariant();
 
-    /// <summary>Creates schema 2 and derives canonical assets once from latest active nonempty serials in legacy history.</summary>
+    /// <summary>Creates schema 3 and derives canonical assets once from latest active nonempty serials in legacy history.</summary>
     internal static void Initialize(SqliteConnection c)
     {
         using var tx=c.BeginTransaction();using var cmd=c.CreateCommand();cmd.Transaction=tx;
@@ -64,7 +68,7 @@ internal sealed class AssetStore
             CREATE UNIQUE INDEX IF NOT EXISTS ix_asset_serial ON assets(serial_key) WHERE serial_key!='';
             CREATE TABLE IF NOT EXISTS asset_movements(id INTEGER PRIMARY KEY AUTOINCREMENT,asset_uid TEXT NOT NULL REFERENCES assets(uid),at_utc TEXT NOT NULL,action TEXT NOT NULL,before_json TEXT,after_json TEXT NOT NULL,actor TEXT NOT NULL);
             CREATE INDEX IF NOT EXISTS ix_asset_movements_uid ON asset_movements(asset_uid,id);
-            """;cmd.ExecuteNonQuery();
+            """;cmd.ExecuteNonQuery();AssetCatalog.Initialize(c,tx);
         cmd.CommandText="PRAGMA table_info(events)";bool linked=false;using(var reader=cmd.ExecuteReader())while(reader.Read())if(reader.GetString(1)=="asset_uid")linked=true;
         if(!linked)
         {
@@ -83,7 +87,7 @@ internal sealed class AssetStore
             c.CreateFunction<string,string>("tagprinter_serial_key",v=>SerialKey(v),isDeterministic:true);
             cmd.CommandText="UPDATE events SET asset_uid=(SELECT uid FROM assets WHERE serial_key=tagprinter_serial_key(events.serial)) WHERE trim(serial)!='' AND COALESCE(json_extract(state_json,'$.FreeTextMode'),0)=0";cmd.ExecuteNonQuery();
         }
-        cmd.CommandText="PRAGMA user_version=2";cmd.ExecuteNonQuery();tx.Commit();
+        cmd.CommandText="PRAGMA user_version=3";cmd.ExecuteNonQuery();tx.Commit();
     }
 
     /// <summary>Registers a new serial once, without overwriting an existing asset from a reprint or historical snapshot.</summary>
@@ -116,13 +120,16 @@ internal sealed class AssetStore
         using var c=history.Open();using var tx=c.BeginTransaction();var saved=Save(c,tx,record,"Updated");tx.Commit();return saved;
     }
     /// <summary>Writes one revision and its before/after audit together inside the caller's transaction.</summary>
-    private static AssetRecord Save(SqliteConnection c,SqliteTransaction? tx,AssetRecord record,string action)
+    private static AssetRecord Save(SqliteConnection c,SqliteTransaction? tx,AssetRecord record,string action,string note="")
     {
         Validate(record);var candidate=record with {AssetType=record.AssetType.Trim(),Brand=record.Brand.Trim(),Model=record.Model.Trim(),Serial=record.Serial.Trim(),PartNumber=record.PartNumber.Trim(),MacAddress=record.MacAddress.Trim(),Location=record.Location.Trim(),Custodian=record.Custodian.Trim(),Notes=record.Notes.Trim()};Validate(candidate);
         var before=candidate.Uid.Length==0?null:Get(c,tx,candidate.Uid);
         if(candidate.Uid.Length>0 && before is null)throw new InvalidOperationException(Ui.T("El activo ya no existe. Actualiza la lista.","Asset no longer exists. Refresh the list."));
         if(before is not null && before.Revision!=candidate.Revision)throw new InvalidOperationException(Ui.T("El activo cambió en otra ventana. Recárgalo antes de guardar.","Asset changed elsewhere. Reload it before saving."));
-        if(before is not null && (before with {UpdatedUtc=""})==(candidate with {UpdatedUtc=""}))return before;
+        if(tx is null)throw new InvalidOperationException("Asset writes require a transaction.");
+        candidate=AssetCatalog.Normalize(c,tx,candidate);
+        if(note.Length>1000 || note.Contains('\0'))throw new InvalidDataException("Invalid movement note.");
+        if(before is not null && string.IsNullOrWhiteSpace(note) && (before with {UpdatedUtc=""})==(candidate with {UpdatedUtc=""}))return before;
         string now=DateTimeOffset.UtcNow.ToString("O",CultureInfo.InvariantCulture);
         candidate=candidate with {Number=before?.Number??0,Uid=before?.Uid??Guid.NewGuid().ToString("N"),Revision=(before?.Revision??0)+1,CreatedUtc=before?.CreatedUtc??now,UpdatedUtc=now};
         using var cmd=c.CreateCommand();cmd.Transaction=tx;
@@ -133,12 +140,12 @@ internal sealed class AssetStore
         else cmd.CommandText="UPDATE assets SET serial_key=$key,revision=$revision,record_json=$json WHERE uid=$uid AND revision=$previous;SELECT changes();";
         cmd.Parameters.AddWithValue("$uid",candidate.Uid);cmd.Parameters.AddWithValue("$key",SerialKey(candidate.Serial));cmd.Parameters.AddWithValue("$revision",candidate.Revision);cmd.Parameters.AddWithValue("$json",JsonSerializer.Serialize(candidate));cmd.Parameters.AddWithValue("$previous",before?.Revision??0);
         long result;
-        try{result=Convert.ToInt64(cmd.ExecuteScalar());}catch(SqliteException e)when(e.SqliteErrorCode==19){throw new InvalidOperationException(Ui.T("El serial ya pertenece a otro activo.","Serial already belongs to another asset."),e);}
+        try{result=Convert.ToInt64(cmd.ExecuteScalar());}catch(SqliteException e)when(e.SqliteExtendedErrorCode==2067){throw new InvalidOperationException(Ui.T("El serial ya pertenece a otro activo.","Serial already belongs to another asset."),e);}
         if(before is not null && result!=1)throw new InvalidOperationException("Asset changed during save.");
         // SQLite assigns the local sequence; persist it in the snapshot before adding the same snapshot to audit.
         if(before is null){candidate=candidate with {Number=result};cmd.CommandText="UPDATE assets SET record_json=$json WHERE uid=$uid";cmd.Parameters["$json"].Value=JsonSerializer.Serialize(candidate);cmd.ExecuteNonQuery();}
-        cmd.Parameters.Clear();cmd.CommandText="INSERT INTO asset_movements(asset_uid,at_utc,action,before_json,after_json,actor) VALUES($uid,$at,$action,$before,$after,$actor)";
-        cmd.Parameters.AddWithValue("$uid",candidate.Uid);cmd.Parameters.AddWithValue("$at",now);cmd.Parameters.AddWithValue("$action",before is null?(action=="Updated"?"Created":action):"Updated");cmd.Parameters.AddWithValue("$before",before is null?DBNull.Value:JsonSerializer.Serialize(before));cmd.Parameters.AddWithValue("$after",JsonSerializer.Serialize(candidate));cmd.Parameters.AddWithValue("$actor",Environment.UserName);cmd.ExecuteNonQuery();return candidate;
+        cmd.Parameters.Clear();cmd.CommandText="INSERT INTO asset_movements(asset_uid,at_utc,action,before_json,after_json,actor,note) VALUES($uid,$at,$action,$before,$after,$actor,$note)";
+        cmd.Parameters.AddWithValue("$uid",candidate.Uid);cmd.Parameters.AddWithValue("$at",now);cmd.Parameters.AddWithValue("$action",before is null?(action=="Updated"?"Created":action):action);cmd.Parameters.AddWithValue("$before",before is null?DBNull.Value:JsonSerializer.Serialize(before));cmd.Parameters.AddWithValue("$after",JsonSerializer.Serialize(candidate));cmd.Parameters.AddWithValue("$actor",Environment.UserName);cmd.Parameters.AddWithValue("$note",note.Trim());cmd.ExecuteNonQuery();return candidate;
     }
     /// <summary>Checks asset content independently of printer/layout preferences.</summary>
     internal static void Validate(AssetRecord r)
@@ -150,7 +157,7 @@ internal sealed class AssetStore
         if(r.Status=="Assigned" && string.IsNullOrWhiteSpace(r.Custodian))throw new InvalidDataException(Ui.T("Indica el responsable del activo asignado.","Enter the custodian for an assigned asset."));
     }
     /// <summary>Builds literal search/status predicates with bound values.</summary>
-    private static string Where(SqliteCommand cmd,string search,string status,string? groupType=null,string? groupBrand=null,string? groupModel=null)
+    private static string Where(SqliteCommand cmd,string search,string status,string? groupType=null,string? groupBrand=null,string? groupModel=null,AssetFilter? scope=null)
     {
         string where="1=1";
         if(groupType is not null){where+=" AND trim(json_extract(record_json,'$.AssetType'))=$gt AND trim(json_extract(record_json,'$.Brand'))=$gb AND trim(json_extract(record_json,'$.Model'))=$gm";cmd.Parameters.AddWithValue("$gt",groupType);cmd.Parameters.AddWithValue("$gb",groupBrand??"");cmd.Parameters.AddWithValue("$gm",groupModel??"");}
@@ -162,25 +169,32 @@ internal sealed class AssetStore
             where+=" AND (printf('TP-%08d',id)||char(10)||"+values+") LIKE $search ESCAPE '~'";
             cmd.Parameters.AddWithValue("$search","%"+search.Replace("~","~~").Replace("%","~%").Replace("_","~_")+"%");
         }
+        if(scope is not null)
+        {
+            if(scope.ExcludeRetired)where+=" AND json_extract(record_json,'$.Status')!='Retired'";
+            foreach(var pair in new[]{("Location",scope.Location),("Custodian",scope.Custodian)})if(pair.Item2 is not null){where+=" AND json_extract(record_json,'$."+pair.Item1+"')=$"+pair.Item1;cmd.Parameters.AddWithValue("$"+pair.Item1,pair.Item2);}
+            if(scope.FromUtc is {} start){where+=" AND json_extract(record_json,'$.UpdatedUtc')>=$from";cmd.Parameters.AddWithValue("$from",start.ToUniversalTime().ToString("O",CultureInfo.InvariantCulture));}
+            if(scope.ToUtc is {} end){where+=" AND json_extract(record_json,'$.UpdatedUtc')<$to";cmd.Parameters.AddWithValue("$to",end.ToUniversalTime().ToString("O",CultureInfo.InvariantCulture));}
+        }
         return where;
     }
     /// <summary>Counts matching master records without loading their JSON into the UI.</summary>
-    internal long Count(string search="",string status="",string? groupType=null,string? groupBrand=null,string? groupModel=null)
+    internal long Count(string search="",string status="",string? groupType=null,string? groupBrand=null,string? groupModel=null,AssetFilter? scope=null)
     {
-        using var c=history.Open();using var cmd=c.CreateCommand();cmd.CommandText="SELECT COUNT(*) FROM assets WHERE "+Where(cmd,search,status,groupType,groupBrand,groupModel);return Convert.ToInt64(cmd.ExecuteScalar());
+        using var c=history.Open();using var cmd=c.CreateCommand();cmd.CommandText="SELECT COUNT(*) FROM assets WHERE "+Where(cmd,search,status,groupType,groupBrand,groupModel,scope);return Convert.ToInt64(cmd.ExecuteScalar());
     }
     /// <summary>Reads a bounded page with whitelisted global sort and literal search/group values.</summary>
-    internal List<AssetRecord> Query(string search="",string status="",int offset=0,int limit=50,string? groupType=null,string? groupBrand=null,string? groupModel=null,string sort="Updated",bool descending=true)
+    internal List<AssetRecord> Query(string search="",string status="",int offset=0,int limit=50,string? groupType=null,string? groupBrand=null,string? groupModel=null,string sort="Updated",bool descending=true,AssetFilter? scope=null)
     {
         if(offset<0 || limit is <1 or >250)throw new ArgumentOutOfRangeException(nameof(limit));
         string[] sortable=["AssetType","Brand","Model","Serial","Status","Location","Custodian","PartNumber","MacAddress"];
         string column=sort=="Code"?"id":sortable.Contains(sort)?$"json_extract(record_json,'$.{sort}') COLLATE NOCASE":"json_extract(record_json,'$.UpdatedUtc')";
-        using var c=history.Open();using var cmd=c.CreateCommand();cmd.CommandText="SELECT record_json FROM assets WHERE "+Where(cmd,search,status,groupType,groupBrand,groupModel)+" ORDER BY "+column+(descending?" DESC":" ASC")+",id DESC LIMIT $limit OFFSET $offset";cmd.Parameters.AddWithValue("$limit",limit);cmd.Parameters.AddWithValue("$offset",offset);using var reader=cmd.ExecuteReader();var rows=new List<AssetRecord>();while(reader.Read())rows.Add(JsonSerializer.Deserialize<AssetRecord>(reader.GetString(0))!);return rows;
+        using var c=history.Open();using var cmd=c.CreateCommand();cmd.CommandText="SELECT record_json FROM assets WHERE "+Where(cmd,search,status,groupType,groupBrand,groupModel,scope)+" ORDER BY "+column+(descending?" DESC":" ASC")+",id DESC LIMIT $limit OFFSET $offset";cmd.Parameters.AddWithValue("$limit",limit);cmd.Parameters.AddWithValue("$offset",offset);using var reader=cmd.ExecuteReader();var rows=new List<AssetRecord>();while(reader.Read())rows.Add(JsonSerializer.Deserialize<AssetRecord>(reader.GetString(0))!);return rows;
     }
     /// <summary>Reads append-only administrative changes for one asset, newest first.</summary>
     internal List<AssetMovement> Movements(string uid)
     {
-        using var c=history.Open();using var cmd=c.CreateCommand();cmd.CommandText="SELECT id,at_utc,action,before_json,after_json,actor FROM asset_movements WHERE asset_uid=$uid ORDER BY id DESC";cmd.Parameters.AddWithValue("$uid",uid);using var reader=cmd.ExecuteReader();var result=new List<AssetMovement>();while(reader.Read())result.Add(new(reader.GetInt64(0),reader.GetString(1),reader.GetString(2),reader.IsDBNull(3)?null:JsonSerializer.Deserialize<AssetRecord>(reader.GetString(3)),JsonSerializer.Deserialize<AssetRecord>(reader.GetString(4))!,reader.GetString(5)));return result;
+        using var c=history.Open();using var cmd=c.CreateCommand();cmd.CommandText="SELECT id,at_utc,action,before_json,after_json,actor,note FROM asset_movements WHERE asset_uid=$uid ORDER BY id DESC";cmd.Parameters.AddWithValue("$uid",uid);using var reader=cmd.ExecuteReader();var result=new List<AssetMovement>();while(reader.Read())result.Add(new(reader.GetInt64(0),reader.GetString(1),reader.GetString(2),reader.IsDBNull(3)?null:JsonSerializer.Deserialize<AssetRecord>(reader.GetString(3)),JsonSerializer.Deserialize<AssetRecord>(reader.GetString(4))!,reader.GetString(5)){Note=reader.GetString(6)});return result;
     }
     /// <summary>Aggregates canonical records in SQL, keeping Dashboard memory bounded by groups rather than label-event history.</summary>
     internal (List<(string Type,string Brand,string Model,long Count)> Groups,Dictionary<string,long> States) Dashboard(string search,DateTimeOffset? from,DateTimeOffset? to,bool includeRetired)
@@ -207,7 +221,7 @@ internal sealed class AssetStore
         {
             string uid=reader.GetString(0);if(!DateTimeOffset.TryParse(reader.GetString(1),CultureInfo.InvariantCulture,out _))throw new InvalidDataException("Invalid asset movement timestamp.");
             foreach(int column in new[]{2,3})if(!reader.IsDBNull(column)){var row=JsonSerializer.Deserialize<AssetRecord>(reader.GetString(column))??throw new InvalidDataException("Missing movement data.");Validate(row);if(row.Uid!=uid)throw new InvalidDataException("Mismatched asset audit identity.");}
-            if(!new[]{"Created","Updated","Registered","Migrated","Imported"}.Contains(reader.GetString(4)))throw new InvalidDataException("Unsupported asset movement.");
+            if(!new[]{"Created","Updated","Registered","Migrated","Imported","ImportUpdated","Assigned","Returned","RepairStarted"}.Contains(reader.GetString(4)))throw new InvalidDataException("Unsupported asset movement.");
         }
         cmd.CommandText="SELECT asset_uid FROM events LIMIT 0";using(var reader=cmd.ExecuteReader()) { }
         foreach(var spec in new[]{("events","asset_uid"),("asset_movements","asset_uid")})

@@ -1,4 +1,4 @@
-# Asset administration — first version, 0.23
+# Asset administration — 0.24
 
 ## Assets are independent records
 
@@ -34,25 +34,25 @@ Select a record and use **Load label**. It copies only the six core asset fields
 
 Label events store a separate stable asset reference. Loading/reprinting an old label keeps that identity even if the master serial has since changed, without restoring old metadata over the current master. Manually changing the serial in the label editor detaches the previous selected identity; a new output resolves/registers the serial normally. New/duplicate drafts also clear the selection. Profiles strip asset identity; applying one preserves the current selection.
 
-In the Labels tab, New asset continues to mean a new label draft. Normal inventory outputs and CSV imports register a previously unknown nonempty serial once, initially **Needs review**; existing masters remain unchanged. Use Assets > Edit for administrative updates. Unchecking CSV duplicate skipping records repeated Imported snapshots but does not overwrite an existing master. Free text creates neither label-history nor asset records.
+In the Labels tab, New label starts a draft; Assets > New asset registers a master record. Normal inventory outputs and CSV imports register a previously unknown nonempty serial once, initially **Needs review**; existing masters remain unchanged. Use Assets > Edit for administrative updates. Unchecking CSV duplicate skipping records repeated Imported snapshots but does not overwrite an existing master. Free text creates neither label-history nor asset records.
 
 Unlinked historical text-only entries with blank serials are not automatically treated as new physical assets: the application cannot infer whether they represent one device or repeated labels. Register such an asset explicitly and load its label from Assets when a stable link is required.
 
 ## Dashboard
 
-Dashboard now counts current master records, not latest print snapshots. Search and optional dates filter asset field values and each asset's last administrative update. Groups show type + brand + model; state totals distinguish available, assigned, repair, retired and needs-review records. Retired records are excluded initially; Include retired adds them. Double-click opens the full matching master group in Assets, without carrying Dashboard dates/search to that destination.
+Dashboard now counts current master records, not latest print snapshots. Search and optional dates filter asset field values and each asset's last administrative update. Groups show type + brand + model, location or custodian. State cards distinguish available, assigned, repair, retired and needs-review records. Retired records are excluded initially; Include retired adds them. Clicking a state card/quantity or double-clicking a group opens Assets with matching search/date/group/retirement criteria. Clear filters removes that scope.
 
 The second summary line keeps **global active label-log totals** for tag exports, submitted jobs and requested copies. These are independent of the asset filters and do not confirm physical output or verified ownership. SQL aggregation avoids materializing every label snapshot just to count it.
 
 ## Updating an existing installation
 
-Inventory SQLite schema is now version **2**, in the same user database. Before upgrading a version-1 database, the app creates a protected **backups/TagPrinter-before-assets-...db** copy with SQLite's consistent backup API. It is not part of automatic ten-file pruning.
+Inventory SQLite schema is now version **3**, in the same user database. Before upgrading a version-1 database, the app creates a protected **backups/TagPrinter-before-assets-...db** copy. A schema-2 upgrade preserves **backups/TagPrinter-before-catalogs-...db**. Both use consistent SQLite backup and are outside automatic ten-file pruning.
 
 Migration is transactional: it creates master/audit tables and a nullable stable asset link on events. It derives one master from the newest active inventory snapshot per normalized nonempty serial, excluding recycled-only and Free text work. The initial state is **Needs review**, with no invented responsible person/location. A Migrated audit entry records this derivation. Original event IDs, snapshot JSON, dates, source links and recycle-bin membership are retained. It runs once, not on every startup. Large legacy histories may take time to migrate; keep the application open until it completes.
 
-Existing backups with schema 1 can be restored: the chosen file is not modified; a staged copy is validated, upgraded and validated again before replacing live pages. Schema-2 backups include assets, movements, label events and recycle-bin membership together. The pre-restore safety copy also includes all these records. Configuration/profile JSON and exported files remain separate.
+Existing backups with schema 1 or 2 can be restored: the chosen file is not modified; a staged copy is validated, upgraded and validated again before replacing live pages. Schema-3 backups include assets, movements/reasons, vocabulary, label events and recycle-bin membership together. Schema-1/2 backups upgrade only in staging. The pre-restore safety copy also includes all these records. Configuration/profile JSON and exported files remain separate.
 
-Older TagPrinter versions cannot open schema 2. To roll back, preserve current data and use the protected pre-assets version-1 copy with the older executable; later changes are not contained in that copy. Close other TagPrinter instances before upgrading/restoring. This is a local module; synchronization remains explicitly pending.
+Older TagPrinter versions cannot open schema 3. To roll back, preserve current data and use the protected version-1/2 copy matching the older executable; later changes are not contained in that copy. Close other TagPrinter instances before upgrading/restoring. This is a local module; synchronization remains explicitly pending.
 
 ## Implementation and evidence
 
@@ -60,4 +60,4 @@ AssetStore owns validation, serial normalization/uniqueness, optimistic revision
 
 AssetTests uses real isolated SQLite to check repeated outputs, serial edits and historical reprints, assignment requirements, real editor binding/save, stale and duplicate rejection, no-serial links, Free text exclusion, retired Dashboard filters, literal field search, protected Unicode-aware version-1 migration and schema-1/2 backup restoration. It also captures the bilingual UI. Physical printer validation and RFID remain pending.
 
-This first version does not include procurement, costs/depreciation, attachments, separate employee/site catalogs, access roles or network synchronization. Location and custodian are free-text fields. CSV rows always resolve their own identity by serial, even when an asset is selected in Labels. Bulk CSV import remains the six-core-field registration format; use SQLite backups for complete administrative recovery.
+Procurement, costs/depreciation, attachments, structured employee/site entities, access roles and synchronization remain future scope. Location/custodian/type/brand/model now use editable vocabulary dropdowns. Settings CSV keeps six-field registration; Assets adds reviewed administrative CSV with UID/revision safeguards. Use SQLite backups for catalogs and complete movement recovery. See [Daily asset operations](ASSET_OPERATIONS.md).
