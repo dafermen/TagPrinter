@@ -22,8 +22,8 @@ internal sealed partial class ServiceStore
             CREATE INDEX IF NOT EXISTS ix_services_status ON asset_services(kind,status,due_date,id);
             CREATE TABLE IF NOT EXISTS service_changes(id INTEGER PRIMARY KEY AUTOINCREMENT,service_id INTEGER NOT NULL REFERENCES asset_services(id),at_utc TEXT NOT NULL,before_json TEXT,after_json TEXT NOT NULL);
             CREATE INDEX IF NOT EXISTS ix_service_changes ON service_changes(service_id,id);
-            PRAGMA user_version=4;
-            """;cmd.ExecuteNonQuery();tx.Commit();
+
+            """;cmd.ExecuteNonQuery();cmd.CommandText="PRAGMA user_version";if(Convert.ToInt32(cmd.ExecuteScalar())<4){cmd.CommandText="PRAGMA user_version=4";cmd.ExecuteNonQuery();}tx.Commit();
     }
     /// <summary>Returns one fresh revision, including archived records.</summary>
     internal ServiceRecord? Get(long id){using var c=history.Open();return Get(c,null,id);}

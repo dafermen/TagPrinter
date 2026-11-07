@@ -88,3 +88,5 @@ WorkState.AssetUid optionally retains the selected local master identity. Profil
 Inventory vocabulary is stored in SQLite asset_catalog and restored with database snapshots. It is separate from ConfigurationBundle.Catalog (installation media/defaults/profiles). TagPrinter.db.backup-status.json beside the database records last success/path/attempt/failure independently of inventory restoration. See ASSET_OPERATIONS.md.
 
 Maintenance/warranty business records and revision history live in the same schema-4 SQLite database as assets. They are included in SQLite backups, not application configuration JSON. Service view filters/look-ahead are transient view state. See [service data contracts](SERVICES.md).
+
+Physical-count sessions, snapshots and action evidence are business data in schema-5 SQLite backups. They are not application configuration JSON. Count filters/session selection are transient; committed readings resume from the saved session. Pending FIFO input is in memory until acknowledged after commit. See [Physical inventory](PHYSICAL_INVENTORY.md).

@@ -111,10 +111,10 @@ public partial class MainForm
     /// <summary>Replaces inventory after validation, explicit confirmation and a preserved pre-restore safety copy.</summary>
     private void RestoreDatabaseDialog()
     {
-        if(printBusy || backupRunning)throw new InvalidOperationException(Ui.T("Espera a que termine la operación actual.","Wait for the current operation to finish."));
+        if(printBusy || backupRunning || countsView?.HasPendingWork==true)throw new InvalidOperationException(Ui.T("Espera a que termine la operación actual.","Wait for the current operation to finish."));
         using var d=new OpenFileDialog{Filter="SQLite|*.db"};if(d.ShowDialog(this)!=DialogResult.OK)return;
-        if(MessageBox.Show(this,Ui.T("Se reemplazarán los activos, mantenimientos, garantías, catálogos, movimientos, historial de etiquetas y papelera. Se guardará un respaldo previo. Cierra otras instancias de TagPrinter. ¿Restaurar?","This replaces assets, maintenance, warranties, catalogs, movements, label history and the recycle bin. A safety backup will be saved. Close other TagPrinter instances. Restore?"),"TagPrinter",MessageBoxButtons.YesNo,MessageBoxIcon.Warning,MessageBoxDefaultButton.Button2)!=DialogResult.Yes)return;
-        string backup=history.RestoreBackup(d.FileName,BackupDirectory);sourceHistoryId=null;selectedAssetUid=null;servicesView?.ShowAsset(null);SaveConfig();reports?.RefreshData();assetsView?.RefreshData();RefreshDuplicateWarning();status.Text=Ui.T("Base restaurada. Respaldo previo: ","Database restored. Safety backup: ")+backup;
+        if(MessageBox.Show(this,Ui.T("Se reemplazarán los activos, tomas físicas, mantenimientos, garantías, catálogos, movimientos, historial de etiquetas y papelera. Se guardará un respaldo previo. Cierra otras instancias de TagPrinter. ¿Restaurar?","This replaces assets, physical counts, maintenance, warranties, catalogs, movements, label history and the recycle bin. A safety backup will be saved. Close other TagPrinter instances. Restore?"),"TagPrinter",MessageBoxButtons.YesNo,MessageBoxIcon.Warning,MessageBoxDefaultButton.Button2)!=DialogResult.Yes)return;
+        string backup=history.RestoreBackup(d.FileName,BackupDirectory);sourceHistoryId=null;selectedAssetUid=null;servicesView?.ShowAsset(null);countsView?.Reset();SaveConfig();reports?.RefreshData();assetsView?.RefreshData();RefreshDuplicateWarning();status.Text=Ui.T("Base restaurada. Respaldo previo: ","Database restored. Safety backup: ")+backup;
     }
     /// <summary>Stops local timers; any already-running backup owns and closes its own SQLite connections.</summary>
     private void DisposeInventoryTools(){backupTimer.Stop();backupTimer.Dispose();duplicateTimer.Stop();duplicateTimer.Dispose();}

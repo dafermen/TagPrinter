@@ -21,7 +21,8 @@ internal static class Program
             {
                 try
                 {
-                    if(args.Contains("--services-only")){string folder=Path.Combine(AppContext.BaseDirectory,"verification");Directory.CreateDirectory(folder);ServiceTests.Run(folder);}
+                    if(args.Contains("--counts-only")){string folder=Path.Combine(AppContext.BaseDirectory,"verification");Directory.CreateDirectory(folder);CountTests.Run(folder);}
+                    else if(args.Contains("--services-only")){string folder=Path.Combine(AppContext.BaseDirectory,"verification");Directory.CreateDirectory(folder);ServiceTests.Run(folder);}
                     else if(args.Contains("--performance-only")){string folder=Path.Combine(AppContext.BaseDirectory,"verification");Directory.CreateDirectory(folder);PerformanceTests.Run(folder);}
                     else if(args.Contains("--asset-operations-only")){string folder=Path.Combine(AppContext.BaseDirectory,"verification");Directory.CreateDirectory(folder);AssetOperationsTests.Run(folder);}
                     else SelfTest.Run();

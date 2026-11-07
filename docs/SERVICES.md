@@ -1,4 +1,4 @@
-# Maintenance and warranties — TagPrinter 0.26
+# Maintenance and warranties — TagPrinter 0.27
 
 ## Purpose and entry points
 
@@ -67,11 +67,11 @@ Export CSV streams **all filtered pages** through the existing progress/cancel d
 
 ## Persistence, upgrade and recovery
 
-SQLite schema **4** adds asset_services and service_changes, foreign keys, due-date/state/asset indexes and append-only revision snapshots. Existing schema-1/2/3 databases are supported. Startup preserves a protected copy before migration: before-assets for 1, before-catalogs for 2 and **TagPrinter-before-services-...db** for 3. New tables are created transactionally without rewriting original asset/label snapshots. Later openings do not repeat this safety copy. If the copy/migration fails, preserve the error and affected files; the app does not silently replace inventory.
+The service extension introduced in 0.26 adds asset_services and service_changes, foreign keys, due-date/state/asset indexes and append-only revision snapshots. Existing schema-1/2/3/4 databases are supported. Startup preserves a protected copy before migration: before-assets for 1, before-catalogs for 2 and **TagPrinter-before-services-...db** for 3. New tables are created transactionally without rewriting original asset/label snapshots. Later openings do not repeat this safety copy. If the copy/migration fails, preserve the error and affected files; the app does not silently replace inventory.
 
-Manual and automatic SQLite backups cover jobs, warranties, changes and all existing inventory data together. Restore accepts schemas 1–4, validates a staged copy, upgrades it, validates again, preserves a current safety backup and then replaces live pages through SQLite. Validation checks business fields, duplicated metadata, revision continuity, final snapshot equality and declared/actual foreign keys. Invalid service records or audit chains must not replace live data. Restoring an old backup without service tables intentionally returns to the earlier state with no service records; the confirmation covers this full replacement.
+Manual and automatic SQLite backups cover jobs, warranties, changes and all existing inventory data together. Current restore accepts schemas 1–5, validates a staged copy, upgrades it, validates again, preserves a current safety backup and then replaces live pages through SQLite. Validation checks business fields, duplicated metadata, revision continuity, final snapshot equality and declared/actual foreign keys. Invalid service records or audit chains must not replace live data. Restoring an old backup without service tables intentionally returns to the earlier state with no service records; the confirmation covers this full replacement.
 
-Older binaries reject schema 4. To roll back, first preserve current data, then use the protected copy appropriate to the older executable; that older copy excludes later changes. Close other TagPrinter instances during upgrade/restore. Configuration JSON carries design/application settings, not service business records. Exported images/CSV and local backup-status metadata remain separate from SQLite restoration.
+Older binaries reject current schema 5. To roll back, first preserve current data, then use the protected copy appropriate to the older executable; that older copy excludes later changes. Close other TagPrinter instances during upgrade/restore. Configuration JSON carries design/application settings, not service business records. Exported images/CSV and local backup-status metadata remain separate from SQLite restoration.
 
 ## Student source walkthrough
 
@@ -86,3 +86,5 @@ Older binaries reject schema 4. To roll back, first preserve current data, then 
 ## Possible later additions
 
 Recurring job generation, attachments/photos, explicit warranty claims with documents, purchasing/accounting, automatic notifications and cost dashboards can be scoped later. Multi-device synchronization and application users remain deferred.
+
+Current 0.27 uses schema 5 for physical-count evidence alongside service tables. Schema-4 files receive a protected before-counts copy; full backups/restores cover both modules. See [Physical inventory](PHYSICAL_INVENTORY.md).

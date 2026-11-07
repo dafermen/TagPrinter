@@ -1,4 +1,4 @@
-# Architecture — TagPrinter 0.26
+# Architecture — TagPrinter 0.27
 
 TagPrinter is a Windows Forms application targeting .NET 8. It uses ZXing.Net 0.16.11 for symbols and Microsoft.Data.Sqlite 8.0.28 for embedded local storage. The Windows x64 portable bundles its runtime; printer drivers remain external.
 
@@ -66,7 +66,7 @@ Preview and output share geometry, but exported/printed labels exclude guides. S
 
 config.json defines installation defaults and stable media IDs. Existing last-work preferences override defaults. WorkState stores selection indexes for code/mode/DPI plus actual physical dimensions. LabelData holds actual DPI and rendering-only inputs. See [configuration](CONFIGURATION.md).
 
-SQLite user_version is 4; protected migration upgrades versions 1, 2 or 3. events stores immutable action metadata plus complete JSON snapshots. trash stores reversible event membership; initialization adds it idempotently to older databases. Indexes cover serial and creation time. Foreign keys preserve loaded-source links. History serials are not unique; canonical assets separately enforce normalized nonempty serial uniqueness.
+SQLite user_version is 5; protected migration upgrades versions 1, 2, 3 or 4. events stores immutable action metadata plus complete JSON snapshots. trash stores reversible event membership; initialization adds it idempotently to older databases. Indexes cover serial and creation time. Foreign keys preserve loaded-source links. History serials are not unique; canonical assets separately enforce normalized nonempty serial uniqueness.
 
 Connections use Pooling=false, WAL, foreign keys and a 5000 ms busy timeout. Queries bind input parameters and whitelist field expressions. Backup uses the SQLite backup API; CSV preserves values rather than localized display captions. See [history](HISTORY.md).
 
@@ -129,3 +129,7 @@ Read delegates capture immutable UI criteria before leaving the UI thread. Backg
 ServiceStore uses the same database for asset_services (current records/duplicated indexed fields) and service_changes (immutable revision snapshots). Save validates identity, calendar/workflow and decimal/currency values, rejects stale revisions and commits both records in one transaction. ServiceStore.Validation checks a staged restore's full revision chains with bounded retained state. Existing asset/label snapshots are not rewritten by schema-4 migration.
 
 ServicesView hosts maintenance/warranty lists; ServiceListView uses BackgroundRead/DatabaseRead and 50-row pages, exact stable asset scopes, full-scope reminders and streaming CSV. ServiceEditor/AssetPicker never access printers. A job status does not imply a physical asset lifecycle transition. Local calendar dates drive reminders independently of stored workflow keys; UTC timestamps describe audit instants. MainForm.Services integrates navigation. See [module contracts and student walkthrough](SERVICES.md).
+
+## Physical reconciliation — 0.27
+
+CountStore freezes location-scoped master snapshots with INSERT SELECT, resolves explicit serial/code reads, and commits session revision, effective observation and immutable action together. CountStore.Validation replays lifecycle/effective-state invariants with indexed lookups. CountStore.Queries supplies bounded consistent pages and CSV. PhysicalCountsView drains one bounded FIFO, retains failed input and coalesces display reads; MainForm.Counts guards normal closure. NewCountDialog snapshots off-thread. No RFID, master state/location mutation or authentication is involved. See [the student walkthrough](PHYSICAL_INVENTORY.md).

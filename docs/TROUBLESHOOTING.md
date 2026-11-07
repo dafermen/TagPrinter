@@ -1,4 +1,4 @@
-# Troubleshooting — TagPrinter 0.26
+# Troubleshooting — TagPrinter 0.27
 
 ## Windows asks for .NET
 
@@ -69,3 +69,9 @@ If records are missing, check the selected subtab, asset scope, state/deadline f
 An amount needs a three-letter currency; Completed needs a completion date no earlier than an entered start. Invalid/stale saves leave the editor open with input intact. Reload a stale record before retrying. Coverage remains linked after serial edits. Job state never automatically changes assignment/physical asset state.
 
 Schema-4 restore errors can indicate corrupt fields, inconsistent metadata or broken revision history. Preserve the files/error and use a known-good complete backup. Do not remove service/audit tables or lower user_version to force older binaries to open current data. Use the protected matching pre-upgrade copy for rollback. See [service recovery](SERVICES.md).
+
+## Physical inventory
+
+Configure the scanner as a keyboard with Enter suffix and focus the reading box. Existing label codes encode Serial; Asset code is an explicit separate mode. Oversized/control-bearing input is rejected. Reused serial conflicts require the intended TP code. Unrecognized input does not create an asset automatically. Wrong-location comparison uses frozen evidence; editing a current master does not rewrite past count results.
+
+Pending is not Missing until Close count. Canceled sessions never assert missing assets. Duplicate readings do not inflate Found. Undo retains audit; closed/canceled sessions are read-only. Resolve a paused queue using Retry or an explicit Discard before closing/restoring. Full buffers preserve rejected input in the reading box. Committed session data survives restart; uncommitted memory input cannot survive forced termination. See [count recovery and evidence](PHYSICAL_INVENTORY.md).

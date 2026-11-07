@@ -1,6 +1,6 @@
 # Documentation index
 
-These English manuals describe application version 0.26. Source XML comments explain individual members; algorithm comments explain meaningful intermediate variables and decisions. The UI still supports English and Spanish.
+These English manuals describe application version 0.27. Source XML comments explain individual members; algorithm comments explain meaningful intermediate variables and decisions. The UI still supports English and Spanish.
 
 ## For users
 
@@ -47,3 +47,5 @@ These English manuals describe application version 0.26. Source XML comments exp
 - [Large histories and inventories](PERFORMANCE.md): query plans, background/paged reads, streaming exports, cancellation and measured scale.
 
 - [Maintenance and warranties](SERVICES.md): linked work/coverage, local reminders, dates/currency, changes, CSV and protected schema-4 upgrade/recovery.
+
+- [Physical inventory](PHYSICAL_INVENTORY.md): location walks, scanner input, frozen scope, missing/wrong-location reconciliation, durable queue, CSV and schema-5 recovery.

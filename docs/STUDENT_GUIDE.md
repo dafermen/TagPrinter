@@ -1,6 +1,6 @@
 # Learning TagPrinter from the source
 
-This guide describes TagPrinter 0.26. All technical documentation and source comments use English. The application still supports English and Spanish. Read this alongside the source; the XML comments explain function contracts in the editor.
+This guide describes TagPrinter 0.27. All technical documentation and source comments use English. The application still supports English and Spanish. Read this alongside the source; the XML comments explain function contracts in the editor.
 
 ## 1. What this application does
 
@@ -198,3 +198,7 @@ An index helps only if the query can use it; inspect EXPLAIN QUERY PLAN rather t
 Follow ServiceRecord → ServiceStore → ServiceStore.Queries → ServiceEditor → ServicesView → MainForm.Services. A service has one stable asset foreign key and an optimistic revision. The transaction writes both its current state and its audit; failure must roll back both. Calendar dates are strings with a strict ISO contract, while audit instants use round-trip UTC. Nullable decimal cost distinguishes unknown from zero, and explicit currency prevents silently combining unrelated amounts.
 
 Study ServiceStore.Validation's ordered revision-chain reader: compare before to the preceding after, enforce revision continuity, then compare the final after to the current master. The reader retains only one chain's latest record. ServiceTests uses actual SQLite, injects an audit-write failure, constructs old-schema backups, mutates bad snapshots and drives the real bilingual editors. The [module guide](SERVICES.md) walks through field and workflow rules.
+
+## Physical-count data flow — 0.27
+
+Follow CountModels → CountStore → CountStore.Queries/Validation → PhysicalCountsView → MainForm.Counts. Frozen evidence and effective observations are distinct from editable masters. A Seen/Duplicate/Undo transaction advances one session revision and audit atomically. Serial resolution checks both captured and current identities, and conflicts require an explicit code. The FIFO captures UI input before a worker starts, retains a failed head and only acknowledges after commit. CountTests exercises actual rollback/retry/closure and recovery rather than mocking SQL. See [the full walkthrough](PHYSICAL_INVENTORY.md).

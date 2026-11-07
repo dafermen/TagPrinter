@@ -44,7 +44,7 @@ public partial class MainForm
         workspaceTabs.SelectedIndexChanged+=(_,_)=>{if(ready && workspaceTabs.SelectedTab==reportsTab)Guard(()=>reports.RefreshData());};
         dashboard=new DashboardView(history,filter=>{workspaceTabs.SelectedTab=assetsTab;assetsView?.ShowFilter(filter);});dashboardTab.Controls.Add(dashboard);
         workspaceTabs.SelectedIndexChanged+=(_,_)=>{if(ready && workspaceTabs.SelectedTab==dashboardTab)Guard(()=>dashboard.RefreshData());};
-        InitializeAssets();InitializeServices();
+        InitializeAssets();InitializeServices();InitializeCounts();
         aboutButton.FlatAppearance.BorderSize=0;
         using(var stream=typeof(MainForm).Assembly.GetManifestResourceStream("TagPrinter.GitHub.png"))
         {
@@ -61,6 +61,7 @@ public partial class MainForm
     {
         labelTab.Text=Ui.T("Etiquetas","Labels");assetsTab.Text=Ui.T("Activos","Assets");assetsView?.RefreshLanguage();reportsTab.Text=Ui.T("Reportes","Reports");
         servicesTab.Text=Ui.T("Mantenimientos y garantías","Maintenance & warranties");servicesView?.RefreshLanguage();
+        countsTab.Text=Ui.T("Toma física","Physical inventory");countsView?.RefreshLanguage();
         string about=Ui.T("Acerca de","About");aboutTip.SetToolTip(aboutButton,about);aboutButton.AccessibleName=about;
         foreach(var item in visibilityFields)
         {

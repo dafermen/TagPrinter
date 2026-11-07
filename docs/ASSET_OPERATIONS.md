@@ -72,9 +72,9 @@ Metadata lives beside the database as TagPrinter.db.backup-status.json. It is lo
 
 ## Database compatibility
 
-Current schema is **4**. Schema 3 introduced asset_catalog and movement notes; schema 4 adds maintenance/warranties and their immutable revisions. Startup preserves a protected before-assets (schema 1), before-catalogs (schema 2), or before-services (schema 3) copy before migration. Original master/label snapshots retain their identity and data.
+Current schema is **5**. Schema 3 introduced asset_catalog and movement notes; schema 4 adds maintenance/warranties and their immutable revisions. Startup preserves a protected before-assets (schema 1), before-catalogs (schema 2), or before-services (schema 3) copy before migration. Original master/label snapshots retain their identity and data.
 
-Restore accepts schemas 1–4 through validated/upgraded/revalidated staging, without modifying the chosen source. Current snapshots include all inventory and service data. Older binaries reject schema 4; preserve the protected matching prior-version copy for rollback, which excludes later changes. Close other instances during upgrade/restore. See [Maintenance and warranties](SERVICES.md).
+Restore accepts schemas 1–5 through validated/upgraded/revalidated staging, without modifying the chosen source. Current snapshots include all inventory and service data. Older binaries reject schema 5; preserve the protected matching prior-version copy for rollback, which excludes later changes. Close other instances during upgrade/restore. See [Maintenance and warranties](SERVICES.md).
 
 ## Source walkthrough and evidence
 
@@ -85,3 +85,5 @@ AssetOperationsTests exercises the actual catalog/assignment forms, explicit loo
 ## Large local datasets — 0.25
 
 Lists/aggregate groups/audit use bounded background pages and catalog pickers use up to 200 prefix options. Exact serial accelerates known-identifier lookup. Full master/history exports use cancellable streaming with a staged destination; master import vocabulary/identity lookup is prepared and lazy. See [Large histories and inventories](PERFORMANCE.md). The derived performance indexes remain in place with the schema-4 service extension.
+
+Schema 5 adds physical sessions, captured scope/readings and action evidence. A schema-4 upgrade preserves a before-counts copy. Counting does not automatically apply location/custody corrections. Full backups/restores include all count evidence; see [Physical inventory](PHYSICAL_INVENTORY.md).

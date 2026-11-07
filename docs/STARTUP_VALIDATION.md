@@ -37,3 +37,5 @@ Build-Launcher.ps1 creates the manifest and compiles Launcher.cs with the Window
 Schema 3 adds vocabulary and movement reasons. Opening version 1 makes a protected before-assets copy; opening version 2 makes a protected before-catalogs copy before transactional migration. If that backup/migration cannot complete, startup fails without silently deleting/replacing inventory. See ASSETS.md for rollback and old-backup restore behavior.
 
 Schema 4 adds service records/revisions. Opening a schema-3 file preserves TagPrinter-before-services-...db before migration. Schemas 1–3 are supported; newer-than-4 files are rejected. Service snapshots, metadata, revision chains and foreign keys are semantically validated during staged restore. See [Maintenance and warranties](SERVICES.md).
+
+Schema 5 adds count sessions/entries/actions. A schema-4 upgrade preserves TagPrinter-before-counts-...db before transactional initialization. Schemas 1–4 upgrade; newer-than-5 files are rejected. Staged count restore validates scope, identity/action chains, effective fields and foreign keys. See [Physical inventory](PHYSICAL_INVENTORY.md).

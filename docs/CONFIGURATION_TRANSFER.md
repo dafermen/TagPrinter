@@ -62,3 +62,5 @@ Since 0.22, Catalog includes reusable label Profiles and AutomaticBackups. Valid
 Since 0.23, WorkState may retain a selected local AssetUid. This is a selection reference, not the asset record or its movements. A different database without that UID resolves subsequent inventory output by serial; use a full SQLite backup for master-data recovery. Reusable profiles and CSV imports clear inherited master identity.
 
 Since 0.26, maintenance/warranties and their revision history remain business data in the full SQLite backup. They are not transferred by configuration/profile JSON. Service list filters and reminder look-ahead are transient view state.
+
+Since 0.27, physical-count records/evidence are included in full SQLite backups rather than configuration JSON. The queued input buffer is not a transferable configuration or a saved reading.

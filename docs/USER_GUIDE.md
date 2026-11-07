@@ -1,4 +1,4 @@
-# User guide — TagPrinter 0.26
+# User guide — TagPrinter 0.27
 
 ## Start and update
 
@@ -101,3 +101,7 @@ Reports and Assets offer Exact serial for a known identifier. Loading indicators
 ## Maintenance and warranties
 
 Open **Maintenance & warranties**, or select an asset in Assets and choose **Maintenance / warranties**. Use the separate subtabs to create/edit planned work and warranty coverage. Reminder counts use local dates, with an adjustable 1–365-day look-ahead. Completed/canceled jobs and closed warranties are preserved without overdue notices. Amounts require an explicit three-letter currency. Each save keeps a change history; CSV includes all filtered pages. SQLite backup/restore covers these records together with inventory. See [the complete module guide](SERVICES.md) for fields, date rules, screenshots and upgrade/recovery instructions. Operation stays local without accounts.
+
+## Physical inventory
+
+Open **Physical inventory / Toma física**. Start a count for the exact location you will check. Expected non-retired assets are frozen at creation. Use Serial mode with existing QR/barcode labels and a keyboard-wedge scanner ending in Enter, or type manually. Asset code mode handles explicit TP identifiers. Repeated readings do not add assets. Pending becomes Missing only when you confirm Close count; Cancel preserves pending results. Undo keeps an action history. Wrong-location/unknown equipment is flagged without editing masters automatically. Resolve a paused input queue before closing the app. Lists/CSV/backups cover the complete session. See [the complete module guide](PHYSICAL_INVENTORY.md).

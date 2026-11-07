@@ -14,7 +14,7 @@ See [full configuration transfer and code size](docs/CONFIGURATION_TRANSFER.md) 
 
 See [centering, empty recycle bin and Windows status](docs/TEXT_TRASH_PRINTER_STATUS.md) for the latest usability options.
 
-## Current features — 0.26
+## Current features — 0.27
 
 - Asset type, brand, model, serial, part number and MAC address, with inline visibility controls.
 - Optional QR/Code128, text-only labels, preset/custom media and four layouts.
@@ -23,6 +23,7 @@ See [centering, empty recycle bin and Windows status](docs/TEXT_TRASH_PRINTER_ST
 - Full-label/code PNG export, raster ZPL export and Windows-driver/RAW-ZPL submission.
 - SQLite event snapshots; Reports search/filter/sort/load, CSV, backup and reversible deletion/restoration.
 - Assets: stable internal codes, editable records, location, custodian, state, notes and movement history.
+- Physical inventory: location snapshots, scanner/manual readings, duplicate-safe reconciliation, missing/wrong-location results, audit and CSV.
 - Maintenance/warranties: linked records, dates/reminders, explicit costs/currency, changes and CSV.
 - Dashboard groups current master assets by type/brand/model and state, separately from global label-log counts.
 - Previewed CSV inventory import, SQL pages, validated restore, automatic backups and reusable label profiles.
@@ -74,7 +75,7 @@ dotnet run --project src/TagPrinter
 
 The project emits an XML API documentation file alongside build output for editor/tooling use. Source comments explain every explicit class/record and method, saved properties, meaningful state and complex algorithms. Read the student guide before changing rendering or persistence.
 
-Publish builds and verifies the self-contained executable, then creates artifacts/TagPrinter-v0.26-PORTABLE-Windows-x64.zip. Generated outputs and personal databases are excluded from Git. Distribute the entire portable folder.
+Publish builds and verifies the self-contained executable, then creates artifacts/TagPrinter-v0.27-PORTABLE-Windows-x64.zip. Generated outputs and personal databases are excluded from Git. Distribute the entire portable folder.
 
 ## Data
 
@@ -88,7 +89,7 @@ Updates do not replace user history. Last work overrides startup defaults. Datab
 
 ## Limits
 
-RFID chip encoding/verification is not implemented. Submission does not confirm physical printing. Validate a real printed sample and scan before a batch. History loading never prints automatically. Dashboard summarizes registered master data and label actions; it does not verify physical inventory. Permanent deletion is limited to confirmed history recycle-bin emptying; retire assets to preserve their records. RFID, synchronization and database encryption remain unimplemented. Schema 4 upgrades existing data after a protected backup; see the asset guide before rolling back to older binaries.
+RFID chip encoding/verification is not implemented. Submission does not confirm physical printing. Validate a real printed sample and scan before a batch. History loading never prints automatically. Dashboard summarizes registered master data and label actions; it does not verify physical inventory. Permanent deletion is limited to confirmed history recycle-bin emptying; retire assets to preserve their records. RFID, synchronization and database encryption remain unimplemented. Schema 5 upgrades existing data after a protected backup; see the asset guide before rolling back to older binaries.
 
 ## License
 
@@ -113,6 +114,8 @@ Free text stays out of inventory history. Ctrl+P on Labels shares the print comm
 
 [Inventory tools](docs/INVENTORY_TOOLS.md): transactional CSV import, SQL history pages, SQLite restore/daily backups, reusable profiles, duplication and serial warnings. Local use; synchronization remains pending.
 
-The [interface refresh](docs/UI_REFRESH.md) adds visible Ctrl+P and offline Fluent icon/text actions. The new second [Assets module](docs/ASSETS.md) manages canonical records, assignment, location, status and movement audit, independently of label events. Database schema 4 is upgraded with a protected prior backup.
+The [interface refresh](docs/UI_REFRESH.md) adds visible Ctrl+P and offline Fluent icon/text actions. The new second [Assets module](docs/ASSETS.md) manages canonical records, assignment, location, status and movement audit, independently of label events. Database schema 5 is upgraded with a protected prior backup.
 
 The local [Maintenance and warranties module](docs/SERVICES.md) adds linked jobs/coverage, calendar reminders, explicit costs/currency, revision history and filtered CSV. SQLite backups cover the complete module. No application accounts are required.
+
+The [Physical inventory module](docs/PHYSICAL_INVENTORY.md) supports local keyboard-scanner/manual counts, frozen expected scope, explicit close/missing results and a retained/retryable input queue. It does not require a printer, RFID or accounts.

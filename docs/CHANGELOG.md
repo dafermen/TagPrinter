@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.27.0 — 2026-11-07
+
+- Add local location-scoped Physical inventory with frozen expected master snapshots and persistent Open/Closed/Canceled sessions.
+- Support keyboard-wedge/manual serial input and explicit asset-code mode, duplicate-safe results, unknown/reused-serial conflict handling and preserved withdrawals.
+- Derive Missing only on explicit close; report captured versus observed locations without changing asset administration or label history.
+- Serialize up to 100 unsaved readings in a retained/retryable FIFO; reject oversized input and guard normal closure/restore while work remains pending.
+- Add cancellable paged session/result/action views, full filtered/action CSV and English/Spanish/minimum-size screenshots.
+- Upgrade to schema 5 after a protected copy; validate frozen scope, lifecycle/action revisions, identity evidence and effective observations during staged restore.
+- Verify a 10000-asset count fixture, actual index plans, rollback, failed-head retry/order, duplicate/conflict/terminal rules, CSV and old/corrupt backups. No RFID or printer logic is changed.
+
 ## 0.26.0 — 2026-11-07
 
 - Add local Maintenance & warranties workspace and per-asset entry/navigation, with no application accounts.

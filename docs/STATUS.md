@@ -1,6 +1,6 @@
 # Current status
 
-Application version: 0.26.0. Project: https://github.com/dafermen/TagPrinter. Local checkout: C:/Projects/TagPrinter.
+Application version: 0.27.0. Project: https://github.com/dafermen/TagPrinter. Local checkout: C:/Projects/TagPrinter.
 
 The application supports six asset fields, independent visibility, optional QR/Code 128, text-only labels, media presets/custom dimensions, fonts/bold/fitting, margins/offsets, media orientation and content rotation. It restores last work, prints through Windows or RAW ZPL, exports label/code PNG and raster ZPL, and records successful actions in SQLite.
 
@@ -37,3 +37,5 @@ License: MIT for TagPrinter source and project documentation, Copyright (c) 2026
 0.25 optimizes large local registries: derived indexes and exact serial matching, projected report pages, one cancellable background reader per view, bounded Dashboard/audit/catalog displays, prepared lazy import lookup and atomic streaming CSV with progress. Schema remains 3. Scale tests use 100000 records in each major collection; see PERFORMANCE.md for evidence and limits. User accounts/permissions remain explicitly deferred.
 
 0.26 adds Maintenance & warranties: linked jobs/coverage, local calendar reminders, explicit amount/currency, optimistic/atomic revision audit, paged search/sort/change history, exact asset navigation and filtered CSV. Schema 4 and staged validation/restore include the complete module. Existing asset states and label events remain separate. Operation stays local with no application users; see SERVICES.md.
+
+0.27 adds local Physical inventory: frozen expected location scope, scanner/manual serial/code input, guarded identity resolution, duplicate-safe outcomes, explicit missing on close, cancellation/withdrawal evidence, a bounded retained/retryable FIFO, paged sessions/results/actions and CSV. Schema 5 protects prior copies and validates all count evidence during staged restore. The module does not require or change RFID/printing and introduces no users or synchronization. See PHYSICAL_INVENTORY.md.

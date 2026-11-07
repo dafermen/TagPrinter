@@ -29,7 +29,7 @@ The progress window stays responsive and keeps cancellation/cleanup alive before
 
 ## Derived indexes and compatibility
 
-The performance work introduced in 0.25 used schema **3**. Current 0.26 adds schema **4** for service records; the eleven derived indexes and their behavior are unchanged. Startup installs eleven rebuildable expression/partial/prefix indexes when missing; it does not rewrite event snapshots, master identity, assignments, audit or catalogs. Current schema-4 files are rejected by older binaries; preserve the protected schema-3 copy for rollback. Schema-1/2 migrations retain their protected safety-copy behavior. Restoring an older snapshot creates the same performance indexes on its staged copy before live replacement.
+The performance work introduced in 0.25 used schema **3**. Version 0.26 added schema **4** for service records; current 0.27 adds schema **5** for physical counts; the eleven derived indexes and their behavior are unchanged. Startup installs eleven rebuildable expression/partial/prefix indexes when missing; it does not rewrite event snapshots, master identity, assignments, audit or catalogs. Current schema-5 files are rejected by older binaries; preserve the protected matching prior-schema copy for rollback. Schema-1/2 migrations retain their protected safety-copy behavior. Restoring an older snapshot creates the same performance indexes on its staged copy before live replacement.
 
 Indexes cover inventory-event IDs/date/action/trimmed serial, master update order/state/location/custodian/description/active groups, and catalog prefix browsing. Expressions match the query predicates and ordering exactly. For the existing partial unique master-serial index, lookup SQL explicitly includes serial_key!=''; an application-side nonempty check alone does not make SQLite's partial-index proof select that index. The benchmark asserts actual EXPLAIN QUERY PLAN output.
 
@@ -100,3 +100,20 @@ The complete source/root-launcher suites repeat the original 100000-record-per-c
 | Additional sampled live managed bytes during export | 341,056 |
 
 ServiceTests independently verifies 10000 service records, due-date index selection, bounded lists/revisions and backup-chain correctness. These checks do not establish a universal maximum capacity or total process-RAM guarantee.
+
+## Physical-count extension — 0.27
+
+Schema 5 adds location-scoped SQL snapshot creation, paged sessions/results/actions and frozen-serial/effective-action indexes. CountTests verifies 10000 captured assets, duplicate-heavy action paging, actual index selection and bounded retained queue/page state. Session totals still aggregate their full scope in a cancellable background snapshot; arbitrary substring searches and deep OFFSET retain the existing documented limits. Earlier timing tables remain historical evidence for their labeled release.
+
+## Published 0.27 regression measurements
+
+The complete source/root-launcher suites repeat the original 100000-record-per-collection fixture. Published Windows x64 verification on 2026-11-07 observed these environment-specific values:
+
+| Measurement | Observed |
+|---|---|
+| Median default asset query before / after derived indexes | 478.735 / 2.268 ms |
+| Dashboard groups materialized / total | 50 / 80,000 |
+| Full history export rows / bytes / time | 95,000 / 92,104,632 / 1,941 ms |
+| Additional sampled live managed bytes during export | 341,056 |
+
+CountTests independently verifies 10000 captured assets, frozen-serial index selection, bounded results/actions, duplicate-heavy evidence, failed-head FIFO retry and scope/effective-state backup correctness. ServiceTests also repeats its 10000-record fixture. These checks do not establish a universal maximum capacity or total process-RAM guarantee.
